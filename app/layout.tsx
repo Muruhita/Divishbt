@@ -1,16 +1,10 @@
 import type { Metadata } from "next";
-import { Inter, Cinzel } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({ 
   subsets: ["latin", "cyrillic"],
   variable: "--font-inter",
-});
-
-const cinzel = Cinzel({
-  weight: ["400", "700", "900"],
-  subsets: ["latin"],
-  variable: "--font-cinzel",
 });
 
 export const metadata: Metadata = {
@@ -25,7 +19,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
-      <body className={`${inter.variable} ${cinzel.variable} font-sans antialiased`}>
+      <body className={`${inter.className} antialiased`}>
         {children}
       </body>
     </html>
