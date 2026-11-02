@@ -1,27 +1,22 @@
 @import "tailwindcss";
 
-/* Сбрасываем стандартные отступы браузера и задаем темный фон для всего документа */
 body {
   margin: 0;
   padding: 0;
-  background-color: #1a1512; /* Темный цвет таверны */
-  color: #f4e4c1; /* Светлый текст */
+  background-color: #1a1512;
+  color: #f4e4c1;
 }
 
-/* Делаем скроллбар в стиле ретро/таверны (опционально, но красиво) */
 ::-webkit-scrollbar {
   width: 12px;
 }
-
 ::-webkit-scrollbar-track {
   background: #1a1512; 
 }
-
 ::-webkit-scrollbar-thumb {
   background: #8b5a2b; 
   border: 2px solid #1a1512;
 }
-
 ::-webkit-scrollbar-thumb:hover {
   background: #d4af37; 
 }
