@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import { VT323 } from "next/font/google";
+// Заменили VT323 на Pixelify_Sans
+import { Pixelify_Sans } from "next/font/google";
 import "./globals.css";
 
-const pixelFont = VT323({ 
-  weight: "400", 
+const pixelFont = Pixelify_Sans({ 
+  weight: ["400", "700"], 
   subsets: ["latin", "cyrillic"],
   variable: "--font-pixel",
 });
