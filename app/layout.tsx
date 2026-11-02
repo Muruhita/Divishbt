@@ -1,17 +1,16 @@
 import type { Metadata } from "next";
-// Заменили VT323 на Pixelify_Sans
-import { Pixelify_Sans } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const pixelFont = Pixelify_Sans({ 
-  weight: ["400", "700"], 
+// Заменили пиксельный шрифт на современный и читаемый Inter
+const inter = Inter({ 
   subsets: ["latin", "cyrillic"],
-  variable: "--font-pixel",
+  variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
   title: "Сытый Лис | Архив",
-  description: "Архив запретных знаний",
+  description: "Архив запретных знаний таверны 'Сытый Лис'",
 };
 
 export default function RootLayout({
@@ -21,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
-      <body className={`${pixelFont.className} antialiased`}>
+      <body className={`${inter.className} antialiased`}>
         {children}
       </body>
     </html>
