@@ -17,16 +17,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Недостаточно прав для создания этого ранга" }, { status: 403 });
     }
 
+    // Хешируем пароль для безопасного входа
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await db.execute({
-      sql: "INSERT INTO users (username, password, account_name, role) VALUES (?, ?, ?, ?)",
-      args: [username, hashedPassword, account_name, role],
+      sql: "INSERT INTO users (username, password, plain_password, account_name, role) VALUES (?, ?, ?, ?, ?)",
+      args: [username, hashedPassword, password, account_name, role], // <--- password записывается в plain_password
     });
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    // Логируем ошибку в консоль сервера, чтобы ESLint не ругался на неиспользуемую переменную
     console.error("Ошибка при создании пользователя:", error);
     return NextResponse.json({ error: "Ошибка (возможно, логин занят)" }, { status: 400 });
   }
