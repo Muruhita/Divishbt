@@ -23,8 +23,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Неверный логин или пароль" }, { status: 401 });
     }
 
-    // В реальном проекте нужно выдавать JWT токен. 
-    // Для простоты возвращаем данные пользователя.
     return NextResponse.json({
       id: user.id,
       username: user.username,
@@ -32,6 +30,8 @@ export async function POST(req: Request) {
       role: user.role,
     });
   } catch (error) {
+    // Логируем ошибку, чтобы не было предупреждения
+    console.error("Ошибка авторизации:", error);
     return NextResponse.json({ error: "Ошибка сервера" }, { status: 500 });
   }
 }
