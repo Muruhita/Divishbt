@@ -12,14 +12,15 @@ type ArchiveItem = {
   dangerLevel?: "Низкий" | "Средний" | "Высокий" | "Смертельный";
 };
 
+// --- БАЗОВАЯ БАЗА ДАННЫХ (Эмодзи убраны) ---
 const INITIAL_DATA: ArchiveItem[] = [
-  { id: 1, title: "Печать Сытого Лиса", category: "Символы", description: "Официальный знак таверны. Обозначает безопасную гавань для воров и наемников.", symbol: "🦊", dangerLevel: "Низкий" },
-  { id: 2, title: "Перевернутая пентаграмма", category: "Символы", description: "Знак запрещенного культа 'Темного Пламени'. Используется для жертвоприношений.", symbol: "🔻", dangerLevel: "Смертельный" },
+  { id: 1, title: "Печать Сытого Лиса", category: "Символы", description: "Официальный знак таверны. Обозначает безопасную гавань для воров и наемников.", dangerLevel: "Низкий" },
+  { id: 2, title: "Перевернутая пентаграмма", category: "Символы", description: "Знак запрещенного культа 'Темного Пламени'. Используется для жертвоприношений.", dangerLevel: "Смертельный" },
   { id: 3, title: "Тёмный протокол", category: "Термины", description: "Скрытый способ передачи зашифрованных данных между гильдиями воров с помощью птиц.", dangerLevel: "Средний" },
   { id: 4, title: "Шифр 'Пьяный Гоблин'", category: "Термины", description: "Метод запутывания текста с помощью сдвига букв на 3 позиции вперед по алфавиту. Легко взламывается.", dangerLevel: "Низкий" },
   { id: 5, title: "«Лиса не дремлет»", category: "Высказывания", description: "Условный сигнал о приближении городской стражи или инквизиции. Требует немедленного побега через черный ход.", dangerLevel: "Высокий" },
   { id: 6, title: "Комбинация 3-7-11", category: "Комбинации", description: "Секретный стук в дверь черного входа таверны. Открывает путь в подземелье и к тайному складу.", dangerLevel: "Средний" },
-  { id: 7, title: "Слеза Василиска", category: "Опасные артефакты", description: "Камень, способный превращать металл в свинец. Хранится в защищенном сундуке под барной стойкой.", symbol: "💎", dangerLevel: "Смертельный" }
+  { id: 7, title: "Слеза Василиска", category: "Опасные артефакты", description: "Камень, способный превращать металл в свинец. Хранится в защищенном сундуке под барной стойкой.", dangerLevel: "Смертельный" }
 ];
 
 const CATEGORIES = ["Все", "Символы", "Термины", "Высказывания", "Комбинации", "Опасные артефакты"];
@@ -45,7 +46,6 @@ export default function TavernArchive() {
     dangerLevel: "Низкий"
   });
 
-  // Загрузка и сохранение
   useEffect(() => {
     const saved = localStorage.getItem("tavern_archive_data");
     if (saved) {
@@ -57,7 +57,6 @@ export default function TavernArchive() {
     localStorage.setItem("tavern_archive_data", JSON.stringify(data));
   }, [data]);
 
-  // Функция поиска (фокус больше не теряется!)
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
   };
@@ -83,7 +82,6 @@ export default function TavernArchive() {
     setData([itemToAdd, ...data]);
     setShowAddForm(false);
     setNewItem({ title: "", category: "Символы", description: "", symbol: "", dangerLevel: "Низкий" });
-    // Оставляем пользователя в архиве, чтобы он видел, что запись добавилась
     setView("archive"); 
   };
 
@@ -108,14 +106,14 @@ export default function TavernArchive() {
     }
   };
 
-  // Вынесенный компонент карточки для чистоты кода
   const ArchiveCard = ({ item }: { item: ArchiveItem }) => (
-    <div className="bg-[#2A1B14]/90 backdrop-blur-sm border-2 border-[#5C4033] p-6 rounded-2xl shadow-lg hover:border-[#E5B85C] hover:shadow-[0_0_20px_rgba(229,184,92,0.15)] hover:-translate-y-1 transition-all duration-300 group flex flex-col relative overflow-hidden animate-fade-in">
+    <div className="bg-[#2A1B14]/90 backdrop-blur-sm border-2 border-[#5C4033] p-6 rounded-2xl shadow-lg hover:border-[#E5B85C] hover:shadow-[0_0_20px_rgba(229,184,92,0.15)] hover:-translate-y-1 transition-all duration-300 group flex flex-col relative overflow-hidden animate-fade-in z-10">
       <div className="absolute inset-0 bg-gradient-to-br from-[#E5B85C]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
       
       <div className="flex justify-between items-start mb-3 relative z-10">
         <h3 className="text-xl font-bold text-[#E5B85C] group-hover:text-[#F2D18B] transition-colors pr-2">{item.title}</h3>
-        {item.symbol && <span className="text-3xl filter drop-shadow-md transform group-hover:scale-110 transition-transform duration-300">{item.symbol}</span>}
+        {/* Оставляем вывод символа, только если он есть */}
+        {item.symbol && <span className="text-2xl font-bold text-[#E5B85C] bg-[#1a1512] px-2 py-1 rounded border border-[#5C4033]">{item.symbol}</span>}
       </div>
       
       <div className="flex flex-wrap items-center gap-2 mb-4 relative z-10">
@@ -123,7 +121,6 @@ export default function TavernArchive() {
         {item.dangerLevel && (
           <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-md border ${getDangerColor(item.dangerLevel)}`}>⚠ {item.dangerLevel}</span>
         )}
-        {/* Кнопка удаления только для хозяина */}
         {isOwner && (
           <button onClick={() => handleDeleteItem(item.id)} className="ml-auto text-red-500 hover:text-red-400 bg-red-500/10 hover:bg-red-500/20 p-1.5 rounded transition-colors" title="Удалить запись">
             <Trash2 size={16} />
@@ -140,6 +137,14 @@ export default function TavernArchive() {
       
       {/* НЕВИДИМЫЙ КВАДРАТ ДЛЯ ВХОДА */}
       <div onClick={() => setShowLogin(true)} className="absolute top-0 left-0 w-12 h-12 z-[100] cursor-default"></div>
+
+      {/* МАГИЧЕСКИЕ ЧАСТИЦЫ НА ФОНЕ */}
+      <div className="magic-particles">
+        <div className="particle"></div><div className="particle"></div><div className="particle"></div>
+        <div className="particle"></div><div className="particle"></div><div className="particle"></div>
+        <div className="particle"></div><div className="particle"></div><div className="particle"></div>
+        <div className="particle"></div>
+      </div>
 
       {/* ФОН */}
       <div className="absolute inset-0 opacity-20 pointer-events-none animate-bg-pulse" style={{ backgroundImage: "radial-gradient(circle at 50% 0%, #E5B85C 0%, transparent 70%)" }}></div>
@@ -205,7 +210,6 @@ export default function TavernArchive() {
               <Search className="absolute left-5 top-5 text-[#8C7A6B] group-focus-within:text-[#E5B85C] transition-colors duration-300" size={28} />
             </div>
 
-            {/* Если есть поисковый запрос - показываем результаты прямо тут */}
             {searchQuery.length > 0 ? (
               <div className="mt-12 w-full text-left animate-fade-in">
                 <h3 className="text-2xl font-bold text-[#E5B85C] mb-6 border-b border-[#4a3424] pb-2">Результаты поиска ({filteredData.length})</h3>
@@ -221,8 +225,8 @@ export default function TavernArchive() {
                 )}
               </div>
             ) : (
-              /* Если поиск пустой - показываем кнопку */
-              <button onClick={() => setView("archive")} className="mt-10 px-10 py-4 bg-[#E5B85C] hover:bg-[#F2D18B] text-[#2A1B14] font-bold text-xl rounded-xl shadow-[0_6px_0_#9C7330] hover:shadow-[0_2px_0_#9C7330] hover:translate-y-[4px] transition-all duration-200 flex items-center gap-3 group">
+              /* НОВАЯ ТЕКСТУРИРОВАННАЯ КНОПКА */
+              <button onClick={() => setView("archive")} className="mt-12 px-12 py-5 bg-gradient-to-b from-[#6B4C30] to-[#3A271E] border-2 border-[#9C7330] hover:border-[#E5B85C] text-[#E5B85C] font-bold text-xl rounded-xl shadow-[0_6px_0_#1a1512] hover:shadow-[0_0_20px_rgba(229,184,92,0.4)] hover:-translate-y-1 transition-all duration-300 flex items-center gap-3 group tracking-widest uppercase">
                 <ScrollText size={24} className="group-hover:rotate-12 transition-transform duration-300" />
                 Открыть все свитки
               </button>
@@ -232,7 +236,7 @@ export default function TavernArchive() {
 
         {/* ЭКРАН 2: АРХИВ */}
         {view === "archive" && (
-          <div className="animate-fade-in w-full pb-20">
+          <div className="animate-fade-in w-full pb-20 relative z-10">
             
             {/* ПАНЕЛЬ ХОЗЯИНА */}
             {isOwner && (
@@ -246,11 +250,11 @@ export default function TavernArchive() {
 
             {/* ФОРМА ДОБАВЛЕНИЯ */}
             {isOwner && showAddForm && (
-              <form onSubmit={handleAddItem} className="mb-10 p-6 bg-[#2A1B14] border border-[#E5B85C]/50 rounded-2xl shadow-xl animate-fade-in">
+              <form onSubmit={handleAddItem} className="mb-10 p-6 bg-[#2A1B14] border border-[#E5B85C]/50 rounded-2xl shadow-xl animate-fade-in relative z-20">
                 <h3 className="text-xl font-bold text-[#E5B85C] mb-4">Новая запись в архив</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <input required type="text" placeholder="Название (например, 14/88)" value={newItem.title} onChange={e => setNewItem({...newItem, title: e.target.value})} className="p-3 bg-[#1a1512] border border-[#4a3424] rounded-lg text-white focus:border-[#E5B85C] outline-none" />
-                  <input type="text" placeholder="Символ (эмодзи, опционально)" value={newItem.symbol} onChange={e => setNewItem({...newItem, symbol: e.target.value})} className="p-3 bg-[#1a1512] border border-[#4a3424] rounded-lg text-white focus:border-[#E5B85C] outline-none" />
+                  <input type="text" placeholder="Символ (текст или эмодзи, опционально)" value={newItem.symbol} onChange={e => setNewItem({...newItem, symbol: e.target.value})} className="p-3 bg-[#1a1512] border border-[#4a3424] rounded-lg text-white focus:border-[#E5B85C] outline-none" />
                   <select value={newItem.category} onChange={e => setNewItem({...newItem, category: e.target.value as any})} className="p-3 bg-[#1a1512] border border-[#4a3424] rounded-lg text-white focus:border-[#E5B85C] outline-none cursor-pointer">
                     {CATEGORIES.filter(c => c !== "Все").map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
@@ -268,7 +272,7 @@ export default function TavernArchive() {
               </form>
             )}
 
-            {/* ПАНЕЛЬ ПОИСКА И НАВИГАЦИИ В АРХИВЕ */}
+            {/* ПАНЕЛЬ ПОИСКА И НАВИГАЦИИ */}
             <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
               <button onClick={() => { setView("home"); setSearchQuery(""); setSelectedCategory("Все"); }} className="flex items-center gap-2 text-[#A89B8F] hover:text-[#E5B85C] transition-colors px-4 py-2 font-medium bg-[#2A1B14] rounded-lg border border-[#5C4033] hover:border-[#E5B85C]">
                 <ChevronLeft size={20} /> На главную
@@ -288,8 +292,8 @@ export default function TavernArchive() {
               ))}
             </div>
 
-            {/* СЕТКА КАРТОЧЕК В АРХИВЕ */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* СЕТКА КАРТОЧЕК */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
               {filteredData.length > 0 ? (
                 filteredData.map((item) => <ArchiveCard key={item.id} item={item} />)
               ) : (
