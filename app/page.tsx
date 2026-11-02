@@ -196,7 +196,7 @@ export default function TavernArchive() {
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#1f1814] text-[#F3E8D6] font-sans">
       
-      {/* АНИМИРОВАННЫЙ ФОН (Работает и на экране входа, и внутри) */}
+      {/* АНИМИРОВАННЫЙ ФОН */}
       <div className="magic-particles">
         <div className="particle"></div><div className="particle"></div><div className="particle"></div>
         <div className="particle"></div><div className="particle"></div><div className="particle"></div>
@@ -209,8 +209,23 @@ export default function TavernArchive() {
       {/* ========================================== */}
       {!user && (
         <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
-          <div className="bg-[#2A1B14]/90 backdrop-blur-md border-2 border-[#E5B85C] p-8 rounded-2xl shadow-[0_0_50px_rgba(229,184,92,0.15)] w-full max-w-md animate-fade-in">
-            <div className="flex justify-center mb-6 text-[#E5B85C]"><LockKeyhole size={64} /></div>
+          <div className="bg-[#2A1B14]/90 backdrop-blur-md border-2 border-[#E5B85C] p-8 pt-0 rounded-2xl shadow-[0_0_50px_rgba(229,184,92,0.15)] w-full max-w-md animate-fade-in relative mt-16">
+            
+            {/* ЛОГОТИП НА ЭКРАНЕ ВХОДА */}
+            <div className="flex justify-center -mt-16 mb-4 relative">
+              <div className="absolute inset-0 bg-[#E5B85C] blur-2xl opacity-20 rounded-full"></div>
+              <img 
+                src="/logo.png" 
+                alt="Сытый Лис" 
+                className="w-32 h-32 md:w-40 md:h-40 object-cover rounded-full border-4 border-[#5C4033] shadow-2xl relative z-10 animate-float bg-[#1a1512]"
+                onError={(e) => {
+                  // Если картинки нет, показываем иконку замка
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.parentElement!.innerHTML = '<div class="w-32 h-32 md:w-40 md:h-40 flex items-center justify-center bg-[#1a1512] rounded-full border-4 border-[#5C4033] text-[#E5B85C] shadow-2xl relative z-10 animate-float"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-lock-keyhole"><circle cx="12" cy="16" r="1"/><rect x="3" y="10" width="18" height="12" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/></svg></div>';
+                }}
+              />
+            </div>
+
             <h1 className="text-3xl font-bold text-center mb-2 text-[#E5B85C] tracking-widest uppercase flex justify-center items-center gap-2">
                <Flame /> Сытый Лис
             </h1>
@@ -261,10 +276,26 @@ export default function TavernArchive() {
           </div>
 
           <div className="max-w-5xl mx-auto px-6 py-12 relative z-10 flex flex-col min-h-screen">
-            <header className="flex justify-center mb-10 cursor-pointer" onClick={() => setView("home")}>
-               <h1 className="text-4xl font-bold text-[#E5B85C] tracking-widest uppercase flex items-center gap-2 drop-shadow-md">
-                 <Flame /> Сытый Лис
-               </h1>
+            
+            {/* ШАПКА С ЛОГОТИПОМ */}
+            <header className="flex justify-center items-center mb-12 cursor-pointer group" onClick={() => setView("home")}>
+              <div className="relative flex items-center gap-4">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-[#E5B85C] blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500 rounded-full"></div>
+                  <img 
+                    src="/logo.png" 
+                    alt="Сытый Лис" 
+                    className="w-20 h-20 md:w-28 md:h-28 object-cover rounded-full border-4 border-[#5C4033] group-hover:border-[#E5B85C] transition-colors duration-300 shadow-2xl relative z-10 animate-float bg-[#1a1512]"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.parentElement!.innerHTML = '<h1 class="text-4xl font-bold text-[#E5B85C] animate-float flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-flame"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg> Сытый Лис</h1>';
+                    }}
+                  />
+                </div>
+                <h1 className="text-4xl md:text-5xl font-bold text-[#E5B85C] tracking-widest uppercase hidden sm:block drop-shadow-lg">
+                  Сытый Лис
+                </h1>
+              </div>
             </header>
 
             {view === "home" && (
@@ -312,7 +343,6 @@ export default function TavernArchive() {
                   <button onClick={() => setAdminTab("diag")} className={`px-4 py-2 rounded flex items-center gap-2 transition-all ${adminTab === 'diag' ? 'bg-[#5C4033] text-white shadow-lg' : 'bg-transparent text-gray-500 hover:text-gray-300'}`}><Activity size={18}/> Диагностика</button>
                 </div>
 
-                {/* 1. АРХИВ */}
                 {adminTab === "archive" && (
                   <form onSubmit={handleAddItem} className="space-y-4 max-w-xl">
                     <h3 className="text-lg font-bold text-[#E5B85C]">Добавить запись</h3>
@@ -326,7 +356,6 @@ export default function TavernArchive() {
                   </form>
                 )}
 
-                {/* 2. АККАУНТЫ */}
                 {adminTab === "users" && (
                   <div className="space-y-10">
                     <form onSubmit={handleCreateUser} className="space-y-4 max-w-xl bg-[#1f1814] p-6 rounded-xl border border-[#4a3424]">
@@ -380,7 +409,6 @@ export default function TavernArchive() {
                   </div>
                 )}
 
-                {/* 3. ДИАГНОСТИКА */}
                 {adminTab === "diag" && (
                   <div className="max-w-xl">
                     <h3 className="text-lg font-bold text-[#E5B85C] mb-4 flex items-center gap-2"><Database size={18}/> Проверка системы</h3>
