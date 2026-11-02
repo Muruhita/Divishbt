@@ -57,6 +57,7 @@ export default function TavernArchive() {
   const [loginUser, setLoginUser] = useState("");
   const [loginPass, setLoginPass] = useState("");
   const [loginError, setLoginError] = useState("");
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true); // Защита от "мигания" экрана входа
 
   // Admin State
   const [newItem, setNewItem] = useState({ title: "", category: "Символы", description: "", symbol: "", dangerLevel: "Низкий" });
@@ -66,6 +67,28 @@ export default function TavernArchive() {
   const [adminTab, setAdminTab] = useState<"archive" | "users" | "diag">("archive");
   const [usersList, setUsersList] = useState<DbUser[]>([]);
   const [diagResult, setDiagResult] = useState<{ status: string, latency?: number, message: string } | null>(null);
+
+  // === ПРОВЕРКА СОХРАНЕННОЙ СЕССИИ ПРИ ЗАГРУЗКЕ ===
+  useEffect(() => {
+    const checkSession = () => {
+      try {
+        const savedSession = localStorage.getItem("tavern_session");
+        if (savedSession) {
+          const { userData, expiresAt } = JSON.parse(savedSession);
+          if (Date.now() < expiresAt) {
+            setUser(userData); // Сессия жива, пускаем на сайт
+          } else {
+            localStorage.removeItem("tavern_session"); // Сессия истекла (прошло 5 часов)
+          }
+        }
+      } catch (e) {
+        localStorage.removeItem("tavern_session"); // Если данные повреждены
+      } finally {
+        setIsCheckingAuth(false); // Завершаем проверку
+      }
+    };
+    checkSession();
+  }, []);
 
   const fetchArchive = async () => {
     try {
@@ -99,15 +122,29 @@ export default function TavernArchive() {
         body: JSON.stringify({ username: loginUser, password: loginPass })
       });
       const data = await res.json();
+      
       if (res.ok) {
         setUser(data);
-        setLoginUser(""); setLoginPass("");
+        setLoginUser(""); 
+        setLoginPass("");
+        
+        // СОХРАНЯЕМ СЕССИЮ НА 5 ЧАСОВ
+        // 5 часов * 60 минут * 60 секунд * 1000 миллисекунд
+        const expiresAt = Date.now() + (5 * 60 * 60 * 1000); 
+        localStorage.setItem("tavern_session", JSON.stringify({ userData: data, expiresAt }));
       } else {
         setLoginError(data.error || "Ошибка входа");
       }
     } catch { 
       setLoginError("Ошибка соединения с сервером"); 
     }
+  };
+
+  // ФУНКЦИЯ ВЫХОДА (Очищает кэш)
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem("tavern_session");
+    setView("home");
   };
 
   const generateRandom = (length = 15) => {
@@ -193,6 +230,11 @@ export default function TavernArchive() {
     </div>
   );
 
+  // Если идет проверка сессии, показываем пустой экран (чтобы не мигал экран входа)
+  if (isCheckingAuth) {
+    return <main className="min-h-screen bg-[#1f1814]"></main>;
+  }
+
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#1f1814] text-[#F3E8D6] font-sans">
       
@@ -211,7 +253,6 @@ export default function TavernArchive() {
         <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
           <div className="bg-[#2A1B14]/90 backdrop-blur-md border-2 border-[#E5B85C] p-8 pt-0 rounded-2xl shadow-[0_0_50px_rgba(229,184,92,0.15)] w-full max-w-md animate-fade-in relative mt-16">
             
-            {/* ЛОГОТИП НА ЭКРАНЕ ВХОДА */}
             <div className="flex justify-center -mt-16 mb-4 relative">
               <div className="absolute inset-0 bg-[#E5B85C] blur-2xl opacity-20 rounded-full"></div>
               <img 
@@ -219,7 +260,6 @@ export default function TavernArchive() {
                 alt="Сытый Лис" 
                 className="w-32 h-32 md:w-40 md:h-40 object-cover rounded-full border-4 border-[#5C4033] shadow-2xl relative z-10 animate-float bg-[#1a1512]"
                 onError={(e) => {
-                  // Если картинки нет, показываем иконку замка
                   e.currentTarget.style.display = 'none';
                   e.currentTarget.parentElement!.innerHTML = '<div class="w-32 h-32 md:w-40 md:h-40 flex items-center justify-center bg-[#1a1512] rounded-full border-4 border-[#5C4033] text-[#E5B85C] shadow-2xl relative z-10 animate-float"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-lock-keyhole"><circle cx="12" cy="16" r="1"/><rect x="3" y="10" width="18" height="12" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/></svg></div>';
                 }}
@@ -252,7 +292,7 @@ export default function TavernArchive() {
       )}
 
       {/* ========================================== */}
-      {/* ОСНОВНОЙ САЙТ (Если залогинен) */}
+      {/* ОСНОВНОЙ САЙТ */}
       {/* ========================================== */}
       {user && (
         <>
@@ -269,7 +309,8 @@ export default function TavernArchive() {
                   <Settings size={18} />
                 </button>
               )}
-              <button onClick={() => setUser(null)} className="p-2 text-red-400 hover:bg-red-500/20 rounded transition-colors" title="Выйти">
+              {/* ИСПОЛЬЗУЕМ НОВУЮ ФУНКЦИЮ ВЫХОДА */}
+              <button onClick={handleLogout} className="p-2 text-red-400 hover:bg-red-500/20 rounded transition-colors" title="Выйти">
                 <LogOut size={18} />
               </button>
             </div>
@@ -277,7 +318,6 @@ export default function TavernArchive() {
 
           <div className="max-w-5xl mx-auto px-6 py-12 relative z-10 flex flex-col min-h-screen">
             
-            {/* ШАПКА С ЛОГОТИПОМ */}
             <header className="flex justify-center items-center mb-12 cursor-pointer group" onClick={() => setView("home")}>
               <div className="relative flex items-center gap-4">
                 <div className="relative">
