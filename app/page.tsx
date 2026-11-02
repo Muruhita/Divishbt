@@ -57,7 +57,7 @@ export default function TavernArchive() {
   const [loginUser, setLoginUser] = useState("");
   const [loginPass, setLoginPass] = useState("");
   const [loginError, setLoginError] = useState("");
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true); // Защита от "мигания" экрана входа
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   // Admin State
   const [newItem, setNewItem] = useState({ title: "", category: "Символы", description: "", symbol: "", dangerLevel: "Низкий" });
@@ -68,7 +68,6 @@ export default function TavernArchive() {
   const [usersList, setUsersList] = useState<DbUser[]>([]);
   const [diagResult, setDiagResult] = useState<{ status: string, latency?: number, message: string } | null>(null);
 
-  // === ПРОВЕРКА СОХРАНЕННОЙ СЕССИИ ПРИ ЗАГРУЗКЕ ===
   useEffect(() => {
     const checkSession = () => {
       try {
@@ -76,15 +75,15 @@ export default function TavernArchive() {
         if (savedSession) {
           const { userData, expiresAt } = JSON.parse(savedSession);
           if (Date.now() < expiresAt) {
-            setUser(userData); // Сессия жива, пускаем на сайт
+            setUser(userData); 
           } else {
-            localStorage.removeItem("tavern_session"); // Сессия истекла (прошло 5 часов)
+            localStorage.removeItem("tavern_session"); 
           }
         }
       } catch (e) {
-        localStorage.removeItem("tavern_session"); // Если данные повреждены
+        localStorage.removeItem("tavern_session"); 
       } finally {
-        setIsCheckingAuth(false); // Завершаем проверку
+        setIsCheckingAuth(false); 
       }
     };
     checkSession();
@@ -128,8 +127,6 @@ export default function TavernArchive() {
         setLoginUser(""); 
         setLoginPass("");
         
-        // СОХРАНЯЕМ СЕССИЮ НА 5 ЧАСОВ
-        // 5 часов * 60 минут * 60 секунд * 1000 миллисекунд
         const expiresAt = Date.now() + (5 * 60 * 60 * 1000); 
         localStorage.setItem("tavern_session", JSON.stringify({ userData: data, expiresAt }));
       } else {
@@ -140,7 +137,6 @@ export default function TavernArchive() {
     }
   };
 
-  // ФУНКЦИЯ ВЫХОДА (Очищает кэш)
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem("tavern_session");
@@ -182,7 +178,10 @@ export default function TavernArchive() {
     const res = await fetch("/api/archive", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newItem)
     });
-    if (res.ok) { fetchArchive(); setNewItem({ title: "", category: "Символы", description: "", symbol: "", dangerLevel: "Низкий" }); }
+    if (res.ok) { 
+      fetchArchive(); 
+      setNewItem({ title: "", category: "Символы", description: "", symbol: "", dangerLevel: "Низкий" }); 
+    }
   };
 
   const handleDeleteItem = async (id: number) => {
@@ -230,7 +229,6 @@ export default function TavernArchive() {
     </div>
   );
 
-  // Если идет проверка сессии, показываем пустой экран (чтобы не мигал экран входа)
   if (isCheckingAuth) {
     return <main className="min-h-screen bg-[#1f1814]"></main>;
   }
@@ -238,7 +236,6 @@ export default function TavernArchive() {
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#1f1814] text-[#F3E8D6] font-sans">
       
-      {/* АНИМИРОВАННЫЙ ФОН */}
       <div className="magic-particles">
         <div className="particle"></div><div className="particle"></div><div className="particle"></div>
         <div className="particle"></div><div className="particle"></div><div className="particle"></div>
@@ -246,9 +243,6 @@ export default function TavernArchive() {
       </div>
       <div className="absolute inset-0 opacity-20 pointer-events-none animate-bg-pulse" style={{ backgroundImage: "radial-gradient(circle at 50% 0%, #E5B85C 0%, transparent 70%)" }}></div>
 
-      {/* ========================================== */}
-      {/* ЭКРАН АВТОРИЗАЦИИ */}
-      {/* ========================================== */}
       {!user && (
         <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
           <div className="bg-[#2A1B14]/90 backdrop-blur-md border-2 border-[#E5B85C] p-8 pt-0 rounded-2xl shadow-[0_0_50px_rgba(229,184,92,0.15)] w-full max-w-md animate-fade-in relative mt-16">
@@ -291,9 +285,6 @@ export default function TavernArchive() {
         </div>
       )}
 
-      {/* ========================================== */}
-      {/* ОСНОВНОЙ САЙТ */}
-      {/* ========================================== */}
       {user && (
         <>
           <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
@@ -309,7 +300,6 @@ export default function TavernArchive() {
                   <Settings size={18} />
                 </button>
               )}
-              {/* ИСПОЛЬЗУЕМ НОВУЮ ФУНКЦИЮ ВЫХОДА */}
               <button onClick={handleLogout} className="p-2 text-red-400 hover:bg-red-500/20 rounded transition-colors" title="Выйти">
                 <LogOut size={18} />
               </button>
@@ -318,23 +308,19 @@ export default function TavernArchive() {
 
           <div className="max-w-5xl mx-auto px-6 py-12 relative z-10 flex flex-col min-h-screen">
             
+            {/* ШАПКА ТОЛЬКО С ЛОГОТИПОМ (Без текста) */}
             <header className="flex justify-center items-center mb-12 cursor-pointer group" onClick={() => setView("home")}>
-              <div className="relative flex items-center gap-4">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-[#E5B85C] blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500 rounded-full"></div>
-                  <img 
-                    src="/logo.png" 
-                    alt="Сытый Лис" 
-                    className="w-20 h-20 md:w-28 md:h-28 object-cover rounded-full border-4 border-[#5C4033] group-hover:border-[#E5B85C] transition-colors duration-300 shadow-2xl relative z-10 animate-float bg-[#1a1512]"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      e.currentTarget.parentElement!.innerHTML = '<h1 class="text-4xl font-bold text-[#E5B85C] animate-float flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-flame"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg> Сытый Лис</h1>';
-                    }}
-                  />
-                </div>
-                <h1 className="text-4xl md:text-5xl font-bold text-[#E5B85C] tracking-widest uppercase hidden sm:block drop-shadow-lg">
-                  Сытый Лис
-                </h1>
+              <div className="relative">
+                <div className="absolute inset-0 bg-[#E5B85C] blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500 rounded-full"></div>
+                <img 
+                  src="/logo.png" 
+                  alt="Сытый Лис" 
+                  className="w-24 h-24 md:w-32 md:h-32 object-cover rounded-full border-4 border-[#5C4033] group-hover:border-[#E5B85C] transition-colors duration-300 shadow-2xl relative z-10 animate-float bg-[#1a1512]"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.parentElement!.innerHTML = '<h1 class="text-4xl font-bold text-[#E5B85C] animate-float flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-flame"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg> Сытый Лис</h1>';
+                  }}
+                />
               </div>
             </header>
 
@@ -388,9 +374,18 @@ export default function TavernArchive() {
                     <h3 className="text-lg font-bold text-[#E5B85C]">Добавить запись</h3>
                     <input required placeholder="Название" value={newItem.title} onChange={e => setNewItem({...newItem, title: e.target.value})} className="w-full p-2 bg-[#1a1512] border border-[#4a3424] rounded text-white focus:border-[#E5B85C] outline-none" />
                     <input placeholder="Символ (текст)" value={newItem.symbol} onChange={e => setNewItem({...newItem, symbol: e.target.value})} className="w-full p-2 bg-[#1a1512] border border-[#4a3424] rounded text-white focus:border-[#E5B85C] outline-none" />
+                    
                     <select value={newItem.category} onChange={e => setNewItem({...newItem, category: e.target.value})} className="w-full p-2 bg-[#1a1512] border border-[#4a3424] rounded text-white focus:border-[#E5B85C] outline-none cursor-pointer">
                        {CATEGORIES.filter(c => c !== "Все").map(c => <option key={c}>{c}</option>)}
                     </select>
+
+                    <select value={newItem.dangerLevel} onChange={e => setNewItem({...newItem, dangerLevel: e.target.value})} className="w-full p-2 bg-[#1a1512] border border-[#4a3424] rounded text-white focus:border-[#E5B85C] outline-none cursor-pointer">
+                       <option value="Низкий">Уровень: Низкий</option>
+                       <option value="Средний">Уровень: Средний</option>
+                       <option value="Высокий">Уровень: Высокий</option>
+                       <option value="Смертельный">Уровень: Смертельный</option>
+                    </select>
+
                     <textarea required placeholder="Описание" value={newItem.description} onChange={e => setNewItem({...newItem, description: e.target.value})} className="w-full p-2 bg-[#1a1512] border border-[#4a3424] rounded text-white focus:border-[#E5B85C] outline-none h-24" />
                     <button type="submit" className="px-6 py-2 bg-[#E5B85C] text-black font-bold rounded hover:bg-[#F2D18B] transition-colors shadow-lg">Сохранить в БД</button>
                   </form>
