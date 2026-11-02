@@ -2,95 +2,57 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 243, 232, 214;
-  --background-rgb: 26, 21, 18;
-}
-
 body {
   margin: 0;
   padding: 0;
-  color: rgb(var(--foreground-rgb));
-  background-color: rgb(var(--background-rgb));
+  background-color: #1a1512;
+  color: #f4e4c1;
   overflow-x: hidden;
 }
 
 /* Кастомный скроллбар */
 ::-webkit-scrollbar {
-  width: 12px;
+  width: 10px;
 }
 ::-webkit-scrollbar-track {
   background: #1a1512; 
 }
 ::-webkit-scrollbar-thumb {
-  background: #4a3424; 
-  border-radius: 6px;
-  border: 2px solid #1a1512;
+  background: #5C4033; 
+  border-radius: 5px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #E5B85C; 
 }
 
-/* Текстура шума на фоне */
-.bg-noise {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.04;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-}
-
-/* Виньетка (затемнение по краям) */
-.bg-vignette {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  pointer-events: none;
-  z-index: 0;
-  background: radial-gradient(circle, transparent 40%, rgba(10, 8, 6, 0.8) 100%);
-}
-
-/* Анимации */
+/* Анимация плавного парения (для логотипа) */
 @keyframes float {
-  0% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-8px) rotate(1deg); }
-  100% { transform: translateY(0px) rotate(0deg); }
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
 }
 
 .animate-float {
-  animation: float 6s ease-in-out infinite;
+  animation: float 4s ease-in-out infinite;
 }
 
-@keyframes pulse-glow {
-  0%, 100% { opacity: 0.3; filter: blur(20px); }
-  50% { opacity: 0.6; filter: blur(30px); }
-}
-
-.animate-glow {
-  animation: pulse-glow 4s ease-in-out infinite;
-}
-
+/* Анимация плавного появления контента */
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(15px); }
+  from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fade-in {
-  animation: fade-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fade-in 0.4s ease-out forwards;
 }
 
-/* Задержки для каскадного появления карточек */
-.delay-100 { animation-delay: 100ms; }
-.delay-200 { animation-delay: 200ms; }
-.delay-300 { animation-delay: 300ms; }
+/* Анимация пульсации фона */
+@keyframes bg-pulse {
+  0% { opacity: 0.15; }
+  50% { opacity: 0.25; }
+  100% { opacity: 0.15; }
+}
 
-/* Класс для заголовков */
-.font-heading {
-  font-family: var(--font-cinzel), serif;
+.animate-bg-pulse {
+  animation: bg-pulse 8s ease-in-out infinite;
 }
