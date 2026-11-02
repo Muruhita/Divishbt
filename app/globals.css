@@ -9,16 +9,49 @@ body {
   color: #f4e4c1;
 }
 
+/* Кастомный скроллбар */
 ::-webkit-scrollbar {
-  width: 12px;
+  width: 10px;
 }
 ::-webkit-scrollbar-track {
   background: #1a1512; 
 }
 ::-webkit-scrollbar-thumb {
-  background: #8b5a2b; 
-  border: 2px solid #1a1512;
+  background: #5C4033; 
+  border-radius: 5px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #d4af37; 
+  background: #E5B85C; 
+}
+
+/* Анимация плавного парения (для логотипа) */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* Анимация плавного появления контента */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out forwards;
+}
+
+/* Анимация пульсации фона */
+@keyframes bg-pulse {
+  0% { opacity: 0.15; }
+  50% { opacity: 0.25; }
+  100% { opacity: 0.15; }
+}
+
+.animate-bg-pulse {
+  animation: bg-pulse 8s ease-in-out infinite;
 }
