@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, ChevronLeft, BookOpen, Flame, ScrollText, Skull, Plus, X, LogOut, LockKeyhole, Trash2, Users, ShieldAlert, Settings } from "lucide-react";
+import { Search, ChevronLeft, Flame, ScrollText, Skull, Plus, X, LogOut, LockKeyhole, Trash2, Users, Settings } from "lucide-react";
 
 type ArchiveItem = {
   id: number;
@@ -10,6 +10,16 @@ type ArchiveItem = {
   description: string;
   symbol?: string; 
   dangerLevel?: string;
+};
+
+// Тип для сырых данных из БД (Turso)
+type DbArchiveItem = {
+  id: number;
+  title: string;
+  category: string;
+  description: string;
+  symbol: string | null;
+  danger_level: string | null;
 };
 
 type User = {
@@ -53,10 +63,15 @@ export default function TavernArchive() {
   const fetchArchive = async () => {
     const res = await fetch("/api/archive");
     const dbData = await res.json();
-    // Мапим поля из БД (danger_level) в формат фронтенда (dangerLevel)
-    const formatted = dbData.map((item: any) => ({
-      ...item,
-      dangerLevel: item.danger_level
+    
+    // Мапим поля, используя строгий тип DbArchiveItem
+    const formatted = (dbData as DbArchiveItem[]).map((item) => ({
+      id: item.id,
+      title: item.title,
+      category: item.category,
+      description: item.description,
+      symbol: item.symbol || undefined,
+      dangerLevel: item.danger_level || undefined
     }));
     setData(formatted);
   };
@@ -89,12 +104,12 @@ export default function TavernArchive() {
       } else {
         setLoginError(data.error);
       }
-    } catch (err) {
-      setLoginError("Ошибка соединения");
+    } catch {
+      // Убрали переменную err, чтобы не было ошибки линтера
+      setLoginError("Ошибка соединения с сервером");
     }
   };
 
-  // Генерация случайной строки
   const generateRandom = (length = 15) => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
     let result = "";
@@ -141,7 +156,7 @@ export default function TavernArchive() {
       body: JSON.stringify(newItem)
     });
     if (res.ok) {
-      fetchArchive(); // Обновляем список
+      fetchArchive(); 
       setNewItem({ title: "", category: "Символы", description: "", symbol: "", dangerLevel: "Низкий" });
     }
   };
@@ -178,7 +193,7 @@ export default function TavernArchive() {
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#1f1814] text-[#F3E8D6] font-sans">
       
-      {/* Анимации фона (сохранены из прошлой версии) */}
+      {/* Анимации фона */}
       <div className="magic-particles">
         <div className="particle"></div><div className="particle"></div><div className="particle"></div>
         <div className="particle"></div><div className="particle"></div><div className="particle"></div>
@@ -229,21 +244,28 @@ export default function TavernArchive() {
       <div className="max-w-5xl mx-auto px-6 py-12 relative z-10 flex flex-col min-h-screen">
         {/* Логотип */}
         <header className="flex justify-center mb-10 cursor-pointer" onClick={() => setView("home")}>
-           <h1 className="text-4xl font-bold text-[#E5B85C] tracking-widest uppercase">Сытый Лис</h1>
+           <h1 className="text-4xl font-bold text-[#E5B85C] tracking-widest uppercase flex items-center gap-2">
+             <Flame /> Сытый Лис
+           </h1>
         </header>
 
         {/* ГЛАВНАЯ */}
         {view === "home" && (
           <div className="flex-grow flex flex-col items-center animate-fade-in text-center pb-20">
             <h2 className="text-4xl font-bold mb-4">Запретный Архив</h2>
-            <input type="text" placeholder="Поиск..." value={searchQuery} onChange={handleSearchChange} className="w-full max-w-2xl p-4 bg-[#2A1B14] border-2 border-[#5C4033] rounded-xl text-white focus:border-[#E5B85C] mb-8" />
+            <div className="relative w-full max-w-2xl mb-8">
+              <input type="text" placeholder="Поиск..." value={searchQuery} onChange={handleSearchChange} className="w-full p-4 pl-12 bg-[#2A1B14] border-2 border-[#5C4033] rounded-xl text-white focus:border-[#E5B85C]" />
+              <Search className="absolute left-4 top-4 text-gray-500" size={24} />
+            </div>
             
             {searchQuery.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
                 {filteredData.map(item => <ArchiveCard key={item.id} item={item} />)}
               </div>
             ) : (
-              <button onClick={() => setView("archive")} className="px-10 py-4 bg-[#E5B85C] text-[#1a1512] font-bold rounded-xl shadow-[0_6px_0_#9C7330] hover:translate-y-1 hover:shadow-none transition-all">Открыть архив</button>
+              <button onClick={() => setView("archive")} className="px-10 py-4 bg-[#E5B85C] text-[#1a1512] font-bold rounded-xl shadow-[0_6px_0_#9C7330] hover:translate-y-1 hover:shadow-none transition-all flex items-center gap-2">
+                <ScrollText size={20} /> Открыть архив
+              </button>
             )}
           </div>
         )}
