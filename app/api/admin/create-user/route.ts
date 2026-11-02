@@ -8,13 +8,11 @@ export async function POST(req: Request) {
   try {
     const { username, password, account_name, role, requesterRole } = await req.json();
 
-    // Проверка иерархии (упрощенная)
+    // Проверка иерархии
     const roles = ["low", "high", "guardian", "creator", "owner"];
     const reqIdx = roles.indexOf(requesterRole);
     const newIdx = roles.indexOf(role);
 
-    // Создавать может только тот, чей ранг выше (например, high может создать low)
-    // Или равный (если хотим разрешить создавать своих)
     if (reqIdx <= newIdx) {
       return NextResponse.json({ error: "Недостаточно прав для создания этого ранга" }, { status: 403 });
     }
@@ -27,7 +25,9 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error) {
+    // Логируем ошибку в консоль сервера, чтобы ESLint не ругался на неиспользуемую переменную
+    console.error("Ошибка при создании пользователя:", error);
     return NextResponse.json({ error: "Ошибка (возможно, логин занят)" }, { status: 400 });
   }
 }
