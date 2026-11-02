@@ -1,10 +1,16 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Pixelify_Sans } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({ 
   subsets: ["latin", "cyrillic"],
   variable: "--font-inter",
+});
+
+const pixel = Pixelify_Sans({
+  weight: ["400", "700"],
+  subsets: ["latin", "cyrillic"],
+  variable: "--font-pixel",
 });
 
 export const metadata: Metadata = {
@@ -19,7 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
-      <body className={`${inter.className} antialiased`}>
+      <body className={`${inter.variable} ${pixel.variable} font-sans antialiased`}>
         {children}
       </body>
     </html>
