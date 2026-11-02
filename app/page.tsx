@@ -33,7 +33,7 @@ type DbUser = {
   username: string;
   account_name: string;
   role: string;
-  plain_password: string;
+  plain_password: string | null;
 };
 
 const CATEGORIES = ["Все", "Символы", "Термины", "Высказывания", "Комбинации", "Опасные артефакты"];
@@ -69,18 +69,27 @@ export default function TavernArchive() {
 
   // Загрузка архива
   const fetchArchive = async () => {
-    const res = await fetch("/api/archive");
-    const dbData = await res.json();
-    const formatted = (dbData as DbArchiveItem[]).map((item) => ({
-      id: item.id, title: item.title, category: item.category, description: item.description,
-      symbol: item.symbol || undefined, dangerLevel: item.danger_level || undefined
-    }));
-    setData(formatted);
+    try {
+      const res = await fetch("/api/archive");
+      const dbData = await res.json();
+      const formatted = (dbData as DbArchiveItem[]).map((item) => ({
+        id: item.id, title: item.title, category: item.category, description: item.description,
+        symbol: item.symbol || undefined, dangerLevel: item.danger_level || undefined
+      }));
+      setData(formatted);
+    } catch (error) {
+      console.error("Ошибка загрузки архива", error);
+    }
   };
 
   useEffect(() => {
     if (user) fetchArchive();
   }, [user]);
+
+  // ФУНКЦИЯ ПОИСКА (Которой не хватало)
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,9 +105,11 @@ export default function TavernArchive() {
         setUser(data);
         setLoginUser(""); setLoginPass("");
       } else {
-        setLoginError(data.error);
+        setLoginError(data.error || "Ошибка входа");
       }
-    } catch { setLoginError("Ошибка соединения с сервером"); }
+    } catch { 
+      setLoginError("Ошибка соединения с сервером"); 
+    }
   };
 
   const generateRandom = (length = 15) => {
@@ -124,7 +135,11 @@ export default function TavernArchive() {
       alert(`Аккаунт создан!\nЛогин: ${finalUsername}\nПароль: ${finalPassword}`);
       setNewAcc({ account_name: "", username: "", password: "", role: "low" });
       setAutoUser(false); setAutoPass(false);
-    } else { const err = await res.json(); alert(err.error); }
+      fetchUsers(); // Обновляем список
+    } else { 
+      const err = await res.json(); 
+      alert(err.error); 
+    }
   };
 
   const handleAddItem = async (e: React.FormEvent) => {
@@ -172,7 +187,7 @@ export default function TavernArchive() {
       <div className="flex flex-wrap items-center gap-2 mb-4 relative z-10">
         <span className="inline-block px-3 py-1 text-xs font-semibold bg-[#1F1510] text-[#A89B8F] rounded-md border border-[#5C4033]">{item.category}</span>
         {item.dangerLevel && <span className="inline-block px-2 py-1 text-xs font-semibold rounded-md border text-orange-500 border-orange-500/30 bg-orange-500/10">{item.dangerLevel}</span>}
-        {user && ROLES_MAP[user.role].level >= 1 && (
+        {user && ROLES_MAP[user.role] && ROLES_MAP[user.role].level >= 1 && (
           <button onClick={() => handleDeleteItem(item.id)} className="ml-auto text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded"><Trash2 size={16} /></button>
         )}
       </div>
@@ -181,12 +196,11 @@ export default function TavernArchive() {
   );
 
   // ==========================================
-  // ЭКРАН АВТОРИЗАЦИИ (Если не залогинен)
+  // ЭКРАН АВТОРИЗАЦИИ
   // ==========================================
   if (!user) {
     return (
       <main className="min-h-screen relative overflow-hidden bg-[#1f1814] text-[#F3E8D6] font-sans flex items-center justify-center p-4">
-        {/* Фон */}
         <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 50% 0%, #E5B85C 0%, transparent 70%)" }}></div>
         
         <div className="bg-[#2A1B14] border-2 border-[#E5B85C] p-8 rounded-2xl shadow-[0_0_50px_rgba(229,184,92,0.1)] w-full max-w-md relative z-10 animate-fade-in">
@@ -216,19 +230,20 @@ export default function TavernArchive() {
   }
 
   // ==========================================
-  // ОСНОВНОЙ САЙТ (Если залогинен)
+  // ОСНОВНОЙ САЙТ
   // ==========================================
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#1f1814] text-[#F3E8D6] font-sans">
       
-      {/* ШАПКА ПРОФИЛЯ */}
       <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
         <div className="flex items-center gap-3 bg-[#2A1B14] border border-[#E5B85C] px-4 py-2 rounded-xl shadow-lg">
           <div className="flex flex-col text-right">
             <span className="text-sm font-bold text-[#F3E8D6]">{user.account_name}</span>
-            <span className={`text-xs font-bold ${ROLES_MAP[user.role].color.split(' ')[0]}`}>{ROLES_MAP[user.role].name}</span>
+            <span className={`text-xs font-bold ${ROLES_MAP[user.role]?.color.split(' ')[0] || "text-white"}`}>
+              {ROLES_MAP[user.role]?.name || user.role}
+            </span>
           </div>
-          {ROLES_MAP[user.role].level >= 1 && (
+          {ROLES_MAP[user.role] && ROLES_MAP[user.role].level >= 1 && (
             <button onClick={() => setView("admin")} className="p-2 bg-[#3A271E] rounded hover:bg-[#E5B85C] hover:text-black transition-colors" title="Админ-панель">
               <Settings size={18} />
             </button>
@@ -240,14 +255,12 @@ export default function TavernArchive() {
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-12 relative z-10 flex flex-col min-h-screen">
-        {/* Логотип */}
         <header className="flex justify-center mb-10 cursor-pointer" onClick={() => setView("home")}>
            <h1 className="text-4xl font-bold text-[#E5B85C] tracking-widest uppercase flex items-center gap-2">
              <Flame /> Сытый Лис
            </h1>
         </header>
 
-        {/* ГЛАВНАЯ */}
         {view === "home" && (
           <div className="flex-grow flex flex-col items-center animate-fade-in text-center pb-20">
             <h2 className="text-4xl font-bold mb-4">Запретный Архив</h2>
@@ -268,7 +281,6 @@ export default function TavernArchive() {
           </div>
         )}
 
-        {/* АРХИВ */}
         {view === "archive" && (
           <div className="animate-fade-in w-full">
              <button onClick={() => setView("home")} className="mb-6 flex items-center gap-2 text-[#A89B8F] hover:text-white"><ChevronLeft size={20}/> Назад</button>
@@ -281,8 +293,7 @@ export default function TavernArchive() {
           </div>
         )}
 
-        {/* АДМИН-ПАНЕЛЬ */}
-        {view === "admin" && (
+        {view === "admin" && ROLES_MAP[user.role] && ROLES_MAP[user.role].level >= 1 && (
           <div className="animate-fade-in w-full bg-[#2A1B14] p-8 rounded-2xl border border-[#5C4033] shadow-2xl">
             <div className="flex justify-between items-center mb-8 border-b border-[#4a3424] pb-4">
                <h2 className="text-2xl font-bold text-[#E5B85C]">Панель Управления</h2>
@@ -295,7 +306,6 @@ export default function TavernArchive() {
               <button onClick={() => setAdminTab("diag")} className={`px-4 py-2 rounded flex items-center gap-2 transition-colors ${adminTab === 'diag' ? 'bg-[#5C4033] text-white' : 'bg-transparent text-gray-500 hover:text-gray-300'}`}><Activity size={18}/> Диагностика</button>
             </div>
 
-            {/* 1. УПРАВЛЕНИЕ АРХИВОМ */}
             {adminTab === "archive" && (
               <form onSubmit={handleAddItem} className="space-y-4 max-w-xl">
                 <h3 className="text-lg font-bold text-[#E5B85C]">Добавить запись</h3>
@@ -309,10 +319,8 @@ export default function TavernArchive() {
               </form>
             )}
 
-            {/* 2. ГЕНЕРАТОР АККАУНТОВ И СПИСОК */}
             {adminTab === "users" && (
               <div className="space-y-10">
-                {/* Форма создания */}
                 <form onSubmit={handleCreateUser} className="space-y-4 max-w-xl bg-[#1f1814] p-6 rounded-xl border border-[#4a3424]">
                   <h3 className="text-lg font-bold text-[#E5B85C] flex items-center gap-2"><Plus size={18}/> Создать аккаунт</h3>
                   <input required placeholder="Название аккаунта (Никнейм)" value={newAcc.account_name} onChange={e => setNewAcc({...newAcc, account_name: e.target.value})} className="w-full p-2 bg-[#1a1512] border border-[#4a3424] rounded text-white" />
@@ -333,7 +341,6 @@ export default function TavernArchive() {
                   <button type="submit" className="px-6 py-2 bg-[#E5B85C] text-black font-bold rounded hover:bg-[#F2D18B]">Сгенерировать</button>
                 </form>
 
-                {/* Таблица пользователей */}
                 <div>
                   <h3 className="text-lg font-bold text-[#E5B85C] mb-4 flex items-center gap-2"><Users size={18}/> Список доступных аккаунтов</h3>
                   <div className="overflow-x-auto">
@@ -350,9 +357,9 @@ export default function TavernArchive() {
                         {usersList.map(u => (
                           <tr key={u.id} className="border-b border-[#3A271E] hover:bg-[#1f1814]">
                             <td className="p-3 font-medium">{u.account_name}</td>
-                            <td className={`p-3 text-sm font-bold ${ROLES_MAP[u.role].color.split(' ')[0]}`}>{ROLES_MAP[u.role].name}</td>
+                            <td className={`p-3 text-sm font-bold ${ROLES_MAP[u.role]?.color.split(' ')[0] || "text-white"}`}>{ROLES_MAP[u.role]?.name || u.role}</td>
                             <td className="p-3 font-mono text-gray-300">{u.username}</td>
-                            <td className="p-3 font-mono text-red-400 bg-red-500/5">{u.plain_password}</td>
+                            <td className="p-3 font-mono text-red-400 bg-red-500/5">{u.plain_password || "********"}</td>
                           </tr>
                         ))}
                         {usersList.length === 0 && (
@@ -365,7 +372,6 @@ export default function TavernArchive() {
               </div>
             )}
 
-            {/* 3. ДИАГНОСТИКА */}
             {adminTab === "diag" && (
               <div className="max-w-xl">
                 <h3 className="text-lg font-bold text-[#E5B85C] mb-4 flex items-center gap-2"><Database size={18}/> Проверка системы</h3>
