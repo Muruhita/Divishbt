@@ -26,7 +26,7 @@ export async function POST(req: Request) {
           item.description, 
           item.symbol || null, 
           item.dangerLevel || null,
-          item.image || null // <--- Сохраняем картинку
+          item.image || null
         ],
       });
     }
@@ -34,6 +34,37 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: "Ошибка при добавлении" }, { status: 500 });
+  }
+}
+
+// НОВЫЙ МЕТОД ДЛЯ РЕДАКТИРОВАНИЯ
+export async function PUT(req: Request) {
+  try {
+    const item = await req.json();
+    
+    if (!item.id) {
+      return NextResponse.json({ error: "ID записи не указан" }, { status: 400 });
+    }
+
+    await db.execute({
+      sql: `UPDATE archive 
+            SET title = ?, category = ?, description = ?, symbol = ?, danger_level = ?, image = ? 
+            WHERE id = ?`,
+      args: [
+        item.title, 
+        item.category, 
+        item.description, 
+        item.symbol || null, 
+        item.dangerLevel || null,
+        item.image || null,
+        item.id
+      ],
+    });
+    
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: "Ошибка при обновлении записи" }, { status: 500 });
   }
 }
 
