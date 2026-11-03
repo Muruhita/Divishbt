@@ -214,10 +214,8 @@ export default function TavernArchive() {
       const base64String = reader.result as string;
       
       if (editingItem) {
-        // Если редактируем существующую запись
         setEditingItem({ ...editingItem, image: base64String });
       } else if (index !== undefined) {
-        // Если добавляем новую
         const updated = [...newItems];
         updated[index] = { ...updated[index], image: base64String };
         setNewItems(updated);
@@ -245,7 +243,6 @@ export default function TavernArchive() {
     }
   };
 
-  // === ОБНОВЛЕНИЕ (РЕДАКТИРОВАНИЕ) ЗАПИСИ ===
   const handleUpdateItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItem) return;
@@ -335,17 +332,15 @@ export default function TavernArchive() {
     return matchesSearch && matchesCategory;
   });
 
-  // === КАРТОЧКА ЗАПИСИ ===
   const ArchiveCard = ({ item }: { item: ArchiveItem }) => (
     <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.6)] hover:border-[#a37c49] hover:shadow-[0_4px_25px_rgba(163,124,73,0.2)] transition-all duration-300 group flex flex-col relative z-10 overflow-hidden">
       
-      {/* КАРТИНКА С ФОНОМ ПЕРГАМЕНТА */}
       {item.image && (
         <div 
           className="w-full h-56 overflow-hidden border-b-2 border-[#5c3a21] cursor-pointer relative group/img flex items-center justify-center"
           style={{ 
-            backgroundColor: '#d6c5b3', // Светлый цвет пергамента
-            backgroundImage: 'radial-gradient(#b8a38a 1px, transparent 1px)', // Легкий паттерн
+            backgroundColor: '#d6c5b3', 
+            backgroundImage: 'radial-gradient(#b8a38a 1px, transparent 1px)', 
             backgroundSize: '10px 10px'
           }}
           onClick={() => setSelectedImage(item.image!)}
@@ -374,7 +369,6 @@ export default function TavernArchive() {
              </span>
           )}
           
-          {/* КНОПКИ РЕДАКТИРОВАНИЯ И УДАЛЕНИЯ (Только для Овнера и Создателя) */}
           {user && (user.role === "owner" || user.role === "creator") && (
             <div className="ml-auto flex items-center gap-1">
               <button onClick={() => setEditingItem(item)} className="text-blue-400 hover:text-blue-300 bg-blue-500/10 p-1.5 rounded transition-colors" title="Редактировать">
@@ -386,7 +380,6 @@ export default function TavernArchive() {
             </div>
           )}
           
-          {/* Если нет прав на редактирование, но есть права на удаление (Хай Стафф) */}
           {user && user.role === "high" && (
             <button onClick={() => handleDeleteItem(item.id)} className="ml-auto text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded transition-colors" title="Удалить">
               <Trash2 size={16} />
@@ -401,7 +394,7 @@ export default function TavernArchive() {
   if (isCheckingAuth) return <main className="min-h-screen bg-[#160d08]"></main>;
 
   return (
-    <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans">
+    <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col">
       
       {/* ПОЛНОЭКРАННЫЙ ПРОСМОТР КАРТИНКИ */}
       {selectedImage && (
@@ -471,7 +464,7 @@ export default function TavernArchive() {
       <div className="absolute inset-0 opacity-20 pointer-events-none animate-bg-pulse" style={{ backgroundImage: "radial-gradient(circle at 50% 0%, #a37c49 0%, transparent 70%)" }}></div>
 
       {!user && (
-        <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
+        <div className="flex-grow flex items-center justify-center p-4 relative z-10">
           <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-8 pt-0 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] w-full max-w-md animate-fade-in relative mt-16">
             <div className="flex justify-center -mt-16 mb-4 relative">
               <div className="absolute inset-0 bg-[#a37c49] blur-2xl opacity-20 rounded-full"></div>
@@ -492,7 +485,7 @@ export default function TavernArchive() {
       )}
 
       {user && (
-        <>
+        <div className="flex-grow flex flex-col relative z-10">
           <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
             <div className="flex items-center gap-3 bg-[#2e1b13]/90 backdrop-blur-sm border border-[#5c3a21] px-4 py-2 rounded-lg shadow-lg">
               <div className="flex flex-col text-right">
@@ -506,7 +499,7 @@ export default function TavernArchive() {
             </div>
           </div>
 
-          <div className="max-w-5xl mx-auto px-6 py-12 relative z-10 flex flex-col min-h-screen">
+          <div className="max-w-5xl mx-auto px-6 py-12 w-full flex flex-col flex-grow">
             <header className="flex justify-center items-center mb-12 cursor-pointer group" onClick={() => setView("home")}>
               <div className="relative">
                 <div className="absolute inset-0 bg-[#a37c49] blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500 rounded-full"></div>
@@ -547,7 +540,6 @@ export default function TavernArchive() {
               </div>
             )}
 
-            {/* АДМИНКА ОСТАЕТСЯ БЕЗ ИЗМЕНЕНИЙ (кроме добавления кнопки редактирования в карточки) */}
             {view === "admin" && ROLES_MAP[user.role] && ROLES_MAP[user.role].level >= 1 && (
               <div className="animate-fade-in w-full bg-[#2e1b13] p-8 rounded-xl border-double border-4 border-[#5c3a21] shadow-2xl">
                 <div className="flex justify-between items-center mb-8 border-b border-[#5c3a21] pb-4">
@@ -677,8 +669,16 @@ export default function TavernArchive() {
               </div>
             )}
           </div>
-        </>
+        </div>
       )}
+
+      {/* ДОБАВЛЕННЫЙ ФУТЕР */}
+      <footer className="w-full text-center py-6 mt-auto relative z-10 border-t-2 border-[#5c3a21]/30 bg-[#160d08]/80">
+        <p className="text-[#8c6e52] font-pixeloid-mono tracking-widest text-sm">
+          Автор: muruh1ta
+        </p>
+      </footer>
+
     </main>
   );
 }
