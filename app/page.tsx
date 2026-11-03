@@ -58,18 +58,15 @@ export default function TavernArchive() {
   const [selectedCategory, setSelectedCategory] = useState("Все");
   const [view, setView] = useState<"home" | "archive" | "admin">("home");
   
-  // Состояния для просмотра и редактирования
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<ArchiveItem | null>(null);
 
-  // Auth State
   const [user, setUser] = useState<User | null>(null);
   const [loginUser, setLoginUser] = useState("");
   const [loginPass, setLoginPass] = useState("");
   const [loginError, setLoginError] = useState("");
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  // Admin State
   const [newItems, setNewItems] = useState<NewArchiveItem[]>([{ ...INITIAL_NEW_ITEM }]);
   const [newAcc, setNewAcc] = useState({ account_name: "", username: "", password: "", role: "low" });
   const [autoUser, setAutoUser] = useState(false);
@@ -396,7 +393,6 @@ export default function TavernArchive() {
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col">
       
-      {/* ПОЛНОЭКРАННЫЙ ПРОСМОТР КАРТИНКИ */}
       {selectedImage && (
         <div 
           className="fixed inset-0 z-[999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-zoom-out animate-fade-in"
@@ -411,7 +407,6 @@ export default function TavernArchive() {
         </div>
       )}
 
-      {/* ОКНО РЕДАКТИРОВАНИЯ ЗАПИСИ */}
       {editingItem && (
         <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in overflow-y-auto">
           <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl shadow-2xl w-full max-w-2xl my-8 relative">
@@ -672,12 +667,10 @@ export default function TavernArchive() {
         </div>
       )}
 
-      {/* ДОБАВЛЕННЫЙ ФУТЕР */}
-      <footer className="w-full text-center py-6 mt-auto relative z-10 border-t-2 border-[#5c3a21]/30 bg-[#160d08]/80">
-        <p className="text-[#8c6e52] font-pixeloid-mono tracking-widest text-sm">
-          Автор: muruh1ta
-        </p>
-      </footer>
+      {/* МАЛЕНЬКАЯ ПЛАШКА АВТОРА В УГЛУ */}
+      <div className="fixed bottom-4 right-4 z-[100] bg-[#1c110b]/70 backdrop-blur-sm border border-[#5c3a21]/40 px-3 py-1.5 rounded-md text-[11px] text-[#8c6e52]/70 font-pixeloid-mono hover:text-[#a37c49] hover:bg-[#2e1b13] hover:border-[#a37c49]/50 transition-all duration-300 cursor-default select-none shadow-sm">
+        Автор: muruh1ta
+      </div>
 
     </main>
   );
