@@ -36,6 +36,8 @@ type DbUser = {
   plain_password: string | null;
 };
 
+type NewArchiveItem = Omit<ArchiveItem, "id">;
+
 const CATEGORIES = ["Все", "Комбинации Цифр", "Слова", "Термины", "Комбинации Букв", "Другое"];
 
 const ROLES_MAP: Record<string, { name: string, level: number, color: string }> = {
@@ -45,6 +47,8 @@ const ROLES_MAP: Record<string, { name: string, level: number, color: string }> 
   high: { name: "Хай Стафф", level: 1, color: "text-green-500 border-green-500" },
   low: { name: "Лоу Стафф", level: 0, color: "text-gray-400 border-gray-400" },
 };
+
+const INITIAL_NEW_ITEM: NewArchiveItem = { title: "", category: "Комбинации Цифр", description: "", symbol: "", dangerLevel: "Низкий" };
 
 export default function TavernArchive() {
   const [data, setData] = useState<ArchiveItem[]>([]);
@@ -60,12 +64,12 @@ export default function TavernArchive() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   // Admin State
-  const [newItem, setNewItem] = useState({ title: "", category: "Комбинации Цифр", description: "", symbol: "", dangerLevel: "Низкий" });
+  const [newItems, setNewItems] = useState<NewArchiveItem[]>([{ ...INITIAL_NEW_ITEM }]); // МАССИВ ЗАПИСЕЙ
   const [newAcc, setNewAcc] = useState({ account_name: "", username: "", password: "", role: "low" });
   const [autoUser, setAutoUser] = useState(false);
   const [autoPass, setAutoPass] = useState(false);
   
-  const [bulkJson, setBulkJson] = useState(""); // Состояние для массового импорта
+  const [bulkJson, setBulkJson] = useState(""); 
   
   const [adminTab, setAdminTab] = useState<"archive" | "bulk" | "users" | "diag">("archive");
   const [usersList, setUsersList] = useState<DbUser[]>([]);
@@ -188,17 +192,49 @@ export default function TavernArchive() {
     }
   };
 
-  const handleAddItem = async (e: React.FormEvent) => {
+  // === МУЛЬТИ-ДОБАВЛЕНИЕ ===
+  const handleAddMultipleItems = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Фильтруем пустые формы (если пользователь добавил поле, но ничего не написал)
+    const validItems = newItems.filter(item => item.title.trim() !== "" && item.description.trim() !== "");
+    
+    if (validItems.length === 0) {
+      return alert("Заполните хотя бы одну запись (Название и Описание)");
+    }
+
     const res = await fetch("/api/archive", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newItem)
+      method: "POST", 
+      headers: { "Content-Type": "application/json" }, 
+      body: JSON.stringify(validItems)
     });
+    
     if (res.ok) { 
+      const result = await res.json();
+      alert(`Успешно добавлено ${result.count} записей!`);
       fetchArchive(); 
-      setNewItem({ title: "", category: "Комбинации Цифр", description: "", symbol: "", dangerLevel: "Низкий" }); 
+      setNewItems([{ ...INITIAL_NEW_ITEM }]); // Очищаем форму
+    } else {
+      alert("Ошибка при сохранении");
     }
   };
 
+  const handleNewItemChange = (index: number, field: keyof NewArchiveItem, value: string) => {
+    const updated = [...newItems];
+    updated[index] = { ...updated[index], [field]: value };
+    setNewItems(updated);
+  };
+
+  const addNewItemField = () => {
+    setNewItems([...newItems, { ...INITIAL_NEW_ITEM }]);
+  };
+
+  const removeNewItemField = (index: number) => {
+    if (newItems.length === 1) return; // Не даем удалить последнее поле
+    setNewItems(newItems.filter((_, i) => i !== index));
+  };
+
+  // === ИМПОРТ ИЗ JSON ===
   const handleBulkImport = async () => {
     try {
       const parsed = JSON.parse(bulkJson);
@@ -439,31 +475,53 @@ export default function TavernArchive() {
                 </div>
 
                 {adminTab === "archive" && (
-                  <form onSubmit={handleAddItem} className="space-y-4 max-w-xl font-sans">
-                    <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49]">Добавить запись</h3>
-                    <input required placeholder="Название" value={newItem.title} onChange={e => setNewItem({...newItem, title: e.target.value})} className="w-full p-2 bg-[#1c110b] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none" />
-                    <input placeholder="Символ (текст)" value={newItem.symbol} onChange={e => setNewItem({...newItem, symbol: e.target.value})} className="w-full p-2 bg-[#1c110b] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none" />
-                    
-                    <select value={newItem.category} onChange={e => setNewItem({...newItem, category: e.target.value})} className="w-full p-2 bg-[#1c110b] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none cursor-pointer">
-                       {CATEGORIES.filter(c => c !== "Все").map(c => <option key={c}>{c}</option>)}
-                    </select>
+                  <form onSubmit={handleAddMultipleItems} className="space-y-6 max-w-xl font-sans">
+                    {newItems.map((item, index) => (
+                      <div key={index} className="p-4 bg-[#1c110b] border border-[#5c3a21] rounded-lg relative shadow-inner">
+                        <h3 className="text-sm font-bold font-pixeloid-mono text-[#a37c49] mb-3 flex justify-between items-center">
+                          Запись #{index + 1}
+                          {newItems.length > 1 && (
+                            <button type="button" onClick={() => removeNewItemField(index)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1 rounded transition-colors" title="Удалить эту форму">
+                              <X size={16} />
+                            </button>
+                          )}
+                        </h3>
 
-                    <select value={newItem.dangerLevel} onChange={e => setNewItem({...newItem, dangerLevel: e.target.value})} className="w-full p-2 bg-[#1c110b] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none cursor-pointer">
-                       <option value="Низкий">Уровень: Низкий</option>
-                       <option value="Средний">Уровень: Средний</option>
-                       <option value="Высокий">Уровень: Высокий</option>
-                       <option value="Смертельный">Уровень: Смертельный</option>
-                    </select>
+                        <div className="space-y-3">
+                          <input required placeholder="Название" value={item.title} onChange={e => handleNewItemChange(index, "title", e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none" />
+                          <input placeholder="Символ (текст)" value={item.symbol || ""} onChange={e => handleNewItemChange(index, "symbol", e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none" />
+                          
+                          <select value={item.category} onChange={e => handleNewItemChange(index, "category", e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none cursor-pointer">
+                             {CATEGORIES.filter(c => c !== "Все").map(c => <option key={c}>{c}</option>)}
+                          </select>
 
-                    <textarea required placeholder="Описание" value={newItem.description} onChange={e => setNewItem({...newItem, description: e.target.value})} className="w-full p-2 bg-[#1c110b] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none h-24" />
-                    <button type="submit" className="px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#7a4f2e] transition-colors shadow-lg">Сохранить в БД</button>
+                          <select value={item.dangerLevel || "Низкий"} onChange={e => handleNewItemChange(index, "dangerLevel", e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none cursor-pointer">
+                             <option value="Низкий">Уровень: Низкий</option>
+                             <option value="Средний">Уровень: Средний</option>
+                             <option value="Высокий">Уровень: Высокий</option>
+                             <option value="Смертельный">Уровень: Смертельный</option>
+                          </select>
+
+                          <textarea required placeholder="Описание" value={item.description} onChange={e => handleNewItemChange(index, "description", e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none h-20" />
+                        </div>
+                      </div>
+                    ))}
+
+                    <div className="flex flex-wrap gap-4">
+                      <button type="button" onClick={addNewItemField} className="px-4 py-2 bg-[#3d2617] border border-[#5c3a21] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#5c3a21] transition-colors shadow-lg flex items-center gap-2">
+                        <Plus size={18}/> Добавить ещё
+                      </button>
+                      <button type="submit" className="px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#7a4f2e] transition-colors shadow-lg">
+                        Сохранить всё
+                      </button>
+                    </div>
                   </form>
                 )}
 
                 {adminTab === "bulk" && (
                   <div className="space-y-8 max-w-2xl">
                     <div className="bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
-                      <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Upload size={18}/> Массовый импорт</h3>
+                      <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Upload size={18}/> Массовый импорт (JSON)</h3>
                       <p className="text-[#8c6e52] mb-4 text-sm font-sans">Вставьте JSON массив записей в формате:</p>
                       <pre className="text-xs text-[#a37c49] bg-[#160d08] p-3 rounded mb-4 overflow-x-auto font-mono">
 {`[
