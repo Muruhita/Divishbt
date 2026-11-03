@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, ChevronLeft, Flame, ScrollText, Skull, Plus, X, LogOut, LockKeyhole, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon } from "lucide-react";
+import { Search, ChevronLeft, Flame, ScrollText, Skull, Plus, X, LogOut, LockKeyhole, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2 } from "lucide-react";
 
 type ArchiveItem = {
   id: number;
@@ -10,7 +10,7 @@ type ArchiveItem = {
   description: string;
   symbol?: string; 
   dangerLevel?: string;
-  image?: string; // <--- Поле для картинки
+  image?: string; 
 };
 
 type DbArchiveItem = {
@@ -40,7 +40,6 @@ type DbUser = {
 
 type NewArchiveItem = Omit<ArchiveItem, "id">;
 
-// ДОБАВЛЕНЫ НОВЫЕ КАТЕГОРИИ
 const CATEGORIES = ["Все", "Комбинации Цифр", "Слова", "Термины", "Комбинации Букв", "Символика", "Картинки", "Другое"];
 
 const ROLES_MAP: Record<string, { name: string, level: number, color: string }> = {
@@ -59,6 +58,9 @@ export default function TavernArchive() {
   const [selectedCategory, setSelectedCategory] = useState("Все");
   const [view, setView] = useState<"home" | "archive" | "admin">("home");
   
+  // Состояние для полноэкранного просмотра картинки
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
   // Auth State
   const [user, setUser] = useState<User | null>(null);
   const [loginUser, setLoginUser] = useState("");
@@ -196,15 +198,13 @@ export default function TavernArchive() {
     }
   };
 
-  // === ЗАГРУЗКА КАРТИНКИ ===
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Ограничение размера (например, 2 МБ)
     if (file.size > 2 * 1024 * 1024) {
       alert("Файл слишком большой! Максимальный размер картинки — 2 МБ.");
-      e.target.value = ""; // Сбрасываем инпут
+      e.target.value = ""; 
       return;
     }
 
@@ -224,7 +224,6 @@ export default function TavernArchive() {
     setNewItems(updated);
   };
 
-  // === МУЛЬТИ-ДОБАВЛЕНИЕ ===
   const handleAddMultipleItems = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -265,7 +264,6 @@ export default function TavernArchive() {
     setNewItems(newItems.filter((_, i) => i !== index));
   };
 
-  // === ИМПОРТ ИЗ JSON ===
   const handleBulkImport = async () => {
     try {
       const parsed = JSON.parse(bulkJson);
@@ -301,7 +299,7 @@ export default function TavernArchive() {
         description: item.description,
         symbol: item.symbol,
         dangerLevel: item.danger_level,
-        image: item.image // Экспортируем и картинки (в base64)
+        image: item.image 
       }));
 
       const jsonString = JSON.stringify(exportData, null, 2);
@@ -345,14 +343,25 @@ export default function TavernArchive() {
     return matchesSearch && matchesCategory;
   });
 
-  // === КАРТОЧКА ЗАПИСИ С КАРТИНКОЙ ===
+  // === КАРТОЧКА ЗАПИСИ ===
   const ArchiveCard = ({ item }: { item: ArchiveItem }) => (
     <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.6)] hover:border-[#a37c49] hover:shadow-[0_4px_25px_rgba(163,124,73,0.2)] transition-all duration-300 group flex flex-col relative z-10 overflow-hidden">
       
-      {/* Если есть картинка, показываем её сверху */}
+      {/* КАРТИНКА В КАРТОЧКЕ */}
       {item.image && (
-        <div className="w-full max-h-64 overflow-hidden border-b-2 border-[#5c3a21]">
-          <img src={item.image} alt={item.title} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
+        <div 
+          className="w-full h-56 overflow-hidden border-b-2 border-[#5c3a21] cursor-pointer relative group/img bg-[#160d08]"
+          onClick={() => setSelectedImage(item.image!)}
+        >
+          <img 
+            src={item.image} 
+            alt={item.title} 
+            className="w-full h-full object-cover opacity-90 group-hover/img:opacity-100 group-hover/img:scale-110 transition-all duration-500" 
+          />
+          {/* Оверлей при наведении для подсказки клика */}
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+            <Maximize2 size={32} className="text-[#e6d5b8] drop-shadow-lg" />
+          </div>
         </div>
       )}
 
@@ -384,6 +393,27 @@ export default function TavernArchive() {
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans">
       
+      {/* === ПОЛНОЭКРАННЫЙ ПРОСМОТР КАРТИНКИ (LIGHTBOX) === */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 z-[999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-zoom-out animate-fade-in"
+          onClick={() => setSelectedImage(null)}
+        >
+          <button 
+            className="absolute top-6 right-6 text-gray-400 hover:text-red-500 transition-colors bg-black/50 p-2 rounded-full z-10"
+            onClick={(e) => { e.stopPropagation(); setSelectedImage(null); }}
+          >
+            <X size={32} />
+          </button>
+          <img 
+            src={selectedImage} 
+            alt="Full size" 
+            className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-[0_0_50px_rgba(0,0,0,0.8)] border-2 border-[#5c3a21]"
+            onClick={(e) => e.stopPropagation()} 
+          />
+        </div>
+      )}
+
       <div className="magic-particles">
         <div className="particle"></div><div className="particle"></div><div className="particle"></div>
         <div className="particle"></div><div className="particle"></div><div className="particle"></div>
@@ -547,7 +577,6 @@ export default function TavernArchive() {
 
                           <textarea required placeholder="Описание" value={item.description} onChange={e => handleNewItemChange(index, "description", e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none h-20" />
 
-                          {/* ЗАГРУЗКА КАРТИНКИ */}
                           <div className="mt-2 border-t border-[#5c3a21] pt-3">
                             <label className="block text-xs font-pixeloid-mono text-[#a37c49] mb-2 flex items-center gap-1"><ImageIcon size={14}/> Прикрепить картинку (до 2МБ)</label>
                             
