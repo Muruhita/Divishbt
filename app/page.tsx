@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, ChevronLeft, Flame, ScrollText, Skull, Plus, X, LogOut, LockKeyhole, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload } from "lucide-react";
+import { Search, ChevronLeft, Flame, ScrollText, Skull, Plus, X, LogOut, LockKeyhole, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon } from "lucide-react";
 
 type ArchiveItem = {
   id: number;
@@ -10,6 +10,7 @@ type ArchiveItem = {
   description: string;
   symbol?: string; 
   dangerLevel?: string;
+  image?: string; // <--- Поле для картинки
 };
 
 type DbArchiveItem = {
@@ -19,6 +20,7 @@ type DbArchiveItem = {
   description: string;
   symbol: string | null;
   danger_level: string | null;
+  image: string | null;
 };
 
 type User = {
@@ -38,7 +40,8 @@ type DbUser = {
 
 type NewArchiveItem = Omit<ArchiveItem, "id">;
 
-const CATEGORIES = ["Все", "Комбинации Цифр", "Слова", "Термины", "Комбинации Букв", "Другое"];
+// ДОБАВЛЕНЫ НОВЫЕ КАТЕГОРИИ
+const CATEGORIES = ["Все", "Комбинации Цифр", "Слова", "Термины", "Комбинации Букв", "Символика", "Картинки", "Другое"];
 
 const ROLES_MAP: Record<string, { name: string, level: number, color: string }> = {
   owner: { name: "Овнер (Dev)", level: 4, color: "text-red-500 border-red-500" },
@@ -48,7 +51,7 @@ const ROLES_MAP: Record<string, { name: string, level: number, color: string }> 
   low: { name: "Лоу Стафф", level: 0, color: "text-gray-400 border-gray-400" },
 };
 
-const INITIAL_NEW_ITEM: NewArchiveItem = { title: "", category: "Комбинации Цифр", description: "", symbol: "", dangerLevel: "Низкий" };
+const INITIAL_NEW_ITEM: NewArchiveItem = { title: "", category: "Комбинации Цифр", description: "", symbol: "", dangerLevel: "Низкий", image: "" };
 
 export default function TavernArchive() {
   const [data, setData] = useState<ArchiveItem[]>([]);
@@ -64,7 +67,7 @@ export default function TavernArchive() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   // Admin State
-  const [newItems, setNewItems] = useState<NewArchiveItem[]>([{ ...INITIAL_NEW_ITEM }]); // МАССИВ ЗАПИСЕЙ
+  const [newItems, setNewItems] = useState<NewArchiveItem[]>([{ ...INITIAL_NEW_ITEM }]);
   const [newAcc, setNewAcc] = useState({ account_name: "", username: "", password: "", role: "low" });
   const [autoUser, setAutoUser] = useState(false);
   const [autoPass, setAutoPass] = useState(false);
@@ -102,7 +105,8 @@ export default function TavernArchive() {
       const dbData = await res.json();
       const formatted = (dbData as DbArchiveItem[]).map((item) => ({
         id: item.id, title: item.title, category: item.category, description: item.description,
-        symbol: item.symbol || undefined, dangerLevel: item.danger_level || undefined
+        symbol: item.symbol || undefined, dangerLevel: item.danger_level || undefined,
+        image: item.image || undefined
       }));
       setData(formatted);
     } catch (error) {
@@ -192,11 +196,38 @@ export default function TavernArchive() {
     }
   };
 
+  // === ЗАГРУЗКА КАРТИНКИ ===
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Ограничение размера (например, 2 МБ)
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Файл слишком большой! Максимальный размер картинки — 2 МБ.");
+      e.target.value = ""; // Сбрасываем инпут
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      const updated = [...newItems];
+      updated[index] = { ...updated[index], image: base64String };
+      setNewItems(updated);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = (index: number) => {
+    const updated = [...newItems];
+    updated[index] = { ...updated[index], image: "" };
+    setNewItems(updated);
+  };
+
   // === МУЛЬТИ-ДОБАВЛЕНИЕ ===
   const handleAddMultipleItems = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Фильтруем пустые формы (если пользователь добавил поле, но ничего не написал)
     const validItems = newItems.filter(item => item.title.trim() !== "" && item.description.trim() !== "");
     
     if (validItems.length === 0) {
@@ -213,7 +244,7 @@ export default function TavernArchive() {
       const result = await res.json();
       alert(`Успешно добавлено ${result.count} записей!`);
       fetchArchive(); 
-      setNewItems([{ ...INITIAL_NEW_ITEM }]); // Очищаем форму
+      setNewItems([{ ...INITIAL_NEW_ITEM }]); 
     } else {
       alert("Ошибка при сохранении");
     }
@@ -230,7 +261,7 @@ export default function TavernArchive() {
   };
 
   const removeNewItemField = (index: number) => {
-    if (newItems.length === 1) return; // Не даем удалить последнее поле
+    if (newItems.length === 1) return;
     setNewItems(newItems.filter((_, i) => i !== index));
   };
 
@@ -269,7 +300,8 @@ export default function TavernArchive() {
         category: item.category,
         description: item.description,
         symbol: item.symbol,
-        dangerLevel: item.danger_level
+        dangerLevel: item.danger_level,
+        image: item.image // Экспортируем и картинки (в base64)
       }));
 
       const jsonString = JSON.stringify(exportData, null, 2);
@@ -313,24 +345,35 @@ export default function TavernArchive() {
     return matchesSearch && matchesCategory;
   });
 
+  // === КАРТОЧКА ЗАПИСИ С КАРТИНКОЙ ===
   const ArchiveCard = ({ item }: { item: ArchiveItem }) => (
-    <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.6)] hover:border-[#a37c49] hover:shadow-[0_4px_25px_rgba(163,124,73,0.2)] transition-all duration-300 group flex flex-col relative z-10">
-      <div className="flex justify-between items-start mb-3 relative z-10">
-        <h3 className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8] tracking-wide">{item.title}</h3>
-        {item.symbol && <span className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8] bg-[#1c110b] px-3 py-1 rounded border border-[#5c3a21] shadow-inner">{item.symbol}</span>}
+    <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.6)] hover:border-[#a37c49] hover:shadow-[0_4px_25px_rgba(163,124,73,0.2)] transition-all duration-300 group flex flex-col relative z-10 overflow-hidden">
+      
+      {/* Если есть картинка, показываем её сверху */}
+      {item.image && (
+        <div className="w-full max-h-64 overflow-hidden border-b-2 border-[#5c3a21]">
+          <img src={item.image} alt={item.title} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
+        </div>
+      )}
+
+      <div className="p-6 flex flex-col flex-grow">
+        <div className="flex justify-between items-start mb-3 relative z-10">
+          <h3 className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8] tracking-wide">{item.title}</h3>
+          {item.symbol && <span className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8] bg-[#1c110b] px-3 py-1 rounded border border-[#5c3a21] shadow-inner">{item.symbol}</span>}
+        </div>
+        <div className="flex flex-wrap items-center gap-2 mb-4 relative z-10">
+          <span className="inline-block px-3 py-1 text-xs font-bold font-pixeloid-mono bg-[#1c110b] text-[#a37c49] rounded border border-[#5c3a21] uppercase tracking-wider">{item.category}</span>
+          {item.dangerLevel && (
+             <span className="inline-block px-2 py-1 text-xs font-bold font-pixeloid-mono rounded border border-red-900/50 bg-red-900/20 text-red-400 uppercase tracking-wider">
+               {item.dangerLevel}
+             </span>
+          )}
+          {user && ROLES_MAP[user.role] && ROLES_MAP[user.role].level >= 1 && (
+            <button onClick={() => handleDeleteItem(item.id)} className="ml-auto text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded transition-colors"><Trash2 size={16} /></button>
+          )}
+        </div>
+        <p className="text-[#c4b5a5] font-sans leading-relaxed flex-grow relative z-10 whitespace-pre-wrap">{item.description}</p>
       </div>
-      <div className="flex flex-wrap items-center gap-2 mb-4 relative z-10">
-        <span className="inline-block px-3 py-1 text-xs font-bold font-pixeloid-mono bg-[#1c110b] text-[#a37c49] rounded border border-[#5c3a21] uppercase tracking-wider">{item.category}</span>
-        {item.dangerLevel && (
-           <span className="inline-block px-2 py-1 text-xs font-bold font-pixeloid-mono rounded border border-red-900/50 bg-red-900/20 text-red-400 uppercase tracking-wider">
-             {item.dangerLevel}
-           </span>
-        )}
-        {user && ROLES_MAP[user.role] && ROLES_MAP[user.role].level >= 1 && (
-          <button onClick={() => handleDeleteItem(item.id)} className="ml-auto text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded transition-colors"><Trash2 size={16} /></button>
-        )}
-      </div>
-      <p className="text-[#c4b5a5] font-sans leading-relaxed flex-grow relative z-10">{item.description}</p>
     </div>
   );
 
@@ -503,11 +546,37 @@ export default function TavernArchive() {
                           </select>
 
                           <textarea required placeholder="Описание" value={item.description} onChange={e => handleNewItemChange(index, "description", e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none h-20" />
+
+                          {/* ЗАГРУЗКА КАРТИНКИ */}
+                          <div className="mt-2 border-t border-[#5c3a21] pt-3">
+                            <label className="block text-xs font-pixeloid-mono text-[#a37c49] mb-2 flex items-center gap-1"><ImageIcon size={14}/> Прикрепить картинку (до 2МБ)</label>
+                            
+                            {!item.image ? (
+                              <input 
+                                type="file" 
+                                accept="image/*"
+                                onChange={(e) => handleImageUpload(e, index)}
+                                className="w-full text-sm text-[#8c6e52] file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-bold file:bg-[#3d2617] file:text-[#e6d5b8] hover:file:bg-[#5c3a21] file:cursor-pointer file:transition-colors"
+                              />
+                            ) : (
+                              <div className="relative inline-block border-2 border-[#5c3a21] rounded-lg overflow-hidden">
+                                <img src={item.image} alt="Preview" className="h-32 object-cover" />
+                                <button 
+                                  type="button" 
+                                  onClick={() => removeImage(index)}
+                                  className="absolute top-1 right-1 bg-red-600/80 hover:bg-red-600 text-white p-1 rounded-full transition-colors"
+                                  title="Удалить картинку"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
 
-                    <div className="flex flex-wrap gap-4">
+                    <div className="flex flex-wrap gap-4 pt-2">
                       <button type="button" onClick={addNewItemField} className="px-4 py-2 bg-[#3d2617] border border-[#5c3a21] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#5c3a21] transition-colors shadow-lg flex items-center gap-2">
                         <Plus size={18}/> Добавить ещё
                       </button>
@@ -527,10 +596,11 @@ export default function TavernArchive() {
 {`[
   {
     "title": "Название",
-    "category": "Комбинации Цифр",
+    "category": "Символика",
     "description": "Описание",
     "symbol": "1/11",
-    "dangerLevel": "Высокий"
+    "dangerLevel": "Высокий",
+    "image": "data:image/jpeg;base64,..." 
   }
 ]`}
                       </pre>
