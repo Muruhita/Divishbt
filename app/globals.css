@@ -5,9 +5,14 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: #1a1512;
-  color: #f4e4c1;
+  background-color: #160d08; /* Темный D&D фон */
+  color: #e6d5b8;
   overflow-x: hidden;
+}
+
+/* Пиксельный шрифт */
+.font-pixel {
+  font-family: var(--font-pixel);
 }
 
 /* Кастомный скроллбар */
@@ -15,14 +20,14 @@ body {
   width: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: #1a1512; 
+  background: #160d08; 
 }
 ::-webkit-scrollbar-thumb {
-  background: #5C4033; 
+  background: #5c3a21; 
   border-radius: 5px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #E5B85C; 
+  background: #a37c49; 
 }
 
 /* Анимация плавного появления контента */
@@ -44,7 +49,7 @@ body {
   animation: bg-pulse 8s ease-in-out infinite;
 }
 
-/* --- МАГИЧЕСКИЕ ЧАСТИЦЫ --- */
+/* Магические частицы */
 .magic-particles {
   position: absolute;
   top: 0;
@@ -59,9 +64,9 @@ body {
 .particle {
   position: absolute;
   bottom: -10px;
-  background-color: #E5B85C;
+  background-color: #a37c49;
   border-radius: 50%;
-  box-shadow: 0 0 8px 2px rgba(229, 184, 92, 0.6), 0 0 15px rgba(229, 184, 92, 0.4);
+  box-shadow: 0 0 8px 2px rgba(163, 124, 73, 0.6), 0 0 15px rgba(163, 124, 73, 0.4);
   opacity: 0;
   animation: rise infinite linear;
 }
