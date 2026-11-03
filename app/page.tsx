@@ -280,13 +280,13 @@ export default function TavernArchive() {
   const ArchiveCard = ({ item }: { item: ArchiveItem }) => (
     <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.6)] hover:border-[#a37c49] hover:shadow-[0_4px_25px_rgba(163,124,73,0.2)] transition-all duration-300 group flex flex-col relative z-10">
       <div className="flex justify-between items-start mb-3 relative z-10">
-        <h3 className="text-xl font-bold font-pixel text-[#e6d5b8] tracking-wide">{item.title}</h3>
-        {item.symbol && <span className="text-xl font-bold font-pixel text-[#e6d5b8] bg-[#1c110b] px-3 py-1 rounded border border-[#5c3a21] shadow-inner">{item.symbol}</span>}
+        <h3 className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8] tracking-wide">{item.title}</h3>
+        {item.symbol && <span className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8] bg-[#1c110b] px-3 py-1 rounded border border-[#5c3a21] shadow-inner">{item.symbol}</span>}
       </div>
       <div className="flex flex-wrap items-center gap-2 mb-4 relative z-10">
-        <span className="inline-block px-3 py-1 text-xs font-bold font-pixel bg-[#1c110b] text-[#a37c49] rounded border border-[#5c3a21] uppercase tracking-wider">{item.category}</span>
+        <span className="inline-block px-3 py-1 text-xs font-bold font-pixeloid-mono bg-[#1c110b] text-[#a37c49] rounded border border-[#5c3a21] uppercase tracking-wider">{item.category}</span>
         {item.dangerLevel && (
-           <span className="inline-block px-2 py-1 text-xs font-bold font-pixel rounded border border-red-900/50 bg-red-900/20 text-red-400 uppercase tracking-wider">
+           <span className="inline-block px-2 py-1 text-xs font-bold font-pixeloid-mono rounded border border-red-900/50 bg-red-900/20 text-red-400 uppercase tracking-wider">
              {item.dangerLevel}
            </span>
         )}
@@ -329,24 +329,24 @@ export default function TavernArchive() {
               />
             </div>
 
-            <h1 className="text-3xl font-bold font-pixel text-center mb-2 text-[#a37c49] tracking-widest uppercase flex justify-center items-center gap-2">
+            <h1 className="text-3xl font-bold font-pixeloid-mono text-center mb-2 text-[#a37c49] tracking-widest uppercase flex justify-center items-center gap-2">
                <Flame /> Сытый Лис
             </h1>
             <p className="text-center text-[#8c6e52] mb-8 font-sans">Вход в закрытый архив</p>
             
             <form onSubmit={handleLogin} className="space-y-5">
               <div>
-                <label className="block text-sm font-pixel text-[#a37c49] mb-1">Логин</label>
+                <label className="block text-sm font-pixeloid-mono text-[#a37c49] mb-1">Логин</label>
                 <input type="text" required value={loginUser} onChange={(e) => setLoginUser(e.target.value)} className="w-full p-3 bg-[#1c110b] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none transition-colors" />
               </div>
               <div>
-                <label className="block text-sm font-pixel text-[#a37c49] mb-1">Пароль</label>
+                <label className="block text-sm font-pixeloid-mono text-[#a37c49] mb-1">Пароль</label>
                 <input type="password" required value={loginPass} onChange={(e) => setLoginPass(e.target.value)} className="w-full p-3 bg-[#1c110b] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none transition-colors" />
               </div>
               
               {loginError && <p className="text-red-400 text-sm text-center bg-red-500/10 py-2 rounded border border-red-500/20">{loginError}</p>}
               
-              <button type="submit" className="w-full py-3 bg-[#5c3a21] hover:bg-[#7a4f2e] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixel text-lg rounded shadow-lg transition-all">
+              <button type="submit" className="w-full py-3 bg-[#5c3a21] hover:bg-[#7a4f2e] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono text-lg rounded shadow-lg transition-all">
                 Войти
               </button>
             </form>
@@ -359,8 +359,8 @@ export default function TavernArchive() {
           <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
             <div className="flex items-center gap-3 bg-[#2e1b13]/90 backdrop-blur-sm border border-[#5c3a21] px-4 py-2 rounded-lg shadow-lg">
               <div className="flex flex-col text-right">
-                <span className="text-sm font-bold font-pixel text-[#e6d5b8]">{user.account_name}</span>
-                <span className={`text-xs font-bold font-pixel ${ROLES_MAP[user.role]?.color.split(' ')[0] || "text-white"}`}>
+                <span className="text-sm font-bold font-pixeloid-mono text-[#e6d5b8]">{user.account_name}</span>
+                <span className={`text-xs font-bold font-pixeloid-mono ${ROLES_MAP[user.role]?.color.split(' ')[0] || "text-white"}`}>
                   {ROLES_MAP[user.role]?.name || user.role}
                 </span>
               </div>
@@ -386,7 +386,7 @@ export default function TavernArchive() {
                   className="w-24 h-24 md:w-32 md:h-32 object-cover rounded-full border-4 border-[#5c3a21] group-hover:border-[#a37c49] transition-colors duration-300 shadow-2xl relative z-10 animate-float bg-[#1c110b]"
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
-                    e.currentTarget.parentElement!.innerHTML = '<h1 class="text-4xl font-bold font-pixel text-[#a37c49] animate-float flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-flame"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg> Сытый Лис</h1>';
+                    e.currentTarget.parentElement!.innerHTML = '<h1 class="text-4xl font-bold font-pixeloid-mono text-[#a37c49] animate-float flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-flame"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg> Сытый Лис</h1>';
                   }}
                 />
               </div>
@@ -394,9 +394,9 @@ export default function TavernArchive() {
 
             {view === "home" && (
               <div className="flex-grow flex flex-col items-center animate-fade-in text-center pb-20">
-                <h2 className="text-4xl font-bold font-pixel text-[#a37c49] mb-6 drop-shadow-lg">Запретный Архив</h2>
+                <h2 className="text-4xl font-bold font-pixeloid-mono text-[#a37c49] mb-6 drop-shadow-lg">Запретный Архив</h2>
                 <div className="relative w-full max-w-2xl mb-8 group">
-                  <input type="text" placeholder="Искать в свитках..." value={searchQuery} onChange={handleSearchChange} className="w-full p-4 pl-12 bg-[#2e1b13]/90 backdrop-blur-sm border-2 border-[#5c3a21] rounded-lg text-[#e6d5b8] font-pixel focus:border-[#a37c49] transition-colors shadow-xl placeholder-[#6b513b]" />
+                  <input type="text" placeholder="Искать в свитках..." value={searchQuery} onChange={handleSearchChange} className="w-full p-4 pl-12 bg-[#2e1b13]/90 backdrop-blur-sm border-2 border-[#5c3a21] rounded-lg text-[#e6d5b8] font-pixeloid-mono focus:border-[#a37c49] transition-colors shadow-xl placeholder-[#6b513b]" />
                   <Search className="absolute left-4 top-4 text-[#6b513b] group-focus-within:text-[#a37c49] transition-colors" size={24} />
                 </div>
                 
@@ -405,7 +405,7 @@ export default function TavernArchive() {
                     {filteredData.map(item => <ArchiveCard key={item.id} item={item} />)}
                   </div>
                 ) : (
-                  <button onClick={() => setView("archive")} className="mt-8 px-10 py-4 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixel text-xl rounded-lg shadow-[0_4px_0_#2e1b13] hover:shadow-[0_0_20px_rgba(163,124,73,0.4)] hover:-translate-y-1 transition-all duration-300 flex items-center gap-3 group tracking-widest uppercase">
+                  <button onClick={() => setView("archive")} className="mt-8 px-10 py-4 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono text-xl rounded-lg shadow-[0_4px_0_#2e1b13] hover:shadow-[0_0_20px_rgba(163,124,73,0.4)] hover:-translate-y-1 transition-all duration-300 flex items-center gap-3 group tracking-widest uppercase">
                     <ScrollText size={24} className="group-hover:rotate-12 transition-transform duration-300" /> Открыть все свитки
                   </button>
                 )}
@@ -414,9 +414,9 @@ export default function TavernArchive() {
 
             {view === "archive" && (
               <div className="animate-fade-in w-full text-left">
-                 <button onClick={() => setView("home")} className="mb-6 flex items-center gap-2 text-[#8c6e52] hover:text-[#a37c49] transition-colors font-pixel"><ChevronLeft size={20}/> На главную</button>
+                 <button onClick={() => setView("home")} className="mb-6 flex items-center gap-2 text-[#8c6e52] hover:text-[#a37c49] transition-colors font-pixeloid-mono"><ChevronLeft size={20}/> На главную</button>
                  <div className="flex flex-wrap gap-2 mb-8">
-                    {CATEGORIES.map(c => <button key={c} onClick={() => setSelectedCategory(c)} className={`px-4 py-2 rounded border font-pixel uppercase tracking-wider text-sm transition-all duration-300 ${selectedCategory === c ? 'bg-[#a37c49] text-[#160d08] border-[#a37c49] shadow-[0_0_15px_rgba(163,124,73,0.3)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-[#a37c49] hover:text-[#e6d5b8]'}`}>{c}</button>)}
+                    {CATEGORIES.map(c => <button key={c} onClick={() => setSelectedCategory(c)} className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 ${selectedCategory === c ? 'bg-[#a37c49] text-[#160d08] border-[#a37c49] shadow-[0_0_15px_rgba(163,124,73,0.3)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-[#a37c49] hover:text-[#e6d5b8]'}`}>{c}</button>)}
                  </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {filteredData.map(item => <ArchiveCard key={item.id} item={item} />)}
@@ -427,11 +427,11 @@ export default function TavernArchive() {
             {view === "admin" && ROLES_MAP[user.role] && ROLES_MAP[user.role].level >= 1 && (
               <div className="animate-fade-in w-full bg-[#2e1b13] p-8 rounded-xl border-double border-4 border-[#5c3a21] shadow-2xl">
                 <div className="flex justify-between items-center mb-8 border-b border-[#5c3a21] pb-4">
-                   <h2 className="text-2xl font-bold font-pixel text-[#a37c49] drop-shadow-md">Панель Управления</h2>
-                   <button onClick={() => setView("home")} className="text-sm font-pixel text-[#8c6e52] hover:text-[#e6d5b8] transition-colors">На главную</button>
+                   <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49] drop-shadow-md">Панель Управления</h2>
+                   <button onClick={() => setView("home")} className="text-sm font-pixeloid-mono text-[#8c6e52] hover:text-[#e6d5b8] transition-colors">На главную</button>
                 </div>
 
-                <div className="flex flex-wrap gap-4 mb-8 font-pixel">
+                <div className="flex flex-wrap gap-4 mb-8 font-pixeloid-mono">
                   <button onClick={() => setAdminTab("archive")} className={`px-4 py-2 rounded flex items-center gap-2 transition-all ${adminTab === 'archive' ? 'bg-[#5c3a21] text-[#e6d5b8] shadow-lg border border-[#a37c49]' : 'bg-transparent text-[#8c6e52] border border-transparent hover:text-[#e6d5b8]'}`}><ScrollText size={18}/> Добавить</button>
                   <button onClick={() => setAdminTab("bulk")} className={`px-4 py-2 rounded flex items-center gap-2 transition-all ${adminTab === 'bulk' ? 'bg-[#5c3a21] text-[#e6d5b8] shadow-lg border border-[#a37c49]' : 'bg-transparent text-[#8c6e52] border border-transparent hover:text-[#e6d5b8]'}`}><Upload size={18}/> Импорт/Экспорт</button>
                   <button onClick={() => setAdminTab("users")} className={`px-4 py-2 rounded flex items-center gap-2 transition-all ${adminTab === 'users' ? 'bg-[#5c3a21] text-[#e6d5b8] shadow-lg border border-[#a37c49]' : 'bg-transparent text-[#8c6e52] border border-transparent hover:text-[#e6d5b8]'}`}><Users size={18}/> Аккаунты</button>
@@ -440,7 +440,7 @@ export default function TavernArchive() {
 
                 {adminTab === "archive" && (
                   <form onSubmit={handleAddItem} className="space-y-4 max-w-xl font-sans">
-                    <h3 className="text-lg font-bold font-pixel text-[#a37c49]">Добавить запись</h3>
+                    <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49]">Добавить запись</h3>
                     <input required placeholder="Название" value={newItem.title} onChange={e => setNewItem({...newItem, title: e.target.value})} className="w-full p-2 bg-[#1c110b] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none" />
                     <input placeholder="Символ (текст)" value={newItem.symbol} onChange={e => setNewItem({...newItem, symbol: e.target.value})} className="w-full p-2 bg-[#1c110b] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none" />
                     
@@ -456,14 +456,14 @@ export default function TavernArchive() {
                     </select>
 
                     <textarea required placeholder="Описание" value={newItem.description} onChange={e => setNewItem({...newItem, description: e.target.value})} className="w-full p-2 bg-[#1c110b] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none h-24" />
-                    <button type="submit" className="px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixel rounded hover:bg-[#7a4f2e] transition-colors shadow-lg">Сохранить в БД</button>
+                    <button type="submit" className="px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#7a4f2e] transition-colors shadow-lg">Сохранить в БД</button>
                   </form>
                 )}
 
                 {adminTab === "bulk" && (
                   <div className="space-y-8 max-w-2xl">
                     <div className="bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
-                      <h3 className="text-lg font-bold font-pixel text-[#a37c49] mb-4 flex items-center gap-2"><Upload size={18}/> Массовый импорт</h3>
+                      <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Upload size={18}/> Массовый импорт</h3>
                       <p className="text-[#8c6e52] mb-4 text-sm font-sans">Вставьте JSON массив записей в формате:</p>
                       <pre className="text-xs text-[#a37c49] bg-[#160d08] p-3 rounded mb-4 overflow-x-auto font-mono">
 {`[
@@ -482,13 +482,13 @@ export default function TavernArchive() {
                         onChange={e => setBulkJson(e.target.value)} 
                         className="w-full p-3 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] font-mono text-sm focus:border-[#a37c49] outline-none h-48" 
                       />
-                      <button onClick={handleBulkImport} className="mt-4 px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixel rounded hover:bg-[#7a4f2e] transition-colors shadow-lg">Импортировать данные</button>
+                      <button onClick={handleBulkImport} className="mt-4 px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#7a4f2e] transition-colors shadow-lg">Импортировать данные</button>
                     </div>
 
                     <div className="bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
-                      <h3 className="text-lg font-bold font-pixel text-[#a37c49] mb-4 flex items-center gap-2"><Download size={18}/> Экспорт</h3>
+                      <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Download size={18}/> Экспорт</h3>
                       <p className="text-[#8c6e52] mb-4 text-sm font-sans">Скачать весь текущий архив в формате JSON.</p>
-                      <button onClick={handleExport} className="px-6 py-2 bg-[#3d2617] border border-[#5c3a21] text-[#e6d5b8] font-bold font-pixel rounded hover:bg-[#5c3a21] transition-colors shadow-lg">Скачать файл</button>
+                      <button onClick={handleExport} className="px-6 py-2 bg-[#3d2617] border border-[#5c3a21] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#5c3a21] transition-colors shadow-lg">Скачать файл</button>
                     </div>
                   </div>
                 )}
@@ -496,15 +496,15 @@ export default function TavernArchive() {
                 {adminTab === "users" && (
                   <div className="space-y-10 font-sans">
                     <form onSubmit={handleCreateUser} className="space-y-4 max-w-xl bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
-                      <h3 className="text-lg font-bold font-pixel text-[#a37c49] flex items-center gap-2"><Plus size={18}/> Создать аккаунт</h3>
+                      <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] flex items-center gap-2"><Plus size={18}/> Создать аккаунт</h3>
                       <input required placeholder="Название аккаунта (Никнейм)" value={newAcc.account_name} onChange={e => setNewAcc({...newAcc, account_name: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none" />
                       <div className="flex items-center gap-2">
                         <input required={!autoUser} placeholder="Логин" value={newAcc.username} onChange={e => setNewAcc({...newAcc, username: e.target.value})} disabled={autoUser} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none disabled:opacity-50" />
-                        <label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer font-pixel"><input type="checkbox" checked={autoUser} onChange={e => setAutoUser(e.target.checked)} /> Рандом</label>
+                        <label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer font-pixeloid-mono"><input type="checkbox" checked={autoUser} onChange={e => setAutoUser(e.target.checked)} /> Рандом</label>
                       </div>
                       <div className="flex items-center gap-2">
                         <input required={!autoPass} placeholder="Пароль" value={newAcc.password} onChange={e => setNewAcc({...newAcc, password: e.target.value})} disabled={autoPass} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none disabled:opacity-50" />
-                        <label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer font-pixel"><input type="checkbox" checked={autoPass} onChange={e => setAutoPass(e.target.checked)} /> Рандом</label>
+                        <label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer font-pixeloid-mono"><input type="checkbox" checked={autoPass} onChange={e => setAutoPass(e.target.checked)} /> Рандом</label>
                       </div>
                       <select value={newAcc.role} onChange={e => setNewAcc({...newAcc, role: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none cursor-pointer">
                          <option value="low">Лоу Стафф</option>
@@ -512,15 +512,15 @@ export default function TavernArchive() {
                          <option value="guardian">Хранитель</option>
                          <option value="creator">Создатель Сервера</option>
                       </select>
-                      <button type="submit" className="px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixel rounded hover:bg-[#7a4f2e] transition-colors shadow-lg">Сгенерировать</button>
+                      <button type="submit" className="px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#7a4f2e] transition-colors shadow-lg">Сгенерировать</button>
                     </form>
 
                     <div>
-                      <h3 className="text-lg font-bold font-pixel text-[#a37c49] mb-4 flex items-center gap-2"><Users size={18}/> Список доступных аккаунтов</h3>
+                      <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Users size={18}/> Список доступных аккаунтов</h3>
                       <div className="overflow-x-auto rounded-lg border border-[#5c3a21]">
                         <table className="w-full text-left border-collapse">
                           <thead className="bg-[#1c110b]">
-                            <tr className="text-[#8c6e52] border-b border-[#5c3a21] font-pixel text-sm">
+                            <tr className="text-[#8c6e52] border-b border-[#5c3a21] font-pixeloid-mono text-sm">
                               <th className="p-3">Имя</th>
                               <th className="p-3">Роль</th>
                               <th className="p-3">Логин</th>
@@ -532,7 +532,7 @@ export default function TavernArchive() {
                             {usersList.map(u => (
                               <tr key={u.id} className="border-b border-[#3d2617] hover:bg-[#1c110b] transition-colors">
                                 <td className="p-3 font-medium">{u.account_name}</td>
-                                <td className={`p-3 text-sm font-bold font-pixel ${ROLES_MAP[u.role]?.color.split(' ')[0] || "text-white"}`}>{ROLES_MAP[u.role]?.name || u.role}</td>
+                                <td className={`p-3 text-sm font-bold font-pixeloid-mono ${ROLES_MAP[u.role]?.color.split(' ')[0] || "text-white"}`}>{ROLES_MAP[u.role]?.name || u.role}</td>
                                 <td className="p-3 font-mono text-[#c4b5a5]">{u.username}</td>
                                 <td className="p-3 font-mono text-red-400 bg-red-500/5">{u.plain_password || "********"}</td>
                                 <td className="p-3">
@@ -556,10 +556,10 @@ export default function TavernArchive() {
 
                 {adminTab === "diag" && (
                   <div className="max-w-xl font-sans">
-                    <h3 className="text-lg font-bold font-pixel text-[#a37c49] mb-4 flex items-center gap-2"><Database size={18}/> Проверка системы</h3>
+                    <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Database size={18}/> Проверка системы</h3>
                     <p className="text-[#8c6e52] mb-6">Нажмите кнопку ниже, чтобы проверить подключение к базе данных Turso и замерить пинг.</p>
                     
-                    <button onClick={runDiagnostics} className="px-6 py-3 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixel rounded-lg hover:bg-[#7a4f2e] flex items-center gap-2 mb-6 shadow-lg transition-colors">
+                    <button onClick={runDiagnostics} className="px-6 py-3 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded-lg hover:bg-[#7a4f2e] flex items-center gap-2 mb-6 shadow-lg transition-colors">
                       <Activity size={18}/> Запустить тест
                     </button>
 
@@ -567,7 +567,7 @@ export default function TavernArchive() {
                       <div className={`p-6 rounded-xl border ${diagResult.status === 'ok' ? 'bg-green-900/20 border-green-500/50' : 'bg-red-900/20 border-red-500/50'}`}>
                         <div className="flex items-center gap-3 mb-2">
                           {diagResult.status === 'ok' ? <ShieldAlert className="text-green-500" /> : <Skull className="text-red-500" />}
-                          <h4 className={`text-xl font-bold font-pixel ${diagResult.status === 'ok' ? 'text-green-400' : 'text-red-400'}`}>
+                          <h4 className={`text-xl font-bold font-pixeloid-mono ${diagResult.status === 'ok' ? 'text-green-400' : 'text-red-400'}`}>
                             {diagResult.status === 'ok' ? 'Система в норме' : 'Ошибка подключения'}
                           </h4>
                         </div>
