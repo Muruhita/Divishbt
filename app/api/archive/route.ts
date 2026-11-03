@@ -4,25 +4,49 @@ import { db } from "@/lib/db";
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const result = await db.execute("SELECT * FROM archive ORDER BY id DESC");
-  return NextResponse.json(result.rows);
+  try {
+    const result = await db.execute("SELECT * FROM archive ORDER BY id DESC");
+    return NextResponse.json(result.rows);
+  } catch (error) {
+    return NextResponse.json({ error: "Ошибка получения данных" }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {
-  const body = await req.json();
-  const { title, category, description, symbol, dangerLevel } = body;
-  
-  await db.execute({
-    sql: "INSERT INTO archive (title, category, description, symbol, danger_level) VALUES (?, ?, ?, ?, ?)",
-    args: [title, category, description, symbol || null, dangerLevel || null],
-  });
-  
-  return NextResponse.json({ success: true });
+  try {
+    const body = await req.json();
+    // Проверяем, массив это или одиночный объект
+    const items = Array.isArray(body) ? body : [body];
+
+    for (const item of items) {
+      await db.execute({
+        sql: "INSERT INTO archive (title, category, description, symbol, danger_level) VALUES (?, ?, ?, ?, ?)",
+        args: [
+          item.title, 
+          item.category, 
+          item.description, 
+          item.symbol || null, 
+          item.dangerLevel || null
+        ],
+      });
+    }
+    return NextResponse.json({ success: true, count: items.length });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: "Ошибка при добавлении" }, { status: 500 });
+  }
 }
 
 export async function DELETE(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const id = searchParams.get("id");
-  await db.execute({ sql: "DELETE FROM archive WHERE id = ?", args: [id as string] });
-  return NextResponse.json({ success: true });
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    
+    if (!id) return NextResponse.json({ error: "ID не указан" }, { status: 400 });
+    
+    await db.execute({ sql: "DELETE FROM archive WHERE id = ?", args: [id] });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: "Ошибка при удалении" }, { status: 500 });
+  }
 }
