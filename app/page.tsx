@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, ChevronLeft, Flame, ScrollText, Skull, Plus, X, LogOut, LockKeyhole, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2 } from "lucide-react";
+import { Search, ChevronLeft, Flame, ScrollText, Skull, Plus, X, LogOut, LockKeyhole, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil } from "lucide-react";
 
 type ArchiveItem = {
   id: number;
@@ -58,8 +58,9 @@ export default function TavernArchive() {
   const [selectedCategory, setSelectedCategory] = useState("Все");
   const [view, setView] = useState<"home" | "archive" | "admin">("home");
   
-  // Состояние для полноэкранного просмотра картинки
+  // Состояния для просмотра и редактирования
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [editingItem, setEditingItem] = useState<ArchiveItem | null>(null);
 
   // Auth State
   const [user, setUser] = useState<User | null>(null);
@@ -198,7 +199,7 @@ export default function TavernArchive() {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, index?: number) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -211,32 +212,27 @@ export default function TavernArchive() {
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = reader.result as string;
-      const updated = [...newItems];
-      updated[index] = { ...updated[index], image: base64String };
-      setNewItems(updated);
+      
+      if (editingItem) {
+        // Если редактируем существующую запись
+        setEditingItem({ ...editingItem, image: base64String });
+      } else if (index !== undefined) {
+        // Если добавляем новую
+        const updated = [...newItems];
+        updated[index] = { ...updated[index], image: base64String };
+        setNewItems(updated);
+      }
     };
     reader.readAsDataURL(file);
   };
 
-  const removeImage = (index: number) => {
-    const updated = [...newItems];
-    updated[index] = { ...updated[index], image: "" };
-    setNewItems(updated);
-  };
-
   const handleAddMultipleItems = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     const validItems = newItems.filter(item => item.title.trim() !== "" && item.description.trim() !== "");
-    
-    if (validItems.length === 0) {
-      return alert("Заполните хотя бы одну запись (Название и Описание)");
-    }
+    if (validItems.length === 0) return alert("Заполните хотя бы одну запись");
 
     const res = await fetch("/api/archive", {
-      method: "POST", 
-      headers: { "Content-Type": "application/json" }, 
-      body: JSON.stringify(validItems)
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(validItems)
     });
     
     if (res.ok) { 
@@ -249,70 +245,66 @@ export default function TavernArchive() {
     }
   };
 
+  // === ОБНОВЛЕНИЕ (РЕДАКТИРОВАНИЕ) ЗАПИСИ ===
+  const handleUpdateItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingItem) return;
+
+    const res = await fetch("/api/archive", {
+      method: "PUT", 
+      headers: { "Content-Type": "application/json" }, 
+      body: JSON.stringify(editingItem)
+    });
+    
+    if (res.ok) { 
+      alert("Запись успешно обновлена!");
+      setEditingItem(null);
+      fetchArchive(); 
+    } else {
+      alert("Ошибка при обновлении");
+    }
+  };
+
   const handleNewItemChange = (index: number, field: keyof NewArchiveItem, value: string) => {
     const updated = [...newItems];
     updated[index] = { ...updated[index], [field]: value };
     setNewItems(updated);
   };
 
-  const addNewItemField = () => {
-    setNewItems([...newItems, { ...INITIAL_NEW_ITEM }]);
-  };
-
+  const addNewItemField = () => setNewItems([...newItems, { ...INITIAL_NEW_ITEM }]);
   const removeNewItemField = (index: number) => {
-    if (newItems.length === 1) return;
-    setNewItems(newItems.filter((_, i) => i !== index));
+    if (newItems.length > 1) setNewItems(newItems.filter((_, i) => i !== index));
   };
 
   const handleBulkImport = async () => {
     try {
       const parsed = JSON.parse(bulkJson);
       if (!Array.isArray(parsed)) throw new Error("JSON должен быть массивом");
-      
       const res = await fetch("/api/archive", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(parsed)
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(parsed)
       });
-      
       if (res.ok) {
         const result = await res.json();
         alert(`Успешно добавлено ${result.count} записей!`);
-        setBulkJson("");
-        fetchArchive();
-      } else {
-        alert("Ошибка при импорте данных");
-      }
-    } catch (error) {
-      alert("Ошибка формата JSON. Проверьте синтаксис.");
-    }
+        setBulkJson(""); fetchArchive();
+      } else { alert("Ошибка при импорте"); }
+    } catch (error) { alert("Ошибка формата JSON"); }
   };
 
   const handleExport = async () => {
     try {
       const res = await fetch("/api/archive");
       const dbData = await res.json();
-      
       const exportData = dbData.map((item: DbArchiveItem) => ({
-        title: item.title,
-        category: item.category,
-        description: item.description,
-        symbol: item.symbol,
-        dangerLevel: item.danger_level,
-        image: item.image 
+        title: item.title, category: item.category, description: item.description,
+        symbol: item.symbol, dangerLevel: item.danger_level, image: item.image 
       }));
-
-      const jsonString = JSON.stringify(exportData, null, 2);
-      const blob = new Blob([jsonString], { type: "application/json" });
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url;
-      a.download = "tavern_archive_export.json";
-      a.click();
+      a.href = url; a.download = "tavern_archive_export.json"; a.click();
       URL.revokeObjectURL(url);
-    } catch {
-      alert("Ошибка при экспорте");
-    }
+    } catch { alert("Ошибка при экспорте"); }
   };
 
   const handleDeleteItem = async (id: number) => {
@@ -347,18 +339,22 @@ export default function TavernArchive() {
   const ArchiveCard = ({ item }: { item: ArchiveItem }) => (
     <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.6)] hover:border-[#a37c49] hover:shadow-[0_4px_25px_rgba(163,124,73,0.2)] transition-all duration-300 group flex flex-col relative z-10 overflow-hidden">
       
-      {/* КАРТИНКА В КАРТОЧКЕ */}
+      {/* КАРТИНКА С ФОНОМ ПЕРГАМЕНТА */}
       {item.image && (
         <div 
-          className="w-full h-56 overflow-hidden border-b-2 border-[#5c3a21] cursor-pointer relative group/img bg-[#160d08]"
+          className="w-full h-56 overflow-hidden border-b-2 border-[#5c3a21] cursor-pointer relative group/img flex items-center justify-center"
+          style={{ 
+            backgroundColor: '#d6c5b3', // Светлый цвет пергамента
+            backgroundImage: 'radial-gradient(#b8a38a 1px, transparent 1px)', // Легкий паттерн
+            backgroundSize: '10px 10px'
+          }}
           onClick={() => setSelectedImage(item.image!)}
         >
           <img 
             src={item.image} 
             alt={item.title} 
-            className="w-full h-full object-cover opacity-90 group-hover/img:opacity-100 group-hover/img:scale-110 transition-all duration-500" 
+            className="max-w-full max-h-full object-contain p-2 transition-transform duration-500 group-hover/img:scale-110 drop-shadow-md" 
           />
-          {/* Оверлей при наведении для подсказки клика */}
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity duration-300 flex items-center justify-center">
             <Maximize2 size={32} className="text-[#e6d5b8] drop-shadow-lg" />
           </div>
@@ -377,8 +373,24 @@ export default function TavernArchive() {
                {item.dangerLevel}
              </span>
           )}
-          {user && ROLES_MAP[user.role] && ROLES_MAP[user.role].level >= 1 && (
-            <button onClick={() => handleDeleteItem(item.id)} className="ml-auto text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded transition-colors"><Trash2 size={16} /></button>
+          
+          {/* КНОПКИ РЕДАКТИРОВАНИЯ И УДАЛЕНИЯ (Только для Овнера и Создателя) */}
+          {user && (user.role === "owner" || user.role === "creator") && (
+            <div className="ml-auto flex items-center gap-1">
+              <button onClick={() => setEditingItem(item)} className="text-blue-400 hover:text-blue-300 bg-blue-500/10 p-1.5 rounded transition-colors" title="Редактировать">
+                <Pencil size={16} />
+              </button>
+              <button onClick={() => handleDeleteItem(item.id)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded transition-colors" title="Удалить">
+                <Trash2 size={16} />
+              </button>
+            </div>
+          )}
+          
+          {/* Если нет прав на редактирование, но есть права на удаление (Хай Стафф) */}
+          {user && user.role === "high" && (
+            <button onClick={() => handleDeleteItem(item.id)} className="ml-auto text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded transition-colors" title="Удалить">
+              <Trash2 size={16} />
+            </button>
           )}
         </div>
         <p className="text-[#c4b5a5] font-sans leading-relaxed flex-grow relative z-10 whitespace-pre-wrap">{item.description}</p>
@@ -386,31 +398,68 @@ export default function TavernArchive() {
     </div>
   );
 
-  if (isCheckingAuth) {
-    return <main className="min-h-screen bg-[#160d08]"></main>;
-  }
+  if (isCheckingAuth) return <main className="min-h-screen bg-[#160d08]"></main>;
 
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans">
       
-      {/* === ПОЛНОЭКРАННЫЙ ПРОСМОТР КАРТИНКИ (LIGHTBOX) === */}
+      {/* ПОЛНОЭКРАННЫЙ ПРОСМОТР КАРТИНКИ */}
       {selectedImage && (
         <div 
           className="fixed inset-0 z-[999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-zoom-out animate-fade-in"
           onClick={() => setSelectedImage(null)}
         >
-          <button 
-            className="absolute top-6 right-6 text-gray-400 hover:text-red-500 transition-colors bg-black/50 p-2 rounded-full z-10"
-            onClick={(e) => { e.stopPropagation(); setSelectedImage(null); }}
-          >
+          <button className="absolute top-6 right-6 text-gray-400 hover:text-red-500 bg-black/50 p-2 rounded-full z-10" onClick={(e) => { e.stopPropagation(); setSelectedImage(null); }}>
             <X size={32} />
           </button>
-          <img 
-            src={selectedImage} 
-            alt="Full size" 
-            className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-[0_0_50px_rgba(0,0,0,0.8)] border-2 border-[#5c3a21]"
-            onClick={(e) => e.stopPropagation()} 
-          />
+          <div className="p-4 rounded-xl" style={{ backgroundColor: '#d6c5b3', backgroundImage: 'radial-gradient(#b8a38a 1px, transparent 1px)', backgroundSize: '10px 10px' }}>
+            <img src={selectedImage} alt="Full size" className="max-w-full max-h-[85vh] object-contain rounded shadow-2xl" onClick={(e) => e.stopPropagation()} />
+          </div>
+        </div>
+      )}
+
+      {/* ОКНО РЕДАКТИРОВАНИЯ ЗАПИСИ */}
+      {editingItem && (
+        <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in overflow-y-auto">
+          <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl shadow-2xl w-full max-w-2xl my-8 relative">
+            <button onClick={() => setEditingItem(null)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500"><X size={24}/></button>
+            <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49] mb-6">Редактировать запись</h2>
+            
+            <form onSubmit={handleUpdateItem} className="space-y-4">
+              <input required placeholder="Название" value={editingItem.title} onChange={e => setEditingItem({...editingItem, title: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none" />
+              <input placeholder="Символ (текст)" value={editingItem.symbol || ""} onChange={e => setEditingItem({...editingItem, symbol: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none" />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <select value={editingItem.category} onChange={e => setEditingItem({...editingItem, category: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none cursor-pointer">
+                   {CATEGORIES.filter(c => c !== "Все").map(c => <option key={c}>{c}</option>)}
+                </select>
+                <select value={editingItem.dangerLevel || "Низкий"} onChange={e => setEditingItem({...editingItem, dangerLevel: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none cursor-pointer">
+                   <option value="Низкий">Уровень: Низкий</option>
+                   <option value="Средний">Уровень: Средний</option>
+                   <option value="Высокий">Уровень: Высокий</option>
+                   <option value="Смертельный">Уровень: Смертельный</option>
+                </select>
+              </div>
+
+              <textarea required placeholder="Описание" value={editingItem.description} onChange={e => setEditingItem({...editingItem, description: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none h-32" />
+
+              <div className="mt-4 border-t border-[#5c3a21] pt-4">
+                <label className="block text-sm font-pixeloid-mono text-[#a37c49] mb-2 flex items-center gap-2"><ImageIcon size={16}/> Картинка</label>
+                {!editingItem.image ? (
+                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e)} className="w-full text-sm text-[#8c6e52] file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-[#3d2617] file:text-[#e6d5b8] hover:file:bg-[#5c3a21] file:cursor-pointer" />
+                ) : (
+                  <div className="relative inline-block border-2 border-[#5c3a21] rounded-lg overflow-hidden" style={{ backgroundColor: '#d6c5b3', backgroundImage: 'radial-gradient(#b8a38a 1px, transparent 1px)', backgroundSize: '10px 10px' }}>
+                    <img src={editingItem.image} alt="Preview" className="h-32 object-contain p-2" />
+                    <button type="button" onClick={() => setEditingItem({...editingItem, image: ""})} className="absolute top-1 right-1 bg-red-600/80 hover:bg-red-600 text-white p-1 rounded-full transition-colors"><X size={14} /></button>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <button type="submit" className="px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#7a4f2e] transition-colors shadow-lg">Сохранить изменения</button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
@@ -424,40 +473,19 @@ export default function TavernArchive() {
       {!user && (
         <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
           <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-8 pt-0 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] w-full max-w-md animate-fade-in relative mt-16">
-            
             <div className="flex justify-center -mt-16 mb-4 relative">
               <div className="absolute inset-0 bg-[#a37c49] blur-2xl opacity-20 rounded-full"></div>
-              <img 
-                src="/logo.png" 
-                alt="Сытый Лис" 
-                className="w-32 h-32 md:w-40 md:h-40 object-cover rounded-full border-4 border-[#5c3a21] shadow-2xl relative z-10 animate-float bg-[#1c110b]"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  e.currentTarget.parentElement!.innerHTML = '<div class="w-32 h-32 md:w-40 md:h-40 flex items-center justify-center bg-[#1c110b] rounded-full border-4 border-[#5c3a21] text-[#a37c49] shadow-2xl relative z-10 animate-float"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-lock-keyhole"><circle cx="12" cy="16" r="1"/><rect x="3" y="10" width="18" height="12" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/></svg></div>';
-                }}
+              <img src="/logo.png" alt="Сытый Лис" className="w-32 h-32 md:w-40 md:h-40 object-cover rounded-full border-4 border-[#5c3a21] shadow-2xl relative z-10 animate-float bg-[#1c110b]"
+                onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.innerHTML = '<div class="w-32 h-32 md:w-40 md:h-40 flex items-center justify-center bg-[#1c110b] rounded-full border-4 border-[#5c3a21] text-[#a37c49] shadow-2xl relative z-10 animate-float"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-lock-keyhole"><circle cx="12" cy="16" r="1"/><rect x="3" y="10" width="18" height="12" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/></svg></div>'; }}
               />
             </div>
-
-            <h1 className="text-3xl font-bold font-pixeloid-mono text-center mb-2 text-[#a37c49] tracking-widest uppercase flex justify-center items-center gap-2">
-               <Flame /> Сытый Лис
-            </h1>
+            <h1 className="text-3xl font-bold font-pixeloid-mono text-center mb-2 text-[#a37c49] tracking-widest uppercase flex justify-center items-center gap-2"><Flame /> Сытый Лис</h1>
             <p className="text-center text-[#8c6e52] mb-8 font-sans">Вход в закрытый архив</p>
-            
             <form onSubmit={handleLogin} className="space-y-5">
-              <div>
-                <label className="block text-sm font-pixeloid-mono text-[#a37c49] mb-1">Логин</label>
-                <input type="text" required value={loginUser} onChange={(e) => setLoginUser(e.target.value)} className="w-full p-3 bg-[#1c110b] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none transition-colors" />
-              </div>
-              <div>
-                <label className="block text-sm font-pixeloid-mono text-[#a37c49] mb-1">Пароль</label>
-                <input type="password" required value={loginPass} onChange={(e) => setLoginPass(e.target.value)} className="w-full p-3 bg-[#1c110b] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none transition-colors" />
-              </div>
-              
+              <div><label className="block text-sm font-pixeloid-mono text-[#a37c49] mb-1">Логин</label><input type="text" required value={loginUser} onChange={(e) => setLoginUser(e.target.value)} className="w-full p-3 bg-[#1c110b] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none transition-colors" /></div>
+              <div><label className="block text-sm font-pixeloid-mono text-[#a37c49] mb-1">Пароль</label><input type="password" required value={loginPass} onChange={(e) => setLoginPass(e.target.value)} className="w-full p-3 bg-[#1c110b] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none transition-colors" /></div>
               {loginError && <p className="text-red-400 text-sm text-center bg-red-500/10 py-2 rounded border border-red-500/20">{loginError}</p>}
-              
-              <button type="submit" className="w-full py-3 bg-[#5c3a21] hover:bg-[#7a4f2e] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono text-lg rounded shadow-lg transition-all">
-                Войти
-              </button>
+              <button type="submit" className="w-full py-3 bg-[#5c3a21] hover:bg-[#7a4f2e] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono text-lg rounded shadow-lg transition-all">Войти</button>
             </form>
           </div>
         </div>
@@ -469,34 +497,21 @@ export default function TavernArchive() {
             <div className="flex items-center gap-3 bg-[#2e1b13]/90 backdrop-blur-sm border border-[#5c3a21] px-4 py-2 rounded-lg shadow-lg">
               <div className="flex flex-col text-right">
                 <span className="text-sm font-bold font-pixeloid-mono text-[#e6d5b8]">{user.account_name}</span>
-                <span className={`text-xs font-bold font-pixeloid-mono ${ROLES_MAP[user.role]?.color.split(' ')[0] || "text-white"}`}>
-                  {ROLES_MAP[user.role]?.name || user.role}
-                </span>
+                <span className={`text-xs font-bold font-pixeloid-mono ${ROLES_MAP[user.role]?.color.split(' ')[0] || "text-white"}`}>{ROLES_MAP[user.role]?.name || user.role}</span>
               </div>
               {ROLES_MAP[user.role] && ROLES_MAP[user.role].level >= 1 && (
-                <button onClick={() => setView("admin")} className="p-2 bg-[#1c110b] border border-[#5c3a21] rounded hover:bg-[#a37c49] hover:text-[#160d08] transition-colors" title="Админ-панель">
-                  <Settings size={18} />
-                </button>
+                <button onClick={() => setView("admin")} className="p-2 bg-[#1c110b] border border-[#5c3a21] rounded hover:bg-[#a37c49] hover:text-[#160d08] transition-colors" title="Админ-панель"><Settings size={18} /></button>
               )}
-              <button onClick={handleLogout} className="p-2 text-red-400 hover:bg-red-500/20 rounded transition-colors" title="Выйти">
-                <LogOut size={18} />
-              </button>
+              <button onClick={handleLogout} className="p-2 text-red-400 hover:bg-red-500/20 rounded transition-colors" title="Выйти"><LogOut size={18} /></button>
             </div>
           </div>
 
           <div className="max-w-5xl mx-auto px-6 py-12 relative z-10 flex flex-col min-h-screen">
-            
             <header className="flex justify-center items-center mb-12 cursor-pointer group" onClick={() => setView("home")}>
               <div className="relative">
                 <div className="absolute inset-0 bg-[#a37c49] blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500 rounded-full"></div>
-                <img 
-                  src="/logo.png" 
-                  alt="Сытый Лис" 
-                  className="w-24 h-24 md:w-32 md:h-32 object-cover rounded-full border-4 border-[#5c3a21] group-hover:border-[#a37c49] transition-colors duration-300 shadow-2xl relative z-10 animate-float bg-[#1c110b]"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    e.currentTarget.parentElement!.innerHTML = '<h1 class="text-4xl font-bold font-pixeloid-mono text-[#a37c49] animate-float flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-flame"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg> Сытый Лис</h1>';
-                  }}
+                <img src="/logo.png" alt="Сытый Лис" className="w-24 h-24 md:w-32 md:h-32 object-cover rounded-full border-4 border-[#5c3a21] group-hover:border-[#a37c49] transition-colors duration-300 shadow-2xl relative z-10 animate-float bg-[#1c110b]"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.innerHTML = '<h1 class="text-4xl font-bold font-pixeloid-mono text-[#a37c49] animate-float flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-flame"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg> Сытый Лис</h1>'; }}
                 />
               </div>
             </header>
@@ -508,7 +523,6 @@ export default function TavernArchive() {
                   <input type="text" placeholder="Искать в свитках..." value={searchQuery} onChange={handleSearchChange} className="w-full p-4 pl-12 bg-[#2e1b13]/90 backdrop-blur-sm border-2 border-[#5c3a21] rounded-lg text-[#e6d5b8] font-pixeloid-mono focus:border-[#a37c49] transition-colors shadow-xl placeholder-[#6b513b]" />
                   <Search className="absolute left-4 top-4 text-[#6b513b] group-focus-within:text-[#a37c49] transition-colors" size={24} />
                 </div>
-                
                 {searchQuery.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full animate-fade-in text-left">
                     {filteredData.map(item => <ArchiveCard key={item.id} item={item} />)}
@@ -533,6 +547,7 @@ export default function TavernArchive() {
               </div>
             )}
 
+            {/* АДМИНКА ОСТАЕТСЯ БЕЗ ИЗМЕНЕНИЙ (кроме добавления кнопки редактирования в карточки) */}
             {view === "admin" && ROLES_MAP[user.role] && ROLES_MAP[user.role].level >= 1 && (
               <div className="animate-fade-in w-full bg-[#2e1b13] p-8 rounded-xl border-double border-4 border-[#5c3a21] shadow-2xl">
                 <div className="flex justify-between items-center mb-8 border-b border-[#5c3a21] pb-4">
@@ -554,64 +569,36 @@ export default function TavernArchive() {
                         <h3 className="text-sm font-bold font-pixeloid-mono text-[#a37c49] mb-3 flex justify-between items-center">
                           Запись #{index + 1}
                           {newItems.length > 1 && (
-                            <button type="button" onClick={() => removeNewItemField(index)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1 rounded transition-colors" title="Удалить эту форму">
-                              <X size={16} />
-                            </button>
+                            <button type="button" onClick={() => removeNewItemField(index)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1 rounded transition-colors" title="Удалить эту форму"><X size={16} /></button>
                           )}
                         </h3>
-
                         <div className="space-y-3">
                           <input required placeholder="Название" value={item.title} onChange={e => handleNewItemChange(index, "title", e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none" />
                           <input placeholder="Символ (текст)" value={item.symbol || ""} onChange={e => handleNewItemChange(index, "symbol", e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none" />
-                          
                           <select value={item.category} onChange={e => handleNewItemChange(index, "category", e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none cursor-pointer">
                              {CATEGORIES.filter(c => c !== "Все").map(c => <option key={c}>{c}</option>)}
                           </select>
-
                           <select value={item.dangerLevel || "Низкий"} onChange={e => handleNewItemChange(index, "dangerLevel", e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none cursor-pointer">
-                             <option value="Низкий">Уровень: Низкий</option>
-                             <option value="Средний">Уровень: Средний</option>
-                             <option value="Высокий">Уровень: Высокий</option>
-                             <option value="Смертельный">Уровень: Смертельный</option>
+                             <option value="Низкий">Уровень: Низкий</option><option value="Средний">Уровень: Средний</option><option value="Высокий">Уровень: Высокий</option><option value="Смертельный">Уровень: Смертельный</option>
                           </select>
-
                           <textarea required placeholder="Описание" value={item.description} onChange={e => handleNewItemChange(index, "description", e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none h-20" />
-
                           <div className="mt-2 border-t border-[#5c3a21] pt-3">
                             <label className="block text-xs font-pixeloid-mono text-[#a37c49] mb-2 flex items-center gap-1"><ImageIcon size={14}/> Прикрепить картинку (до 2МБ)</label>
-                            
                             {!item.image ? (
-                              <input 
-                                type="file" 
-                                accept="image/*"
-                                onChange={(e) => handleImageUpload(e, index)}
-                                className="w-full text-sm text-[#8c6e52] file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-bold file:bg-[#3d2617] file:text-[#e6d5b8] hover:file:bg-[#5c3a21] file:cursor-pointer file:transition-colors"
-                              />
+                              <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, index)} className="w-full text-sm text-[#8c6e52] file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-[#3d2617] file:text-[#e6d5b8] hover:file:bg-[#5c3a21] file:cursor-pointer" />
                             ) : (
-                              <div className="relative inline-block border-2 border-[#5c3a21] rounded-lg overflow-hidden">
-                                <img src={item.image} alt="Preview" className="h-32 object-cover" />
-                                <button 
-                                  type="button" 
-                                  onClick={() => removeImage(index)}
-                                  className="absolute top-1 right-1 bg-red-600/80 hover:bg-red-600 text-white p-1 rounded-full transition-colors"
-                                  title="Удалить картинку"
-                                >
-                                  <X size={14} />
-                                </button>
+                              <div className="relative inline-block border-2 border-[#5c3a21] rounded-lg overflow-hidden" style={{ backgroundColor: '#d6c5b3', backgroundImage: 'radial-gradient(#b8a38a 1px, transparent 1px)', backgroundSize: '10px 10px' }}>
+                                <img src={item.image} alt="Preview" className="h-32 object-contain p-2" />
+                                <button type="button" onClick={() => { const updated = [...newItems]; updated[index].image = ""; setNewItems(updated); }} className="absolute top-1 right-1 bg-red-600/80 hover:bg-red-600 text-white p-1 rounded-full transition-colors"><X size={14} /></button>
                               </div>
                             )}
                           </div>
                         </div>
                       </div>
                     ))}
-
                     <div className="flex flex-wrap gap-4 pt-2">
-                      <button type="button" onClick={addNewItemField} className="px-4 py-2 bg-[#3d2617] border border-[#5c3a21] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#5c3a21] transition-colors shadow-lg flex items-center gap-2">
-                        <Plus size={18}/> Добавить ещё
-                      </button>
-                      <button type="submit" className="px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#7a4f2e] transition-colors shadow-lg">
-                        Сохранить всё
-                      </button>
+                      <button type="button" onClick={addNewItemField} className="px-4 py-2 bg-[#3d2617] border border-[#5c3a21] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#5c3a21] transition-colors shadow-lg flex items-center gap-2"><Plus size={18}/> Добавить ещё</button>
+                      <button type="submit" className="px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#7a4f2e] transition-colors shadow-lg">Сохранить всё</button>
                     </div>
                   </form>
                 )}
@@ -622,26 +609,11 @@ export default function TavernArchive() {
                       <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Upload size={18}/> Массовый импорт (JSON)</h3>
                       <p className="text-[#8c6e52] mb-4 text-sm font-sans">Вставьте JSON массив записей в формате:</p>
                       <pre className="text-xs text-[#a37c49] bg-[#160d08] p-3 rounded mb-4 overflow-x-auto font-mono">
-{`[
-  {
-    "title": "Название",
-    "category": "Символика",
-    "description": "Описание",
-    "symbol": "1/11",
-    "dangerLevel": "Высокий",
-    "image": "data:image/jpeg;base64,..." 
-  }
-]`}
+{`[{"title": "Название", "category": "Символика", "description": "Описание", "symbol": "1/11", "dangerLevel": "Высокий", "image": "data:image..."}]`}
                       </pre>
-                      <textarea 
-                        placeholder="Вставьте JSON сюда..." 
-                        value={bulkJson} 
-                        onChange={e => setBulkJson(e.target.value)} 
-                        className="w-full p-3 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] font-mono text-sm focus:border-[#a37c49] outline-none h-48" 
-                      />
+                      <textarea placeholder="Вставьте JSON сюда..." value={bulkJson} onChange={e => setBulkJson(e.target.value)} className="w-full p-3 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] font-mono text-sm focus:border-[#a37c49] outline-none h-48" />
                       <button onClick={handleBulkImport} className="mt-4 px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#7a4f2e] transition-colors shadow-lg">Импортировать данные</button>
                     </div>
-
                     <div className="bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
                       <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Download size={18}/> Экспорт</h3>
                       <p className="text-[#8c6e52] mb-4 text-sm font-sans">Скачать весь текущий архив в формате JSON.</p>
@@ -655,36 +627,18 @@ export default function TavernArchive() {
                     <form onSubmit={handleCreateUser} className="space-y-4 max-w-xl bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
                       <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] flex items-center gap-2"><Plus size={18}/> Создать аккаунт</h3>
                       <input required placeholder="Название аккаунта (Никнейм)" value={newAcc.account_name} onChange={e => setNewAcc({...newAcc, account_name: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none" />
-                      <div className="flex items-center gap-2">
-                        <input required={!autoUser} placeholder="Логин" value={newAcc.username} onChange={e => setNewAcc({...newAcc, username: e.target.value})} disabled={autoUser} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none disabled:opacity-50" />
-                        <label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer font-pixeloid-mono"><input type="checkbox" checked={autoUser} onChange={e => setAutoUser(e.target.checked)} /> Рандом</label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <input required={!autoPass} placeholder="Пароль" value={newAcc.password} onChange={e => setNewAcc({...newAcc, password: e.target.value})} disabled={autoPass} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none disabled:opacity-50" />
-                        <label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer font-pixeloid-mono"><input type="checkbox" checked={autoPass} onChange={e => setAutoPass(e.target.checked)} /> Рандом</label>
-                      </div>
+                      <div className="flex items-center gap-2"><input required={!autoUser} placeholder="Логин" value={newAcc.username} onChange={e => setNewAcc({...newAcc, username: e.target.value})} disabled={autoUser} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none disabled:opacity-50" /><label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer font-pixeloid-mono"><input type="checkbox" checked={autoUser} onChange={e => setAutoUser(e.target.checked)} /> Рандом</label></div>
+                      <div className="flex items-center gap-2"><input required={!autoPass} placeholder="Пароль" value={newAcc.password} onChange={e => setNewAcc({...newAcc, password: e.target.value})} disabled={autoPass} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none disabled:opacity-50" /><label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer font-pixeloid-mono"><input type="checkbox" checked={autoPass} onChange={e => setAutoPass(e.target.checked)} /> Рандом</label></div>
                       <select value={newAcc.role} onChange={e => setNewAcc({...newAcc, role: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none cursor-pointer">
-                         <option value="low">Лоу Стафф</option>
-                         <option value="high">Хай Стафф</option>
-                         <option value="guardian">Хранитель</option>
-                         <option value="creator">Создатель Сервера</option>
+                         <option value="low">Лоу Стафф</option><option value="high">Хай Стафф</option><option value="guardian">Хранитель</option><option value="creator">Создатель Сервера</option>
                       </select>
                       <button type="submit" className="px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#7a4f2e] transition-colors shadow-lg">Сгенерировать</button>
                     </form>
-
                     <div>
                       <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Users size={18}/> Список доступных аккаунтов</h3>
                       <div className="overflow-x-auto rounded-lg border border-[#5c3a21]">
                         <table className="w-full text-left border-collapse">
-                          <thead className="bg-[#1c110b]">
-                            <tr className="text-[#8c6e52] border-b border-[#5c3a21] font-pixeloid-mono text-sm">
-                              <th className="p-3">Имя</th>
-                              <th className="p-3">Роль</th>
-                              <th className="p-3">Логин</th>
-                              <th className="p-3">Пароль</th>
-                              <th className="p-3">Действие</th>
-                            </tr>
-                          </thead>
+                          <thead className="bg-[#1c110b]"><tr className="text-[#8c6e52] border-b border-[#5c3a21] font-pixeloid-mono text-sm"><th className="p-3">Имя</th><th className="p-3">Роль</th><th className="p-3">Логин</th><th className="p-3">Пароль</th><th className="p-3">Действие</th></tr></thead>
                           <tbody>
                             {usersList.map(u => (
                               <tr key={u.id} className="border-b border-[#3d2617] hover:bg-[#1c110b] transition-colors">
@@ -692,18 +646,10 @@ export default function TavernArchive() {
                                 <td className={`p-3 text-sm font-bold font-pixeloid-mono ${ROLES_MAP[u.role]?.color.split(' ')[0] || "text-white"}`}>{ROLES_MAP[u.role]?.name || u.role}</td>
                                 <td className="p-3 font-mono text-[#c4b5a5]">{u.username}</td>
                                 <td className="p-3 font-mono text-red-400 bg-red-500/5">{u.plain_password || "********"}</td>
-                                <td className="p-3">
-                                  {(user.role === "owner" || user.role === "creator") && u.id !== user.id && (
-                                    <button onClick={() => handleDeleteUser(u.id, u.account_name)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded transition-colors" title="Удалить аккаунт">
-                                      <Trash2 size={16} />
-                                    </button>
-                                  )}
-                                </td>
+                                <td className="p-3">{(user.role === "owner" || user.role === "creator") && u.id !== user.id && (<button onClick={() => handleDeleteUser(u.id, u.account_name)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded transition-colors" title="Удалить аккаунт"><Trash2 size={16} /></button>)}</td>
                               </tr>
                             ))}
-                            {usersList.length === 0 && (
-                              <tr><td colSpan={5} className="text-center p-6 text-[#8c6e52]">Нет доступных аккаунтов</td></tr>
-                            )}
+                            {usersList.length === 0 && (<tr><td colSpan={5} className="text-center p-6 text-[#8c6e52]">Нет доступных аккаунтов</td></tr>)}
                           </tbody>
                         </table>
                       </div>
@@ -715,23 +661,15 @@ export default function TavernArchive() {
                   <div className="max-w-xl font-sans">
                     <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Database size={18}/> Проверка системы</h3>
                     <p className="text-[#8c6e52] mb-6">Нажмите кнопку ниже, чтобы проверить подключение к базе данных Turso и замерить пинг.</p>
-                    
-                    <button onClick={runDiagnostics} className="px-6 py-3 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded-lg hover:bg-[#7a4f2e] flex items-center gap-2 mb-6 shadow-lg transition-colors">
-                      <Activity size={18}/> Запустить тест
-                    </button>
-
+                    <button onClick={runDiagnostics} className="px-6 py-3 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded-lg hover:bg-[#7a4f2e] flex items-center gap-2 mb-6 shadow-lg transition-colors"><Activity size={18}/> Запустить тест</button>
                     {diagResult && (
                       <div className={`p-6 rounded-xl border ${diagResult.status === 'ok' ? 'bg-green-900/20 border-green-500/50' : 'bg-red-900/20 border-red-500/50'}`}>
                         <div className="flex items-center gap-3 mb-2">
                           {diagResult.status === 'ok' ? <ShieldAlert className="text-green-500" /> : <Skull className="text-red-500" />}
-                          <h4 className={`text-xl font-bold font-pixeloid-mono ${diagResult.status === 'ok' ? 'text-green-400' : 'text-red-400'}`}>
-                            {diagResult.status === 'ok' ? 'Система в норме' : 'Ошибка подключения'}
-                          </h4>
+                          <h4 className={`text-xl font-bold font-pixeloid-mono ${diagResult.status === 'ok' ? 'text-green-400' : 'text-red-400'}`}>{diagResult.status === 'ok' ? 'Система в норме' : 'Ошибка подключения'}</h4>
                         </div>
                         <p className="text-[#e6d5b8] mb-2">{diagResult.message}</p>
-                        {diagResult.latency !== undefined && (
-                          <p className="text-sm text-[#8c6e52] font-mono">Пинг до базы: {diagResult.latency} мс</p>
-                        )}
+                        {diagResult.latency !== undefined && (<p className="text-sm text-[#8c6e52] font-mono">Пинг до базы: {diagResult.latency} мс</p>)}
                       </div>
                     )}
                   </div>
