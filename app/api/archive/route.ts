@@ -15,18 +15,18 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    // Проверяем, массив это или одиночный объект
     const items = Array.isArray(body) ? body : [body];
 
     for (const item of items) {
       await db.execute({
-        sql: "INSERT INTO archive (title, category, description, symbol, danger_level) VALUES (?, ?, ?, ?, ?)",
+        sql: "INSERT INTO archive (title, category, description, symbol, danger_level, image) VALUES (?, ?, ?, ?, ?, ?)",
         args: [
           item.title, 
           item.category, 
           item.description, 
           item.symbol || null, 
-          item.dangerLevel || null
+          item.dangerLevel || null,
+          item.image || null // <--- Сохраняем картинку
         ],
       });
     }
@@ -41,9 +41,7 @@ export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
-    
     if (!id) return NextResponse.json({ error: "ID не указан" }, { status: 400 });
-    
     await db.execute({ sql: "DELETE FROM archive WHERE id = ?", args: [id] });
     return NextResponse.json({ success: true });
   } catch (error) {
