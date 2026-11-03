@@ -15,6 +15,13 @@ body {
   font-family: var(--font-pixel);
 }
 
+/* app/globals.css */
+/* ... ваши существующие стили ... */
+
+.font-pixeloid-mono {
+  font-family: var(--font-pixeloid-mono), monospace;
+}
+
 /* Кастомный скроллбар */
 ::-webkit-scrollbar {
   width: 10px;
