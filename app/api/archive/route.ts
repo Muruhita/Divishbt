@@ -10,18 +10,20 @@ export async function GET(req: Request) {
     const limit = parseInt(searchParams.get("limit") || "20");
     const offset = (page - 1) * limit;
 
-    // Получаем общее количество для пагинации
+    // Считаем общее количество
     const countRes = await db.execute("SELECT COUNT(*) as total FROM archive");
-    const total = countRes.rows[0].total as number;
+    const total = Number(countRes.rows[0].total);
 
-    // Получаем записи для текущей страницы
+    // Берем записи для страницы
     const result = await db.execute({
       sql: "SELECT * FROM archive ORDER BY id DESC LIMIT ? OFFSET ?",
       args: [limit, offset]
     });
     
+    // Возвращаем объект (как ждет фронтенд)
     return NextResponse.json({ items: result.rows, total, page, limit });
   } catch (error) {
+    console.error("Ошибка API:", error);
     return NextResponse.json({ error: "Ошибка получения данных" }, { status: 500 });
   }
 }
@@ -31,7 +33,6 @@ export async function POST(req: Request) {
     const body = await req.json();
     const items = Array.isArray(body) ? body : [body];
     
-    // Данные для лога берем из первого элемента (предполагаем, что юзер один)
     const userName = items[0].authorName || "Неизвестно";
     const userRole = items[0].authorRole || "low";
 
@@ -41,7 +42,6 @@ export async function POST(req: Request) {
         args: [item.title, item.category, item.description, item.symbol || null, item.dangerLevel || null, item.image || null],
       });
       
-      // Запись в лог
       await db.execute({
         sql: "INSERT INTO logs (action, item_title, user_name, user_role) VALUES (?, ?, ?, ?)",
         args: ["СОЗДАНИЕ", item.title, userName, userRole],
@@ -64,7 +64,6 @@ export async function PUT(req: Request) {
       args: [item.title, item.category, item.description, item.symbol || null, item.dangerLevel || null, item.image || null, item.id],
     });
 
-    // Запись в лог
     await db.execute({
       sql: "INSERT INTO logs (action, item_title, user_name, user_role) VALUES (?, ?, ?, ?)",
       args: ["ИЗМЕНЕНИЕ", item.title, item.authorName || "Неизвестно", item.authorRole || "low"],
@@ -88,7 +87,6 @@ export async function DELETE(req: Request) {
     
     await db.execute({ sql: "DELETE FROM archive WHERE id = ?", args: [id] });
     
-    // Запись в лог
     await db.execute({
       sql: "INSERT INTO logs (action, item_title, user_name, user_role) VALUES (?, ?, ?, ?)",
       args: ["УДАЛЕНИЕ", title, authorName, authorRole],
