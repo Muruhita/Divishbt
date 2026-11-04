@@ -257,6 +257,18 @@ export default function TavernArchive() {
     }
   };
 
+  const handleClearLogs = async () => {
+    if (!user || !confirm("Очистить все логи? Это действие необратимо.")) return;
+    playSound("delete");
+    const res = await fetch("/api/admin/logs", { method: "DELETE" });
+    if (res.ok) {
+      setLogsList([]);
+      alert("Логи успешно очищены!");
+    } else {
+      alert("Ошибка при очистке логов");
+    }
+  };
+
   const handleAddMultipleItems = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -803,7 +815,12 @@ export default function TavernArchive() {
 
                 {adminTab === "logs" && (userRole.id === "owner" || userRole.id === "creator") && (
                   <div className="animate-smooth-fade-up">
-                    <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><History size={18}/> История (100)</h3>
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] flex items-center gap-2"><History size={18}/> История действий (Последние 100)</h3>
+                      <button onClick={handleClearLogs} className="px-4 py-2 bg-red-900/20 border border-red-500 text-red-400 font-bold rounded hover:bg-red-900/40 active:scale-95 transition-all text-sm flex items-center gap-2">
+                        <Trash2 size={16}/> Очистить логи
+                      </button>
+                    </div>
                     <div className="overflow-x-auto rounded-lg border border-[#5c3a21]">
                       <table className="w-full text-left border-collapse">
                         <thead className="bg-[#1c110b]"><tr className="text-[#8c6e52] border-b border-[#5c3a21] font-pixeloid-mono text-sm"><th className="p-3">Время</th><th className="p-3">Действие</th><th className="p-3">Запись</th><th className="p-3">Кто</th></tr></thead>
@@ -816,6 +833,9 @@ export default function TavernArchive() {
                               <td className="p-3 text-sm">{log.user_name}</td>
                             </tr>
                           ))}
+                          {logsList.length === 0 && (
+                            <tr><td colSpan={4} className="text-center p-6 text-[#8c6e52]">Логи пусты</td></tr>
+                          )}
                         </tbody>
                       </table>
                     </div>
