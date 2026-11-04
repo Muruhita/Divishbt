@@ -2,9 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
-import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, LockKeyhole, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle, Save, Tag, CheckCircle2, Info, Home, BookOpen, LayoutDashboard, FileText, ImagePlus } from "lucide-react";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
+import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, LockKeyhole, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle, Save, Tag, CheckCircle2, Info, Home, BookOpen, LayoutDashboard, ImagePlus } from "lucide-react";
 
 type ArchiveItem = { id: number; title: string; category: string; description: string; symbol?: string; dangerLevel?: string; image?: string; is_draft?: number; };
 type DbArchiveItem = { id: number; title: string; category: string; description: string; symbol: string | null; danger_level: string | null; image: string | null; is_draft: number; };
@@ -30,7 +28,7 @@ const DEFAULT_ROLES = [
 
 // --- КОМПОНЕНТ КАРТОЧКИ ---
 const ArchiveCard = ({ 
-  item, canEdit, canDelete, onEdit, onDelete, onViewImage, onExportPDF
+  item, canEdit, canDelete, onEdit, onDelete, onViewImage
 }: { 
   item: ArchiveItem; 
   canEdit: boolean; 
@@ -38,11 +36,10 @@ const ArchiveCard = ({
   onEdit: (item: ArchiveItem) => void;
   onDelete: (id: number, title: string) => void;
   onViewImage: (img: string) => void;
-  onExportPDF: (item: ArchiveItem) => void;
 }) => {
   if (!item || !item.title) return null;
   return (
-    <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.6)] hover:border-[#a37c49] hover:shadow-[0_0_20px_rgba(163,124,73,0.15)] hover:-translate-y-1.5 transition-all duration-300 group flex flex-col relative z-10 overflow-hidden" id={`record-${item.id}`}>
+    <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.6)] hover:border-[#a37c49] hover:shadow-[0_0_20px_rgba(163,124,73,0.15)] hover:-translate-y-1.5 transition-all duration-300 group flex flex-col relative z-10 overflow-hidden">
       {item.image && (
         <div className="w-full h-56 overflow-hidden border-b-2 border-[#5c3a21] cursor-pointer relative group/img flex items-center justify-center"
           style={{ backgroundColor: '#d6c5b3', backgroundImage: 'radial-gradient(#b8a38a 1px, transparent 1px)', backgroundSize: '10px 10px' }}
@@ -66,7 +63,6 @@ const ArchiveCard = ({
           {item.dangerLevel && <span className="inline-block px-2 py-1 text-xs font-bold font-pixeloid-mono rounded border border-red-900/50 bg-red-900/20 text-red-400 uppercase">{item.dangerLevel}</span>}
           
           <div className="ml-auto flex items-center gap-1 relative z-[60]">
-            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onExportPDF(item); }} className="text-green-400 hover:text-green-300 bg-green-500/10 p-1.5 rounded active:scale-90 transition-all cursor-pointer" title="Экспорт в PDF"><FileText size={16} /></button>
             {canEdit && (
               <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(item); }} className="text-blue-400 hover:text-blue-300 bg-blue-500/10 p-1.5 rounded active:scale-90 transition-all cursor-pointer"><Pencil size={16} /></button>
             )}
@@ -567,27 +563,6 @@ export default function TavernArchive() {
     });
   };
 
-  const handleExportPDF = (item: ArchiveItem) => {
-    const input = document.getElementById(`record-${item.id}`);
-    if (!input) return;
-    
-    const buttons = input.querySelectorAll('button');
-    buttons.forEach(b => (b as HTMLElement).style.display = 'none');
-
-    html2canvas(input, { scale: 2, useCORS: true, backgroundColor: "#2e1b13" }).then((canvas) => {
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "px",
-        format: [canvas.width, canvas.height]
-      });
-      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
-      pdf.save(`${item.title}.pdf`);
-      
-      buttons.forEach(b => (b as HTMLElement).style.display = '');
-    });
-  };
-
   const handleExport = async () => {
     playSound("click");
     try {
@@ -883,7 +858,7 @@ export default function TavernArchive() {
                       <ArchiveCard 
                         key={item.id} item={item} canEdit={canEdit} canDelete={canDelete} 
                         onEdit={(item) => setEditingItem(item)} onDelete={handleDeleteItem} 
-                        onViewImage={(img) => setSelectedImage(img)} onExportPDF={handleExportPDF}
+                        onViewImage={(img) => setSelectedImage(img)}
                       />
                     )) : <p className="text-center w-full col-span-2 text-[#8c6e52]">Ничего не найдено...</p>}
                   </div>
@@ -909,7 +884,7 @@ export default function TavernArchive() {
                       <ArchiveCard 
                         key={item.id} item={item} canEdit={canEdit} canDelete={canDelete} 
                         onEdit={(item) => setEditingItem(item)} onDelete={handleDeleteItem} 
-                        onViewImage={(img) => setSelectedImage(img)} onExportPDF={handleExportPDF}
+                        onViewImage={(img) => setSelectedImage(img)}
                       />
                     )) : <p className="text-center w-full col-span-2 text-[#8c6e52]">В этой категории пока нет записей...</p>}
                  </div>
@@ -1042,8 +1017,6 @@ export default function TavernArchive() {
                   </div>
                 )}
 
-                {/* ... (остальные вкладки: categories, roles, bulk, users, logs, diag остаются как были) ... */}
-                
                 {adminTab === "categories" && userRole.level >= 2 && (
                   <div className="animate-smooth-fade-up max-w-xl">
                     <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Tag size={18}/> Управление категориями</h3>
