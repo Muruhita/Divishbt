@@ -8,18 +8,44 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");
-    const offset = (page - 1) * limit;
+    const category = searchParams.get("category") || "Все";
+    const search = searchParams.get("search") || "";
 
-    const countRes = await db.execute("SELECT COUNT(*) as total FROM archive");
+    // Формируем условия для SQL запроса
+    let whereConditions = [];
+    let args: any[] = [];
+
+    if (category !== "Все") {
+      whereConditions.push("category = ?");
+      args.push(category);
+    }
+
+    if (search) {
+      whereConditions.push("(LOWER(title) LIKE LOWER(?) OR LOWER(description) LIKE LOWER(?))");
+      args.push(`%${search}%`, `%${search}%`);
+    }
+
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(" AND ")}` : "";
+
+    // 1. Считаем общее количество записей с учетом фильтров
+    const countRes = await db.execute({
+      sql: `SELECT COUNT(*) as total FROM archive ${whereClause}`,
+      args: args
+    });
     const total = Number(countRes.rows[0].total);
 
+    // 2. Достаем записи для текущей страницы с учетом фильтров
+    const offset = (page - 1) * limit;
+    const queryArgs = [...args, limit, offset];
+
     const result = await db.execute({
-      sql: "SELECT * FROM archive ORDER BY id DESC LIMIT ? OFFSET ?",
-      args: [limit, offset]
+      sql: `SELECT * FROM archive ${whereClause} ORDER BY id DESC LIMIT ? OFFSET ?`,
+      args: queryArgs
     });
     
     return NextResponse.json({ items: result.rows, total, page, limit });
   } catch (error) {
+    console.error("Ошибка API:", error);
     return NextResponse.json({ error: "Ошибка получения данных" }, { status: 500 });
   }
 }
