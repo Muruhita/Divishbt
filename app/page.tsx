@@ -347,8 +347,11 @@ export default function TavernArchive() {
     return matchesSearch && matchesCategory;
   });
 
-  const ArchiveCard = ({ item }: { item: ArchiveItem }) => (
-    <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.6)] hover:border-[#a37c49] hover:shadow-[0_0_20px_rgba(163,124,73,0.15)] hover:-translate-y-1.5 transition-all duration-300 group flex flex-col relative z-10 overflow-hidden">
+  const ArchiveCard = ({ item, index }: { item: ArchiveItem, index: number }) => (
+    <div 
+      className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.6)] hover:border-[#a37c49] hover:shadow-[0_0_20px_rgba(163,124,73,0.15)] hover:-translate-y-1.5 transition-all duration-300 group flex flex-col relative z-10 overflow-hidden opacity-0"
+      style={{ animation: `pixel-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards`, animationDelay: `${index * 50}ms` }}
+    >
       {item.image && (
         <div className="w-full h-56 overflow-hidden border-b-2 border-[#5c3a21] cursor-pointer relative group/img flex items-center justify-center"
           style={{ backgroundColor: '#d6c5b3', backgroundImage: 'radial-gradient(#b8a38a 1px, transparent 1px)', backgroundSize: '10px 10px' }}
@@ -390,7 +393,8 @@ export default function TavernArchive() {
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col">
       
-      {/* ТУМАН И РУНЫ НА ФОНЕ */}
+      {/* ФОН: ПИКСЕЛЬНЫЕ ЗВЕЗДЫ, ТУМАН, РУНЫ */}
+      <div className="pixel-stars"></div>
       <div className="fog-container"><div className="fog-layer"></div><div className="fog-layer"></div></div>
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
         {RUNES.slice(0, 10).map((rune, i) => (
@@ -407,7 +411,7 @@ export default function TavernArchive() {
       {/* МОДАЛКИ */}
       {selectedImage && (
         <div className="fixed inset-0 z-[999] bg-black/90 flex items-center justify-center p-4 cursor-zoom-out animate-fade-in" onClick={() => setSelectedImage(null)}>
-          <div className="p-4 rounded-xl animate-scale-up" style={{ backgroundColor: '#d6c5b3', backgroundImage: 'radial-gradient(#b8a38a 1px, transparent 1px)', backgroundSize: '10px 10px' }}>
+          <div className="p-4 rounded-xl animate-bounce-in" style={{ backgroundColor: '#d6c5b3', backgroundImage: 'radial-gradient(#b8a38a 1px, transparent 1px)', backgroundSize: '10px 10px' }}>
             <img src={selectedImage} alt="Full size" className="max-w-full max-h-[85vh] object-contain rounded" onClick={(e) => e.stopPropagation()} />
           </div>
         </div>
@@ -415,7 +419,7 @@ export default function TavernArchive() {
 
       {editingItem && (
         <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl w-full max-w-2xl relative animate-scale-up">
+          <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl w-full max-w-2xl relative animate-bounce-in">
             <button onClick={() => setEditingItem(null)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 active:scale-90 transition-all"><X size={24}/></button>
             <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49] mb-6">Редактировать</h2>
             <form onSubmit={handleUpdateItem} className="space-y-4">
@@ -429,7 +433,7 @@ export default function TavernArchive() {
 
       {showProfile && user && (
         <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl w-full max-w-md relative animate-scale-up">
+          <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl w-full max-w-md relative animate-bounce-in">
             <button onClick={() => setShowProfile(false)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 active:scale-90 transition-all"><X size={24}/></button>
             <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49] mb-6 text-center">Личный кабинет</h2>
             <form onSubmit={handleUpdateProfile} className="space-y-4">
@@ -457,10 +461,10 @@ export default function TavernArchive() {
       {/* ЭКРАН ВХОДА */}
       {!user && (
         <div className="flex-grow flex items-center justify-center p-4 relative z-10">
-          <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-8 pt-0 rounded-xl shadow-2xl w-full max-w-md relative mt-16 animate-fade-in">
+          <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-8 pt-0 rounded-xl shadow-2xl w-full max-w-md relative mt-16 animate-pixel-in">
             <div className="flex justify-center -mt-16 mb-4 relative">
               <div className="absolute inset-0 bg-[#a37c49] blur-2xl opacity-20 rounded-full animate-pulse"></div>
-              <img src="/logo.png" alt="Сытый Лис" className="w-32 h-32 object-cover rounded-full border-4 border-[#5c3a21] relative z-10 animate-float bg-[#1c110b]" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              <img src="/logo.png" alt="Сытый Лис" className="w-32 h-32 object-cover rounded-full border-4 border-[#5c3a21] relative z-10 animate-float bg-[#1c110b] hover:glitch cursor-pointer" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             </div>
             <h1 className="text-3xl font-bold font-pixeloid-mono text-center mb-2 text-[#a37c49] uppercase flex justify-center items-center gap-2"><Flame /> Сытый Лис</h1>
             <p className="text-center text-[#8c6e52] mb-8">Вход в закрытый архив</p>
@@ -495,19 +499,19 @@ export default function TavernArchive() {
 
           <div className="max-w-5xl mx-auto px-6 py-12 w-full flex flex-col flex-grow">
             <header className="flex justify-center mb-12 cursor-pointer" onClick={() => setView("home")}>
-              <img src="/logo.png" alt="Сытый Лис" className="w-24 h-24 object-cover rounded-full border-4 border-[#5c3a21] animate-float bg-[#1c110b] hover:scale-105 transition-transform" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              <img src="/logo.png" alt="Сытый Лис" className="w-24 h-24 object-cover rounded-full border-4 border-[#5c3a21] animate-float bg-[#1c110b] hover:scale-105 hover:glitch transition-all" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             </header>
 
             {view === "home" && (
-              <div className="flex-grow flex flex-col items-center animate-fade-in text-center pb-20">
-                <h2 className="text-4xl font-bold font-pixeloid-mono text-[#a37c49] mb-6">Запретный Архив</h2>
+              <div className="flex-grow flex flex-col items-center animate-pixel-in text-center pb-20">
+                <h2 className="text-4xl font-bold font-pixeloid-mono text-[#a37c49] mb-6 hover-glitch cursor-default">Запретный Архив</h2>
                 <div className="relative w-full max-w-2xl mb-8 group">
                   <input type="text" placeholder="Поиск..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-4 pl-12 bg-[#2e1b13] border-2 border-[#5c3a21] rounded-lg text-[#e6d5b8] font-pixeloid-mono focus:border-[#a37c49] transition-colors shadow-lg" />
                   <Search className="absolute left-4 top-4 text-[#6b513b] group-focus-within:text-[#a37c49] transition-colors" size={24} />
                 </div>
                 {searchQuery.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full text-left">
-                    {filteredData.map(item => <ArchiveCard key={item.id} item={item} />)}
+                    {filteredData.map((item, idx) => <ArchiveCard key={item.id} item={item} index={idx} />)}
                   </div>
                 ) : (
                   <button onClick={() => setView("archive")} className="mt-8 px-10 py-4 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono text-xl rounded-lg shadow-[0_4px_0_#1c110b] hover:shadow-[0_0_20px_rgba(163,124,73,0.4)] hover:-translate-y-1 hover:bg-[#7a4f2e] active:translate-y-1 active:shadow-none transition-all duration-300">
@@ -518,7 +522,7 @@ export default function TavernArchive() {
             )}
 
             {view === "archive" && (
-              <div className="animate-fade-in w-full text-left">
+              <div className="animate-pixel-in w-full text-left">
                  <button onClick={() => setView("home")} className="mb-6 flex items-center gap-2 text-[#8c6e52] hover:text-[#a37c49] transition-colors group"><ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform"/> На главную</button>
                  <div className="flex flex-wrap gap-2 mb-8">
                     {CATEGORIES.map(c => (
@@ -532,7 +536,7 @@ export default function TavernArchive() {
                     ))}
                  </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {filteredData.map(item => <ArchiveCard key={item.id} item={item} />)}
+                    {filteredData.map((item, idx) => <ArchiveCard key={item.id} item={item} index={idx} />)}
                  </div>
                  
                  <div className="flex justify-center items-center gap-4 mt-12 pb-8">
@@ -544,9 +548,9 @@ export default function TavernArchive() {
             )}
 
             {view === "admin" && ROLES_MAP[user.role]?.level >= 1 && (
-              <div className="animate-fade-in w-full bg-[#2e1b13] p-8 rounded-xl border-double border-4 border-[#5c3a21]">
+              <div className="animate-pixel-in w-full bg-[#2e1b13] p-8 rounded-xl border-double border-4 border-[#5c3a21]">
                 <div className="flex justify-between items-center mb-8 border-b border-[#5c3a21] pb-4">
-                   <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49]">Панель Управления</h2>
+                   <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49] hover-glitch cursor-default">Панель Управления</h2>
                    <button onClick={() => setView("home")} className="text-sm font-pixeloid-mono text-[#8c6e52] hover:text-white active:scale-95 transition-all">На главную</button>
                 </div>
 
@@ -562,10 +566,10 @@ export default function TavernArchive() {
 
                 {/* ВКЛАДКА: ДОБАВИТЬ */}
                 {adminTab === "archive" && (
-                  <div className="animate-fade-in">
+                  <div className="animate-pixel-in">
                     <form onSubmit={handleAddMultipleItems} className="space-y-6 max-w-xl">
                       {newItems.map((item, index) => (
-                        <div key={index} className="p-4 bg-[#1c110b] border border-[#5c3a21] rounded-lg animate-fade-in">
+                        <div key={index} className="p-4 bg-[#1c110b] border border-[#5c3a21] rounded-lg">
                           <div className="space-y-3">
                             <input required placeholder="Название" value={item.title} onChange={e => { const upd = [...newItems]; upd[index].title = e.target.value; setNewItems(upd); }} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none transition-colors" />
                             <textarea required placeholder="Описание (Markdown)" value={item.description} onChange={e => { const upd = [...newItems]; upd[index].description = e.target.value; setNewItems(upd); }} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white h-20 focus:border-[#a37c49] outline-none transition-colors" />
@@ -578,9 +582,8 @@ export default function TavernArchive() {
                       </div>
                     </form>
 
-                    {/* КНОПКА ОЧИСТКИ БАЗЫ (ОВНЕР И СОЗДАТЕЛЬ) */}
                     {(user.role === "owner" || user.role === "creator") && (
-                      <div className="mt-12 pt-6 border-t border-red-900/50 max-w-xl animate-fade-in">
+                      <div className="mt-12 pt-6 border-t border-red-900/50 max-w-xl animate-pixel-in">
                         <h3 className="text-red-500 font-bold font-pixeloid-mono mb-2 flex items-center gap-2"><AlertTriangle size={18}/> Опасная зона</h3>
                         <p className="text-sm text-gray-500 mb-4">Эта кнопка безвозвратно удалит ВСЕ записи из архива.</p>
                         <button onClick={handleClearDatabase} className="px-6 py-2 bg-red-900/20 border border-red-500 text-red-400 font-bold rounded hover:bg-red-900/40 active:scale-95 transition-all">
@@ -593,7 +596,7 @@ export default function TavernArchive() {
 
                 {/* ВКЛАДКА: ИМПОРТ/ЭКСПОРТ */}
                 {adminTab === "bulk" && (
-                  <div className="space-y-8 max-w-2xl animate-fade-in">
+                  <div className="space-y-8 max-w-2xl animate-pixel-in">
                     <div className="bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
                       <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Upload size={18}/> Массовый импорт (JSON)</h3>
                       <p className="text-[#8c6e52] mb-4 text-sm font-sans">Вставьте JSON массив записей в формате:</p>
@@ -619,7 +622,7 @@ export default function TavernArchive() {
 
                 {/* ВКЛАДКА: АККАУНТЫ */}
                 {adminTab === "users" && (
-                  <div className="space-y-10 font-sans animate-fade-in">
+                  <div className="space-y-10 font-sans animate-pixel-in">
                     <form onSubmit={handleCreateUser} className="space-y-4 max-w-xl bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
                       <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] flex items-center gap-2"><Plus size={18}/> Создать аккаунт</h3>
                       <input required placeholder="Название аккаунта (Никнейм)" value={newAcc.account_name} onChange={e => setNewAcc({...newAcc, account_name: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none" />
@@ -655,7 +658,7 @@ export default function TavernArchive() {
 
                 {/* ВКЛАДКА: ЛОГИ */}
                 {adminTab === "logs" && (user.role === "owner" || user.role === "creator") && (
-                  <div className="animate-fade-in">
+                  <div className="animate-pixel-in">
                     <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><History size={18}/> История действий (Последние 100)</h3>
                     <div className="overflow-x-auto rounded-lg border border-[#5c3a21]">
                       <table className="w-full text-left border-collapse">
@@ -677,7 +680,7 @@ export default function TavernArchive() {
 
                 {/* ВКЛАДКА: ДИАГНОСТИКА */}
                 {adminTab === "diag" && (
-                  <div className="max-w-xl font-sans animate-fade-in">
+                  <div className="max-w-xl font-sans animate-pixel-in">
                     <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Database size={18}/> Проверка системы</h3>
                     <button onClick={async () => {
                       setDiagResult(null);
@@ -686,7 +689,7 @@ export default function TavernArchive() {
                     }} className="px-6 py-3 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded-lg hover:bg-[#7a4f2e] active:scale-95 flex items-center gap-2 mb-6 shadow-lg transition-all"><Activity size={18}/> Запустить тест</button>
                     
                     {diagResult && (
-                      <div className={`p-6 rounded-xl border animate-fade-in ${diagResult.status === 'ok' ? 'bg-green-900/20 border-green-500/50' : 'bg-red-900/20 border-red-500/50'}`}>
+                      <div className={`p-6 rounded-xl border animate-pixel-in ${diagResult.status === 'ok' ? 'bg-green-900/20 border-green-500/50' : 'bg-red-900/20 border-red-500/50'}`}>
                         <p className="text-[#e6d5b8] mb-2">{diagResult.message}</p>
                         {diagResult.latency !== undefined && (<p className="text-sm text-[#8c6e52] font-mono">Пинг до базы: {diagResult.latency} мс</p>)}
                       </div>
@@ -698,7 +701,7 @@ export default function TavernArchive() {
           </div>
         </div>
       )}
-      <div className="fixed bottom-4 right-4 z-[100] bg-[#1c110b]/70 border border-[#5c3a21]/40 px-3 py-1.5 rounded-md text-[11px] text-[#8c6e52]/70 font-pixeloid-mono hover:text-[#a37c49] transition-colors cursor-default select-none">Автор: muruh1ta</div>
+      <div className="fixed bottom-4 right-4 z-[100] bg-[#1c110b]/70 border border-[#5c3a21]/40 px-3 py-1.5 rounded-md text-[11px] text-[#8c6e52]/70 font-pixeloid-mono hover:text-[#a37c49] hover:bg-[#2e1b13] transition-all cursor-default select-none">Автор: muruh1ta</div>
     </main>
   );
 }
