@@ -27,11 +27,9 @@ const DEFAULT_ROLES = [
 ];
 
 export default function TavernArchive() {
-  // --- КУРСОР ---
   const cursorDotRef = useRef<HTMLDivElement>(null);
   const isHovering = useRef(false);
 
-  // --- ПЛАШКИ ---
   const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' | 'info' | 'warning' } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ msg: string, onConfirm: () => void } | null>(null);
   const [promptDialog, setPromptDialog] = useState<{ msg: string, val: string, onConfirm: (val: string) => void } | null>(null);
@@ -44,7 +42,6 @@ export default function TavernArchive() {
   const showConfirm = (msg: string, onConfirm: () => void) => setConfirmDialog({ msg, onConfirm });
   const showPrompt = (msg: string, onConfirm: (val: string) => void) => setPromptDialog({ msg, val: "", onConfirm });
 
-  // --- СТЕЙТЫ ---
   const [data, setData] = useState<ArchiveItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Все");
@@ -66,11 +63,8 @@ export default function TavernArchive() {
   const [loginPass, setLoginPass] = useState("");
   const [loginError, setLoginError] = useState("");
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-  
-  // Стейт для анимации книги
   const [isBookOpening, setIsBookOpening] = useState(false);
 
-  // Профиль
   const [newAccountName, setNewAccountName] = useState("");
   const [newUsername, setNewUsername] = useState("");
   const [newPass, setNewPass] = useState("");
@@ -94,7 +88,6 @@ export default function TavernArchive() {
   const [soundEnabled, setSoundEnabled] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
-  // --- ЛОГИКА КУРСОРА ---
   useEffect(() => {
     if (window.matchMedia("(pointer: coarse)").matches) return;
 
@@ -207,7 +200,7 @@ export default function TavernArchive() {
   const canDelete = user?.role === 'owner' || user?.role === 'creator' || user?.role === 'high' || userRole.level >= 1;
 
   const getRoleColor = (level: number) => {
-    if (level >= 4) return "text-red-500";
+    if (level >= 4) return "text-owner-glow"; // Овнер
     if (level === 3) return "text-purple-500";
     if (level === 2) return "text-blue-500";
     if (level === 1) return "text-green-500";
@@ -226,11 +219,9 @@ export default function TavernArchive() {
       const data = await res.json();
       
       if (res.ok) {
-        // Запускаем анимацию книги
         setIsBookOpening(true);
         playSound("success");
         
-        // Ждем 1.5 секунды (время анимации), затем показываем сайт
         setTimeout(() => {
           setUser({ ...data }); 
           setLoginUser(""); setLoginPass("");
@@ -282,19 +273,12 @@ export default function TavernArchive() {
       showToast("Профиль успешно обновлен!", "success");
       setOldPass(""); setNewPass("");
       
-      const updatedUser = { 
-        ...user, 
-        username: newUsername || user.username, 
-        account_name: newAccountName || user.account_name 
-      };
-      
+      const updatedUser = { ...user, username: newUsername || user.username, account_name: newAccountName || user.account_name };
       setUser(updatedUser);
       const saved = JSON.parse(localStorage.getItem("tavern_session")!);
       saved.userData = updatedUser;
       localStorage.setItem("tavern_session", JSON.stringify(saved));
-    } else { 
-      showToast(`Ошибка: ${data.error}`, "error"); 
-    }
+    } else { showToast(`Ошибка: ${data.error}`, "error"); }
   };
 
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -320,7 +304,7 @@ export default function TavernArchive() {
   };
 
   const handleClearDatabase = () => {
-    if (!user) return;
+    if (!user || userRole.id !== "owner") return; // Только Овнер
     showPrompt("ВНИМАНИЕ! Это удалит ВСЕ записи навсегда. Введите слово 'УДАЛИТЬ':", async (val) => {
       if (val !== "УДАЛИТЬ") return showToast("Отменено. Слово введено неверно.", "warning");
       playSound("delete");
@@ -335,7 +319,7 @@ export default function TavernArchive() {
   };
 
   const handleClearLogs = () => {
-    if (!user) return;
+    if (!user || (userRole.id !== "owner" && userRole.id !== "creator")) return;
     showConfirm("Очистить все логи? Это действие необратимо.", async () => {
       playSound("delete");
       const res = await fetch("/api/admin/logs", { method: "DELETE" });
@@ -440,12 +424,18 @@ export default function TavernArchive() {
     e.preventDefault();
     if (!user) return;
     playSound("save");
+    
+    // Проверка на Овнера на фронтенде
+    if (newAcc.role === "owner" && userRole.id !== "owner") {
+      return showToast("Только Овнер может создать Овнера", "error");
+    }
+
     const finalUsername = autoUser ? generateRandom(15) : newAcc.username;
     const finalPassword = autoPass ? generateRandom(15) : newAcc.password;
 
     const res = await fetch("/api/admin/create-user", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...newAcc, username: finalUsername, password: finalPassword, requesterRole: user.role })
+      body: JSON.stringify({ ...newAcc, username: finalUsername, password: finalPassword, requesterRole: user.role, requesterName: user.account_name })
     });
 
     if (res.ok) {
@@ -566,7 +556,6 @@ export default function TavernArchive() {
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col">
       
-      {/* КУРСОР */}
       <div ref={cursorDotRef} className="custom-cursor-dot hidden md:block" />
 
       <div className="pixel-stars"></div>
@@ -585,7 +574,6 @@ export default function TavernArchive() {
         {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
       </button>
 
-      {/* ПЛАШКИ (TOASTS, MODALS) */}
       {toast && (
         <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[9999] animate-smooth-pop pointer-events-none">
           <div className={`px-6 py-4 rounded-lg border-2 shadow-[0_0_30px_rgba(0,0,0,0.8)] flex items-center gap-3 font-pixeloid-mono backdrop-blur-md text-lg
@@ -635,31 +623,24 @@ export default function TavernArchive() {
         </div>
       )}
 
-      {/* 3D КНИГА (ЭКРАН ВХОДА) */}
       {!user && (
         <div className={`fixed inset-0 z-[999] flex items-center justify-center overflow-hidden book-container ${isBookOpening ? 'book-open' : ''}`}>
-          
-          {/* Фоновый туман за книгой */}
           <div className="absolute inset-0 bg-[#0a0705]"></div>
 
-          {/* Левая створка */}
           <div className="book-cover-left flex items-center justify-end pr-4">
             <div className="w-1/2 h-full border-r border-[#5c3a21]"></div>
             <div className="book-corner book-corner-tl"></div>
             <div className="book-corner book-corner-bl"></div>
           </div>
 
-          {/* Правая створка */}
           <div className="book-cover-right flex items-center justify-start pl-4">
             <div className="w-1/2 h-full border-l border-[#5c3a21]"></div>
             <div className="book-corner book-corner-tr"></div>
             <div className="book-corner book-corner-br"></div>
           </div>
 
-          {/* Корешок книги */}
           <div className="book-spine"></div>
 
-          {/* Содержимое книги (Форма входа) */}
           <div className="login-content">
             <div className="bg-[#2e1b13]/95 border-4 border-[#a37c49] p-8 rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.9)] relative z-50">
               <div className="flex justify-center mb-6 relative">
@@ -693,15 +674,12 @@ export default function TavernArchive() {
         </div>
       )}
 
-      {/* ОСТАЛЬНОЙ ИНТЕРФЕЙС (Когда книга открыта) */}
       {user && (
         <div className="flex-grow flex flex-col relative z-10 w-full animate-content-fade">
           
-          {/* ВЕРХНЯЯ ПРАВАЯ ПАНЕЛЬ (С плавным выездом) */}
           <div className="w-full flex justify-end p-4 relative z-50 animate-menu-drop" style={{ animationDelay: '0.2s' }}>
             <div className="flex flex-col items-end gap-2">
-              {/* Профиль */}
-              <div className="flex items-center gap-3 bg-[#2e1b13]/90 border border-[#5c3a21] p-1.5 rounded-lg cursor-pointer hover:border-[#a37c49] hover:shadow-[0_0_15px_rgba(163,124,73,0.3)] transition-all group" onClick={openProfile}>
+              <div className={`flex items-center gap-3 bg-[#2e1b13]/90 border ${userRole.id === 'owner' ? 'owner-border' : 'border-[#5c3a21]'} p-1.5 rounded-lg cursor-pointer hover:border-[#a37c49] transition-all group`} onClick={openProfile}>
                 <div className="w-10 h-10 rounded bg-[#1c110b] overflow-hidden flex items-center justify-center border border-[#5c3a21] group-hover:border-[#a37c49] transition-colors">
                   {user.avatar ? <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" /> : <UserIcon size={20} className="text-[#5c3a21] group-hover:text-[#a37c49] transition-colors" />}
                 </div>
@@ -712,7 +690,6 @@ export default function TavernArchive() {
                 <button onClick={(e) => { e.stopPropagation(); handleLogout(); }} className="p-2 text-red-400 hover:bg-red-500/20 rounded active:scale-90 transition-all" title="Выйти"><LogOut size={18} /></button>
               </div>
 
-              {/* Меню навигации под профилем */}
               <div className="flex flex-col gap-1 items-end">
                 {view !== "home" && (
                   <button onClick={() => setView("home")} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/90 border border-[#5c3a21] text-[#a37c49] text-xs font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start">
@@ -832,7 +809,7 @@ export default function TavernArchive() {
                       </div>
                     </form>
 
-                    {(userRole.id === "owner" || userRole.id === "creator") && (
+                    {userRole.id === "owner" && (
                       <div className="mt-12 pt-6 border-t border-red-900/50 max-w-xl animate-smooth-fade-up">
                         <h3 className="text-red-500 font-bold font-pixeloid-mono mb-2 flex items-center gap-2"><AlertTriangle size={18}/> Опасная зона</h3>
                         <p className="text-sm text-gray-500 mb-4">Эта кнопка безвозвратно удалит ВСЕ записи из архива.</p>
@@ -912,8 +889,13 @@ export default function TavernArchive() {
                       <input required placeholder="Название аккаунта" value={newAcc.account_name} onChange={e => setNewAcc({...newAcc, account_name: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none" />
                       <div className="flex items-center gap-2"><input required={!autoUser} placeholder="Логин" value={newAcc.username} onChange={e => setNewAcc({...newAcc, username: e.target.value})} disabled={autoUser} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none disabled:opacity-50" /><label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer font-pixeloid-mono hover:text-white transition-colors"><input type="checkbox" checked={autoUser} onChange={e => setAutoUser(e.target.checked)} /> Рандом</label></div>
                       <div className="flex items-center gap-2"><input required={!autoPass} placeholder="Пароль" value={newAcc.password} onChange={e => setNewAcc({...newAcc, password: e.target.value})} disabled={autoPass} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none disabled:opacity-50" /><label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer font-pixeloid-mono hover:text-white transition-colors"><input type="checkbox" checked={autoPass} onChange={e => setAutoPass(e.target.checked)} /> Рандом</label></div>
+                      
+                      {/* Отфильтрованный список ролей */}
                       <select value={newAcc.role} onChange={e => setNewAcc({...newAcc, role: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none">
-                         {roles.map(r => <option key={r.id} value={r.id}>{r.name} (Ур. {r.level})</option>)}
+                         {roles
+                           .filter(r => userRole.id === "owner" || r.level < userRole.level) // Овнер видит всё, остальные только ниже себя
+                           .map(r => <option key={r.id} value={r.id}>{r.name} (Ур. {r.level})</option>)
+                         }
                       </select>
                       <button type="submit" className="px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Сгенерировать</button>
                     </form>
@@ -933,7 +915,12 @@ export default function TavernArchive() {
                                   <td className={`p-3 text-sm font-bold font-pixeloid-mono ${getRoleColor(roleLevel)}`}>{roleObj?.name || u.role}</td>
                                   <td className="p-3 font-mono text-[#c4b5a5]">{u.username}</td>
                                   <td className="p-3 font-mono text-red-400 bg-red-500/5">{u.plain_password || "********"}</td>
-                                  <td className="p-3">{(userRole.id === "owner" || userRole.id === "creator") && u.id !== user.id && (<button onClick={() => handleDeleteUser(u.id, u.account_name)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all"><Trash2 size={16} /></button>)}</td>
+                                  <td className="p-3">
+                                    {/* Проверка иерархии для удаления */}
+                                    {userRole.level > roleLevel && u.id !== user.id && (
+                                      <button onClick={() => handleDeleteUser(u.id, u.account_name)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all"><Trash2 size={16} /></button>
+                                    )}
+                                  </td>
                                 </tr>
                               );
                             })}
