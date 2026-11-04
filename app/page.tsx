@@ -137,22 +137,18 @@ export default function TavernArchive() {
   // --- ЛОГИКА ДВИЖЕНИЯ ЛИСИЦЫ ---
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      // Лисица бежит за мышкой с небольшим смещением
       foxTarget.current = { x: e.clientX + 30, y: e.clientY + 30 };
     };
 
     window.addEventListener('mousemove', handleMouseMove);
 
     const updateFox = () => {
-      // Плавное движение (интерполяция)
       const dx = foxTarget.current.x - foxCurrent.current.x;
       const dy = foxTarget.current.y - foxCurrent.current.y;
       
-      // Скорость лисицы (0.08 - довольно шустрая)
       foxCurrent.current.x += dx * 0.08;
       foxCurrent.current.y += dy * 0.08;
       
-      // Определяем направление (если движется влево - переворачиваем)
       if (Math.abs(dx) > 1) {
         setFacingLeft(dx < 0);
       }
@@ -509,8 +505,8 @@ export default function TavernArchive() {
         ))}
       </div>
 
-      {/* МЕРЦАНИЕ СВЕЧЕЙ */}
-      <div className="absolute inset-0 opacity-20 pointer-events-none animate-candle" style={{ backgroundImage: "radial-gradient(circle at 50% 0%, #a37c49 0%, transparent 70%)" }}></div>
+      {/* СТАТИЧНЫЙ ФОН (Убрали мерцание) */}
+      <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 50% 0%, #a37c49 0%, transparent 70%)" }}></div>
 
       {/* КНОПКА ЗВУКА */}
       <button 
