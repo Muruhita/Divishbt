@@ -970,7 +970,7 @@ export default function TavernArchive() {
 
           <div className="max-w-5xl mx-auto px-6 pb-12 w-full flex flex-col flex-grow -mt-16">
             <header className="flex justify-center mb-8 cursor-pointer" onClick={() => setView("home")}>
-              <img src="/logo.png" alt="Сытый Лис" className="w-24 h-24 object-cover rounded-full border-4 border-[#5c3a21] animate-float bg-[#1c110b] hover:scale-105 transition-all" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              <img src="/logo.png" alt="Сытый Лис" className="w-64 h-64 object-cover rounded-full border-4 border-[#5c3a21] animate-float bg-[#1c110b] hover:scale-105 transition-all" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             </header>
 
             {view === "home" && (
