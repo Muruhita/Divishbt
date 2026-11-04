@@ -17,6 +17,15 @@ const DANGER_LEVELS = ["Низкий", "Средний", "Высокий", "См
 const INITIAL_NEW_ITEM: NewArchiveItem = { title: "", category: "Комбинации Цифр", description: "", symbol: "", dangerLevel: "Низкий", image: "" };
 const RUNES = ["ᚠ", "ᚢ", "ᚦ", "ᚨ", "ᚱ", "ᚲ", "ᚷ", "ᚹ", "ᚺ", "ᚾ", "ᛁ", "ᛃ", "ᛈ", "ᛇ", "ᛉ", "ᛊ", "ᛏ", "ᛒ", "ᛖ", "ᛗ", "ᛚ", "ᛜ", "ᛞ", "ᛟ"];
 
+const DEFAULT_CATEGORIES = ["Комбинации Цифр", "Слова", "Термины", "Комбинации Букв", "Символика", "Картинки", "Другое"].map((name, i) => ({ id: i+1, name }));
+const DEFAULT_ROLES = [
+  { id: "owner", name: "Овнер (Dev)", level: 4 },
+  { id: "creator", name: "Создатель Сервера", level: 3 },
+  { id: "guardian", name: "Хранитель", level: 2 },
+  { id: "high", name: "Хай Стафф", level: 1 },
+  { id: "low", name: "Лоу Стафф", level: 0 }
+];
+
 export default function TavernArchive() {
   const [data, setData] = useState<ArchiveItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -27,9 +36,8 @@ export default function TavernArchive() {
   const [totalPages, setTotalPages] = useState(1);
   const LIMIT = 20;
 
-  // Динамические настройки
-  const [categories, setCategories] = useState<CategoryItem[]>([]);
-  const [roles, setRoles] = useState<RoleItem[]>([]);
+  const [categories, setCategories] = useState<CategoryItem[]>(DEFAULT_CATEGORIES);
+  const [roles, setRoles] = useState<RoleItem[]>(DEFAULT_ROLES);
   
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<ArchiveItem | null>(null);
@@ -41,13 +49,11 @@ export default function TavernArchive() {
   const [loginError, setLoginError] = useState("");
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  // Профиль
   const [newUsername, setNewUsername] = useState("");
   const [newPass, setNewPass] = useState("");
   const [oldPass, setOldPass] = useState("");
   const [profileMsg, setProfileMsg] = useState("");
 
-  // Админка
   const [newItems, setNewItems] = useState<NewArchiveItem[]>([{ ...INITIAL_NEW_ITEM }]);
   const [newAcc, setNewAcc] = useState({ account_name: "", username: "", password: "", role: "low" });
   const [autoUser, setAutoUser] = useState(false);
@@ -59,7 +65,6 @@ export default function TavernArchive() {
   const [logsList, setLogsList] = useState<LogItem[]>([]);
   const [diagResult, setDiagResult] = useState<{ status: string, latency?: number, message: string } | null>(null);
 
-  // Формы настроек
   const [newCatName, setNewCatName] = useState("");
   const [newRoleName, setNewRoleName] = useState("");
   const [newRoleLevel, setNewRoleLevel] = useState(1);
@@ -101,9 +106,15 @@ export default function TavernArchive() {
   const fetchSettings = async () => {
     try {
       const catRes = await fetch('/api/admin/categories');
-      if (catRes.ok) setCategories(await catRes.json());
+      if (catRes.ok) {
+        const catData = await catRes.json();
+        if (catData && catData.length > 0) setCategories(catData);
+      }
       const roleRes = await fetch('/api/admin/roles');
-      if (roleRes.ok) setRoles(await roleRes.json());
+      if (roleRes.ok) {
+        const roleData = await roleRes.json();
+        if (roleData && roleData.length > 0) setRoles(roleData);
+      }
     } catch (e) { console.error("Ошибка загрузки настроек", e); }
   };
 
@@ -122,9 +133,7 @@ export default function TavernArchive() {
       setData(formatted);
       setTotalPages(Math.ceil((result.total || 0) / LIMIT));
       setCurrentPage(page);
-    } catch (error) {
-      setData([]);
-    }
+    } catch (error) { setData([]); }
   };
 
   useEffect(() => {
@@ -147,7 +156,9 @@ export default function TavernArchive() {
     if (user) fetchArchive(currentPage, selectedCategory, searchQuery);
   }, [user, currentPage, selectedCategory, searchQuery]);
 
-  const userRole = roles.find(r => r.id === user?.role);
+  const userRole = roles.find(r => r.id === user?.role) || DEFAULT_ROLES.find(r => r.id === user?.role) || { level: 0, id: "guest", name: "Гость" };
+  const canEdit = user?.role === 'owner' || user?.role === 'creator' || userRole.level >= 3;
+  const canDelete = user?.role === 'owner' || user?.role === 'creator' || user?.role === 'high' || userRole.level >= 1;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -282,7 +293,6 @@ export default function TavernArchive() {
     } else { alert("Ошибка при обновлении"); }
   };
 
-  // --- УПРАВЛЕНИЕ КАТЕГОРИЯМИ ---
   const handleAddCategory = async () => {
     if (!newCatName.trim()) return;
     playSound("save");
@@ -300,7 +310,6 @@ export default function TavernArchive() {
     if (res.ok) fetchSettings();
   };
 
-  // --- УПРАВЛЕНИЕ РОЛЯМИ ---
   const handleAddRole = async () => {
     if (!newRoleName.trim()) return;
     playSound("save");
@@ -436,12 +445,14 @@ export default function TavernArchive() {
             <span className="inline-block px-3 py-1 text-xs font-bold font-pixeloid-mono bg-[#1c110b] text-[#a37c49] rounded border border-[#5c3a21] uppercase">{item.category}</span>
             {item.dangerLevel && <span className="inline-block px-2 py-1 text-xs font-bold font-pixeloid-mono rounded border border-red-900/50 bg-red-900/20 text-red-400 uppercase">{item.dangerLevel}</span>}
             
-            {userRole && userRole.level >= 1 && (
+            {(canEdit || canDelete) && (
               <div className="ml-auto flex items-center gap-1">
-                {userRole.level >= 3 && (
+                {canEdit && (
                   <button onClick={() => setEditingItem(item)} className="text-blue-400 hover:text-blue-300 bg-blue-500/10 p-1.5 rounded active:scale-90 transition-all"><Pencil size={16} /></button>
                 )}
-                <button onClick={() => handleDeleteItem(item.id, item.title)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all"><Trash2 size={16} /></button>
+                {canDelete && (
+                  <button onClick={() => handleDeleteItem(item.id, item.title)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all"><Trash2 size={16} /></button>
+                )}
               </div>
             )}
           </div>
@@ -481,7 +492,6 @@ export default function TavernArchive() {
         </div>
       )}
 
-      {/* МОДАЛКА РЕДАКТИРОВАНИЯ */}
       {editingItem && (
         <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl w-full max-w-2xl relative animate-smooth-pop">
@@ -568,9 +578,9 @@ export default function TavernArchive() {
               </div>
               <div className="flex flex-col text-right pr-2">
                 <span className="text-sm font-bold font-pixeloid-mono">{user.account_name}</span>
-                <span className={`text-xs font-bold font-pixeloid-mono text-[#a37c49]`}>{userRole?.name || user.role}</span>
+                <span className={`text-xs font-bold font-pixeloid-mono text-[#a37c49]`}>{userRole.name}</span>
               </div>
-              {userRole && userRole.level >= 1 && (
+              {userRole.level >= 1 && (
                 <button onClick={(e) => { e.stopPropagation(); setView("admin"); }} className="p-2 bg-[#1c110b] rounded hover:bg-[#a37c49] hover:text-[#160d08] active:scale-90 transition-all" title="Админ-панель"><Settings size={18} /></button>
               )}
               <button onClick={(e) => { e.stopPropagation(); handleLogout(); }} className="p-2 text-red-400 hover:bg-red-500/20 rounded active:scale-90 transition-all" title="Выйти"><LogOut size={18} /></button>
@@ -586,11 +596,7 @@ export default function TavernArchive() {
               <div className="flex-grow flex flex-col items-center animate-smooth-fade-up text-center pb-20">
                 <h2 className="text-4xl font-bold font-pixeloid-mono text-[#a37c49] mb-6">Запретный Архив</h2>
                 <div className="relative w-full max-w-2xl mb-8 group">
-                  <input 
-                    type="text" placeholder="Поиск..." value={searchQuery} 
-                    onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} 
-                    className="w-full p-4 pl-12 bg-[#2e1b13] border-2 border-[#5c3a21] rounded-lg text-[#e6d5b8] font-pixeloid-mono focus:border-[#a37c49] transition-colors shadow-lg" 
-                  />
+                  <input type="text" placeholder="Поиск..." value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} className="w-full p-4 pl-12 bg-[#2e1b13] border-2 border-[#5c3a21] rounded-lg text-[#e6d5b8] font-pixeloid-mono focus:border-[#a37c49] transition-colors shadow-lg" />
                   <Search className="absolute left-4 top-4 text-[#6b513b] group-focus-within:text-[#a37c49] transition-colors" size={24} />
                 </div>
                 {searchQuery.length > 0 || selectedCategory !== "Все" ? (
@@ -609,19 +615,9 @@ export default function TavernArchive() {
               <div className="animate-smooth-fade-up w-full text-left">
                  <button onClick={() => setView("home")} className="mb-6 flex items-center gap-2 text-[#8c6e52] hover:text-[#a37c49] transition-colors group"><ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform"/> На главную</button>
                  <div className="flex flex-wrap gap-2 mb-8">
-                    <button 
-                      onClick={() => { setSelectedCategory("Все"); setCurrentPage(1); }} 
-                      className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 ${selectedCategory === "Все" ? 'bg-[#a37c49] text-[#160d08] border-[#a37c49] shadow-[0_0_15px_rgba(163,124,73,0.3)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-[#a37c49] hover:text-[#e6d5b8]'}`}
-                    >
-                      Все
-                    </button>
+                    <button onClick={() => { setSelectedCategory("Все"); setCurrentPage(1); }} className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 ${selectedCategory === "Все" ? 'bg-[#a37c49] text-[#160d08] border-[#a37c49] shadow-[0_0_15px_rgba(163,124,73,0.3)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-[#a37c49] hover:text-[#e6d5b8]'}`}>Все</button>
                     {categories.map(c => (
-                      <button 
-                        key={c.id} onClick={() => { setSelectedCategory(c.name); setCurrentPage(1); }} 
-                        className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 ${selectedCategory === c.name ? 'bg-[#a37c49] text-[#160d08] border-[#a37c49] shadow-[0_0_15px_rgba(163,124,73,0.3)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-[#a37c49] hover:text-[#e6d5b8]'}`}
-                      >
-                        {c.name}
-                      </button>
+                      <button key={c.id} onClick={() => { setSelectedCategory(c.name); setCurrentPage(1); }} className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 ${selectedCategory === c.name ? 'bg-[#a37c49] text-[#160d08] border-[#a37c49] shadow-[0_0_15px_rgba(163,124,73,0.3)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-[#a37c49] hover:text-[#e6d5b8]'}`}>{c.name}</button>
                     ))}
                  </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -638,7 +634,7 @@ export default function TavernArchive() {
               </div>
             )}
 
-            {view === "admin" && userRole && userRole.level >= 1 && (
+            {view === "admin" && userRole.level >= 1 && (
               <div className="animate-smooth-fade-up w-full bg-[#2e1b13] p-8 rounded-xl border-double border-4 border-[#5c3a21]">
                 <div className="flex justify-between items-center mb-8 border-b border-[#5c3a21] pb-4">
                    <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49]">Панель Управления</h2>
@@ -650,7 +646,6 @@ export default function TavernArchive() {
                   <button onClick={() => setAdminTab("bulk")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'bulk' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Импорт</button>
                   <button onClick={() => setAdminTab("users")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'users' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Аккаунты</button>
                   
-                  {/* Доступно только высоким рангам */}
                   {userRole.level >= 2 && (
                     <button onClick={() => setAdminTab("categories")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'categories' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Категории</button>
                   )}
@@ -664,7 +659,6 @@ export default function TavernArchive() {
                   <button onClick={() => setAdminTab("diag")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'diag' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Диагностика</button>
                 </div>
 
-                {/* ВКЛАДКА: ДОБАВИТЬ */}
                 {adminTab === "archive" && (
                   <div className="animate-smooth-fade-up">
                     <form onSubmit={handleAddMultipleItems} className="space-y-6 max-w-xl">
@@ -704,7 +698,6 @@ export default function TavernArchive() {
                   </div>
                 )}
 
-                {/* ВКЛАДКА: КАТЕГОРИИ */}
                 {adminTab === "categories" && userRole.level >= 2 && (
                   <div className="animate-smooth-fade-up max-w-xl">
                     <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Tag size={18}/> Управление категориями</h3>
@@ -725,7 +718,6 @@ export default function TavernArchive() {
                   </div>
                 )}
 
-                {/* ВКЛАДКА: УРОВНИ ДОСТУПА (РОЛИ) */}
                 {adminTab === "roles" && userRole.level >= 3 && (
                   <div className="animate-smooth-fade-up max-w-2xl">
                     <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><ShieldAlert size={18}/> Уровни доступа (Роли)</h3>
@@ -760,7 +752,6 @@ export default function TavernArchive() {
                   </div>
                 )}
 
-                {/* ОСТАЛЬНЫЕ ВКЛАДКИ (bulk, users, logs, diag) остаются без изменений */}
                 {adminTab === "bulk" && (
                   <div className="space-y-8 max-w-2xl animate-smooth-fade-up">
                     <div className="bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
