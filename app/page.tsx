@@ -27,12 +27,11 @@ const DEFAULT_ROLES = [
 ];
 
 export default function TavernArchive() {
+  // --- КУРСОР ---
   const cursorDotRef = useRef<HTMLDivElement>(null);
-  const cursorRingRef = useRef<HTMLDivElement>(null);
-  const mousePos = useRef({ x: -100, y: -100 });
-  const ringPos = useRef({ x: -100, y: -100 });
   const isHovering = useRef(false);
 
+  // --- ПЛАШКИ ---
   const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' | 'info' | 'warning' } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ msg: string, onConfirm: () => void } | null>(null);
   const [promptDialog, setPromptDialog] = useState<{ msg: string, val: string, onConfirm: (val: string) => void } | null>(null);
@@ -45,6 +44,7 @@ export default function TavernArchive() {
   const showConfirm = (msg: string, onConfirm: () => void) => setConfirmDialog({ msg, onConfirm });
   const showPrompt = (msg: string, onConfirm: (val: string) => void) => setPromptDialog({ msg, val: "", onConfirm });
 
+  // --- СТЕЙТЫ ---
   const [data, setData] = useState<ArchiveItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Все");
@@ -89,11 +89,11 @@ export default function TavernArchive() {
   const [soundEnabled, setSoundEnabled] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
+  // --- ЛОГИКА КУРСОРА (ТОЛЬКО ТОЧКА) ---
   useEffect(() => {
     if (window.matchMedia("(pointer: coarse)").matches) return;
 
     const onMouseMove = (e: MouseEvent) => {
-      mousePos.current = { x: e.clientX, y: e.clientY };
       if (cursorDotRef.current) {
         cursorDotRef.current.style.transform = `translate(${e.clientX}px, ${e.clientY}px) translate(-50%, -50%)`;
       }
@@ -102,34 +102,21 @@ export default function TavernArchive() {
       
       if (isClickable && !isHovering.current) {
         isHovering.current = true;
-        cursorRingRef.current?.classList.add("hovering");
         cursorDotRef.current?.classList.add("hovering");
       } else if (!isClickable && isHovering.current) {
         isHovering.current = false;
-        cursorRingRef.current?.classList.remove("hovering");
         cursorDotRef.current?.classList.remove("hovering");
       }
     };
 
-    let animationFrameId: number;
-    const render = () => {
-      ringPos.current.x += (mousePos.current.x - ringPos.current.x) * 0.15;
-      ringPos.current.y += (mousePos.current.y - ringPos.current.y) * 0.15;
-      if (cursorRingRef.current) {
-        cursorRingRef.current.style.transform = `translate(${ringPos.current.x}px, ${ringPos.current.y}px) translate(-50%, -50%)`;
-      }
-      animationFrameId = requestAnimationFrame(render);
-    };
-
     window.addEventListener("mousemove", onMouseMove);
-    animationFrameId = requestAnimationFrame(render);
 
     return () => {
       window.removeEventListener("mousemove", onMouseMove);
-      cancelAnimationFrame(animationFrameId);
     };
   }, []);
 
+  // --- ОСТАЛЬНАЯ ЛОГИКА ---
   useEffect(() => {
     const initAudio = () => {
       if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -560,9 +547,8 @@ export default function TavernArchive() {
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col">
       
-      {/* КУРСОР */}
+      {/* КУРСОР (ТОЛЬКО ТОЧКА) */}
       <div ref={cursorDotRef} className="custom-cursor-dot hidden md:block" />
-      <div ref={cursorRingRef} className="custom-cursor-ring hidden md:block" />
 
       <div className="pixel-stars"></div>
       <div className="fog-container"><div className="fog-layer"></div><div className="fog-layer"></div></div>
@@ -713,7 +699,7 @@ export default function TavernArchive() {
       {user && (
         <div className="flex-grow flex flex-col relative z-10 w-full">
           
-          {/* ВЕРХНЯЯ ПРАВАЯ ПАНЕЛЬ (ПРОФИЛЬ + МЕНЮ) */}
+          {/* ВЕРХНЯЯ ПРАВАЯ ПАНЕЛЬ */}
           <div className="w-full flex justify-end p-4 relative z-50">
             <div className="flex flex-col items-end gap-2">
               {/* Профиль */}
