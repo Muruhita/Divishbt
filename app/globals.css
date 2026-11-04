@@ -10,9 +10,9 @@ body {
   overflow-x: hidden;
 }
 
-/* Привязываем класс к пиксельному шрифту */
+/* ТЕПЕРЬ ШРИФТ БЕРЕТСЯ ИЗ ВАШЕГО ФАЙЛА */
 .font-pixeloid-mono {
-  font-family: var(--font-pixel), monospace;
+  font-family: var(--font-pixeloid-mono), monospace;
 }
 
 /* Кастомный скроллбар */
@@ -28,7 +28,37 @@ body {
 }
 .animate-fade-in { animation: fade-in 0.4s ease-out forwards; }
 
-/* Туман внизу */
+/* --- ПАРЯЩИЕ РУНЫ --- */
+.rune {
+  position: absolute;
+  bottom: -30px;
+  color: #a37c49;
+  text-shadow: 0 0 8px rgba(163, 124, 73, 0.8), 0 0 15px rgba(163, 124, 73, 0.4);
+  opacity: 0;
+  font-family: serif;
+  user-select: none;
+  animation: rune-rise infinite linear;
+}
+
+@keyframes rune-rise {
+  0% { transform: translateY(0) rotate(0deg) scale(0.6); opacity: 0; }
+  20% { opacity: 0.8; }
+  80% { opacity: 0.8; }
+  100% { transform: translateY(-100vh) rotate(180deg) scale(1.2); opacity: 0; }
+}
+
+.rune:nth-child(1) { left: 10%; font-size: 24px; animation-duration: 15s; animation-delay: 0s; }
+.rune:nth-child(2) { left: 25%; font-size: 16px; animation-duration: 20s; animation-delay: 2s; }
+.rune:nth-child(3) { left: 40%; font-size: 32px; animation-duration: 18s; animation-delay: 4s; }
+.rune:nth-child(4) { left: 55%; font-size: 20px; animation-duration: 22s; animation-delay: 1s; }
+.rune:nth-child(5) { left: 70%; font-size: 28px; animation-duration: 16s; animation-delay: 5s; }
+.rune:nth-child(6) { left: 85%; font-size: 18px; animation-duration: 25s; animation-delay: 3s; }
+.rune:nth-child(7) { left: 15%; font-size: 22px; animation-duration: 12s; animation-delay: 7s; }
+.rune:nth-child(8) { left: 60%; font-size: 30px; animation-duration: 19s; animation-delay: 6s; }
+.rune:nth-child(9) { left: 90%; font-size: 20px; animation-duration: 14s; animation-delay: 9s; }
+.rune:nth-child(10) { left: 45%; font-size: 26px; animation-duration: 21s; animation-delay: 8s; }
+
+/* --- ТУМАН ВНИЗУ --- */
 .fog-container {
   position: fixed;
   bottom: 0;
