@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
-import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, LockKeyhole, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle, Save, Tag, CheckCircle2, Info, Home, BookOpen, LayoutDashboard, ImagePlus } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, LockKeyhole, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle, Save, Tag, CheckCircle2, Info, Home, BookOpen, LayoutDashboard, ImagePlus, Star, ArrowUp } from "lucide-react";
 
 type ArchiveItem = { id: number; title: string; category: string; description: string; symbol?: string; dangerLevel?: string; image?: string; is_draft?: number; };
 type DbArchiveItem = { id: number; title: string; category: string; description: string; symbol: string | null; danger_level: string | null; image: string | null; is_draft: number; };
@@ -26,9 +26,28 @@ const DEFAULT_ROLES = [
   { id: "low", name: "Лоу Стафф", level: 0 }
 ];
 
+// --- СКЕЛЕТОН КАРТОЧКИ (Пока грузится) ---
+const SkeletonCard = () => (
+  <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] rounded-lg p-6 flex flex-col h-64 animate-pulse">
+    <div className="flex justify-between items-start mb-4">
+      <div className="h-6 bg-[#5c3a21]/50 rounded w-1/2"></div>
+      <div className="h-8 w-8 bg-[#5c3a21]/50 rounded"></div>
+    </div>
+    <div className="flex gap-2 mb-4">
+      <div className="h-6 w-20 bg-[#5c3a21]/50 rounded"></div>
+      <div className="h-6 w-16 bg-[#5c3a21]/50 rounded"></div>
+    </div>
+    <div className="space-y-2 flex-grow">
+      <div className="h-4 bg-[#5c3a21]/50 rounded w-full"></div>
+      <div className="h-4 bg-[#5c3a21]/50 rounded w-5/6"></div>
+      <div className="h-4 bg-[#5c3a21]/50 rounded w-4/6"></div>
+    </div>
+  </div>
+);
+
 // --- КОМПОНЕНТ КАРТОЧКИ ---
 const ArchiveCard = ({ 
-  item, canEdit, canDelete, onEdit, onDelete, onViewImage
+  item, canEdit, canDelete, onEdit, onDelete, onViewImage, isFavorite, onToggleFavorite
 }: { 
   item: ArchiveItem; 
   canEdit: boolean; 
@@ -36,10 +55,12 @@ const ArchiveCard = ({
   onEdit: (item: ArchiveItem) => void;
   onDelete: (id: number, title: string) => void;
   onViewImage: (img: string) => void;
+  isFavorite: boolean;
+  onToggleFavorite: (id: number) => void;
 }) => {
   if (!item || !item.title) return null;
   return (
-    <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.6)] hover:border-[#a37c49] hover:shadow-[0_0_20px_rgba(163,124,73,0.15)] hover:-translate-y-1.5 transition-all duration-300 group flex flex-col relative z-10 overflow-hidden">
+    <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.6)] hover:border-[#a37c49] hover:shadow-[0_0_20px_rgba(163,124,73,0.15)] hover:-translate-y-1.5 transition-all duration-300 group flex flex-col relative z-10 overflow-hidden animate-smooth-fade-up">
       {item.image && (
         <div className="w-full h-56 overflow-hidden border-b-2 border-[#5c3a21] cursor-pointer relative group/img flex items-center justify-center"
           style={{ backgroundColor: '#d6c5b3', backgroundImage: 'radial-gradient(#b8a38a 1px, transparent 1px)', backgroundSize: '10px 10px' }}
@@ -53,7 +74,7 @@ const ArchiveCard = ({
       <div className="p-6 flex flex-col flex-grow">
         <div className="flex justify-between items-start mb-3 relative z-10">
           <h3 className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8]">{item.title}</h3>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
              {item.is_draft === 1 && <span className="text-xs bg-yellow-600 text-white px-2 py-1 rounded font-bold">Черновик</span>}
              {item.symbol && <span className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8] bg-[#1c110b] px-3 py-1 rounded border border-[#5c3a21]">{item.symbol}</span>}
           </div>
@@ -63,6 +84,15 @@ const ArchiveCard = ({
           {item.dangerLevel && <span className="inline-block px-2 py-1 text-xs font-bold font-pixeloid-mono rounded border border-red-900/50 bg-red-900/20 text-red-400 uppercase">{item.dangerLevel}</span>}
           
           <div className="ml-auto flex items-center gap-1 relative z-[60]">
+            {/* Кнопка Избранного */}
+            <button 
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFavorite(item.id); }} 
+              className={`p-1.5 rounded active:scale-90 transition-all cursor-pointer ${isFavorite ? 'text-yellow-400 bg-yellow-500/10' : 'text-gray-500 hover:text-yellow-400 bg-white/5 hover:bg-yellow-500/10'}`}
+              title={isFavorite ? "Удалить из избранного" : "В избранное"}
+            >
+              <Star size={16} fill={isFavorite ? "currentColor" : "none"} />
+            </button>
+            
             {canEdit && (
               <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(item); }} className="text-blue-400 hover:text-blue-300 bg-blue-500/10 p-1.5 rounded active:scale-90 transition-all cursor-pointer"><Pencil size={16} /></button>
             )}
@@ -96,10 +126,15 @@ export default function TavernArchive() {
   const showPrompt = (msg: string, onConfirm: (val: string) => void) => setPromptDialog({ msg, val: "", onConfirm });
 
   const [data, setData] = useState<ArchiveItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true); // Стейт загрузки
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Все");
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false); // Фильтр избранного
+  const [favorites, setFavorites] = useState<number[]>([]); // Массив ID избранных записей
   const [view, setView] = useState<"home" | "archive" | "admin">("home");
   
+  const [showScrollTop, setShowScrollTop] = useState(false); // Стейт кнопки "Наверх"
+
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const LIMIT = 20;
@@ -145,6 +180,17 @@ export default function TavernArchive() {
   const [soundEnabled, setSoundEnabled] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
+  // --- ЛОГИКА СКРОЛЛА (Кнопка Наверх) ---
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 300) setShowScrollTop(true);
+      else setShowScrollTop(false);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // --- КУРСОР ---
   useEffect(() => {
     if (window.matchMedia("(pointer: coarse)").matches) return;
 
@@ -214,7 +260,38 @@ export default function TavernArchive() {
     } catch (e) { console.error("Ошибка загрузки настроек", e); }
   };
 
+  const fetchFavorites = async (userId: number) => {
+    try {
+      const res = await fetch(`/api/favorites?userId=${userId}`);
+      if (res.ok) {
+        setFavorites(await res.json());
+      }
+    } catch (e) { console.error("Ошибка загрузки избранного"); }
+  };
+
+  const handleToggleFavorite = async (archiveId: number) => {
+    if (!user) return showToast("Войдите, чтобы добавлять в избранное", "warning");
+    
+    const isCurrentlyFavorite = favorites.includes(archiveId);
+    const action = isCurrentlyFavorite ? "remove" : "add";
+
+    // Оптимистичное обновление UI (сразу меняем цвет звездочки)
+    if (isCurrentlyFavorite) {
+      setFavorites(favorites.filter(id => id !== archiveId));
+    } else {
+      setFavorites([...favorites, archiveId]);
+    }
+    playSound("click");
+
+    await fetch("/api/favorites", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, archiveId, action })
+    });
+  };
+
   const fetchArchive = async (page = 1, cat = selectedCategory, search = searchQuery) => {
+    setIsLoading(true); // Включаем скелетон
     try {
       const res = await fetch(`/api/archive?page=${page}&limit=${LIMIT}&category=${encodeURIComponent(cat)}&search=${encodeURIComponent(search)}&role=${user?.role || 'guest'}`);
       const result = await res.json();
@@ -230,6 +307,7 @@ export default function TavernArchive() {
       setTotalPages(Math.ceil((result.total || 0) / LIMIT));
       setCurrentPage(page);
     } catch (error) { setData([]); }
+    finally { setIsLoading(false); } // Выключаем скелетон
   };
 
   useEffect(() => {
@@ -238,7 +316,10 @@ export default function TavernArchive() {
         const savedSession = localStorage.getItem("tavern_session");
         if (savedSession) {
           const { userData, expiresAt } = JSON.parse(savedSession);
-          if (Date.now() < expiresAt) setUser(userData); 
+          if (Date.now() < expiresAt) {
+            setUser(userData); 
+            fetchFavorites(userData.id);
+          } 
           else localStorage.removeItem("tavern_session"); 
         }
       } catch (e) { localStorage.removeItem("tavern_session"); } 
@@ -283,6 +364,7 @@ export default function TavernArchive() {
         setTimeout(() => {
           setUser({ ...data }); 
           setLoginUser(""); setLoginPass("");
+          fetchFavorites(data.id); // Загружаем избранное
           const expiresAt = Date.now() + (5 * 60 * 60 * 1000); 
           localStorage.setItem("tavern_session", JSON.stringify({ userData: { ...data }, expiresAt }));
           setIsBookOpening(false);
@@ -295,6 +377,7 @@ export default function TavernArchive() {
   const handleLogout = () => {
     playSound("click");
     setUser(null);
+    setFavorites([]);
     localStorage.removeItem("tavern_session");
     setView("home");
   };
@@ -610,6 +693,9 @@ export default function TavernArchive() {
     }
   }, [view, adminTab]);
 
+  // Фильтрация данных для отображения (учитывая "Только избранное")
+  const displayedData = showOnlyFavorites ? data.filter(item => favorites.includes(item.id)) : data;
+
   if (isCheckingAuth) return <main className="min-h-screen bg-[#160d08]"></main>;
 
   return (
@@ -854,11 +940,14 @@ export default function TavernArchive() {
                 
                 {searchQuery.length > 0 || selectedCategory !== "Все" ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full text-left">
-                    {data.length > 0 ? data.map((item) => (
+                    {isLoading ? (
+                      <><SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard /></>
+                    ) : displayedData.length > 0 ? displayedData.map((item) => (
                       <ArchiveCard 
                         key={item.id} item={item} canEdit={canEdit} canDelete={canDelete} 
                         onEdit={(item) => setEditingItem(item)} onDelete={handleDeleteItem} 
                         onViewImage={(img) => setSelectedImage(img)}
+                        isFavorite={favorites.includes(item.id)} onToggleFavorite={handleToggleFavorite}
                       />
                     )) : <p className="text-center w-full col-span-2 text-[#8c6e52]">Ничего не найдено...</p>}
                   </div>
@@ -873,23 +962,30 @@ export default function TavernArchive() {
 
             {view === "archive" && (
               <div className="animate-smooth-fade-up w-full text-left">
-                 <div className="flex flex-wrap gap-2 mb-8">
-                    <button onClick={() => { setSelectedCategory("Все"); setCurrentPage(1); }} className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 ${selectedCategory === "Все" ? 'bg-[#a37c49] text-[#160d08] border-[#a37c49] shadow-[0_0_15px_rgba(163,124,73,0.3)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-[#a37c49] hover:text-[#e6d5b8]'}`}>Все</button>
+                 <div className="flex flex-wrap items-center gap-2 mb-8">
+                    <button onClick={() => { setSelectedCategory("Все"); setCurrentPage(1); setShowOnlyFavorites(false); }} className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 ${selectedCategory === "Все" && !showOnlyFavorites ? 'bg-[#a37c49] text-[#160d08] border-[#a37c49] shadow-[0_0_15px_rgba(163,124,73,0.3)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-[#a37c49] hover:text-[#e6d5b8]'}`}>Все</button>
                     {categories.map(c => (
-                      <button key={c.id} onClick={() => { setSelectedCategory(c.name); setCurrentPage(1); }} className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 ${selectedCategory === c.name ? 'bg-[#a37c49] text-[#160d08] border-[#a37c49] shadow-[0_0_15px_rgba(163,124,73,0.3)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-[#a37c49] hover:text-[#e6d5b8]'}`}>{c.name}</button>
+                      <button key={c.id} onClick={() => { setSelectedCategory(c.name); setCurrentPage(1); setShowOnlyFavorites(false); }} className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 ${selectedCategory === c.name && !showOnlyFavorites ? 'bg-[#a37c49] text-[#160d08] border-[#a37c49] shadow-[0_0_15px_rgba(163,124,73,0.3)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-[#a37c49] hover:text-[#e6d5b8]'}`}>{c.name}</button>
                     ))}
+                    {/* Кнопка Только избранное */}
+                    <button onClick={() => setShowOnlyFavorites(!showOnlyFavorites)} className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 flex items-center gap-2 ml-auto ${showOnlyFavorites ? 'bg-yellow-600 text-white border-yellow-500 shadow-[0_0_15px_rgba(202,138,4,0.4)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-yellow-500 hover:text-yellow-400'}`}>
+                      <Star size={16} fill={showOnlyFavorites ? "currentColor" : "none"} /> Избранное
+                    </button>
                  </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {data.length > 0 ? data.map((item) => (
+                    {isLoading ? (
+                      <><SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard /></>
+                    ) : displayedData.length > 0 ? displayedData.map((item) => (
                       <ArchiveCard 
                         key={item.id} item={item} canEdit={canEdit} canDelete={canDelete} 
                         onEdit={(item) => setEditingItem(item)} onDelete={handleDeleteItem} 
                         onViewImage={(img) => setSelectedImage(img)}
+                        isFavorite={favorites.includes(item.id)} onToggleFavorite={handleToggleFavorite}
                       />
-                    )) : <p className="text-center w-full col-span-2 text-[#8c6e52]">В этой категории пока нет записей...</p>}
+                    )) : <p className="text-center w-full col-span-2 text-[#8c6e52]">{showOnlyFavorites ? "В избранном пока пусто..." : "В этой категории пока нет записей..."}</p>}
                  </div>
                  
-                 {totalPages > 1 && (
+                 {totalPages > 1 && !showOnlyFavorites && (
                    <div className="flex justify-center items-center gap-4 mt-12 pb-8">
                      <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => prev - 1)} className="p-3 bg-[#2e1b13] border border-[#5c3a21] rounded text-[#a37c49] disabled:opacity-30 hover:bg-[#5c3a21] hover:text-white active:scale-90 transition-all"><ChevronLeft size={24}/></button>
                      <span className="font-pixeloid-mono text-lg text-[#a37c49]">Стр. {currentPage} из {totalPages}</span>
@@ -1180,6 +1276,18 @@ export default function TavernArchive() {
           </div>
         </div>
       )}
+      
+      {/* КНОПКА "НАВЕРХ" */}
+      {showScrollTop && (
+        <button 
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-20 right-6 z-[100] p-3 bg-[#5c3a21] border-2 border-[#a37c49] text-[#e6d5b8] rounded-full shadow-[0_4px_15px_rgba(0,0,0,0.6)] hover:bg-[#a37c49] hover:text-[#1a1512] hover:-translate-y-1 transition-all duration-300 animate-smooth-pop"
+          title="Наверх"
+        >
+          <ArrowUp size={24} />
+        </button>
+      )}
+
       <div className="fixed bottom-4 right-4 z-[100] bg-[#1c110b]/70 border border-[#5c3a21]/40 px-3 py-1.5 rounded-md text-[11px] text-[#8c6e52]/70 font-pixeloid-mono hover:text-[#a37c49] transition-colors cursor-default select-none">Автор: muruh1ta</div>
     </main>
   );
