@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
-import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, LockKeyhole, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle, Save, Tag, CheckCircle2, Info, Home } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, LockKeyhole, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle, Save, Tag, CheckCircle2, Info, Home, BookOpen } from "lucide-react";
 
 type ArchiveItem = { id: number; title: string; category: string; description: string; symbol?: string; dangerLevel?: string; image?: string; };
 type DbArchiveItem = { id: number; title: string; category: string; description: string; symbol: string | null; danger_level: string | null; image: string | null; };
@@ -66,6 +66,9 @@ export default function TavernArchive() {
   const [loginPass, setLoginPass] = useState("");
   const [loginError, setLoginError] = useState("");
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  
+  // Стейт для анимации книги
+  const [isBookOpening, setIsBookOpening] = useState(false);
 
   // Профиль
   const [newAccountName, setNewAccountName] = useState("");
@@ -223,12 +226,19 @@ export default function TavernArchive() {
       const data = await res.json();
       
       if (res.ok) {
-        setUser({ ...data }); 
-        setLoginUser(""); setLoginPass("");
-        const expiresAt = Date.now() + (5 * 60 * 60 * 1000); 
-        localStorage.setItem("tavern_session", JSON.stringify({ userData: { ...data }, expiresAt }));
+        // Запускаем анимацию книги
+        setIsBookOpening(true);
         playSound("success");
-        showToast("Добро пожаловать в таверну!", "success");
+        
+        // Ждем 1.5 секунды (время анимации), затем показываем сайт
+        setTimeout(() => {
+          setUser({ ...data }); 
+          setLoginUser(""); setLoginPass("");
+          const expiresAt = Date.now() + (5 * 60 * 60 * 1000); 
+          localStorage.setItem("tavern_session", JSON.stringify({ userData: { ...data }, expiresAt }));
+          setIsBookOpening(false);
+        }, 1500);
+
       } else { setLoginError(data.error || "Ошибка входа"); }
     } catch { setLoginError("Ошибка соединения"); }
   };
@@ -242,7 +252,7 @@ export default function TavernArchive() {
 
   const openProfile = () => {
     if (user) {
-      setNewAccountName(user.account_name); // Инициализируем имя
+      setNewAccountName(user.account_name);
       setNewUsername(user.username);
       setNewPass("");
       setOldPass("");
@@ -263,7 +273,7 @@ export default function TavernArchive() {
         newPassword: newPass, 
         avatar: user.avatar,
         newUsername: newUsername !== user.username ? newUsername : undefined,
-        newAccountName: newAccountName !== user.account_name ? newAccountName : undefined // Отправляем имя, если изменилось
+        newAccountName: newAccountName !== user.account_name ? newAccountName : undefined
       })
     });
 
@@ -272,7 +282,6 @@ export default function TavernArchive() {
       showToast("Профиль успешно обновлен!", "success");
       setOldPass(""); setNewPass("");
       
-      // Обновляем локального пользователя
       const updatedUser = { 
         ...user, 
         username: newUsername || user.username, 
@@ -576,7 +585,7 @@ export default function TavernArchive() {
         {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
       </button>
 
-      {/* ПЛАШКИ */}
+      {/* ПЛАШКИ (TOASTS, MODALS) */}
       {toast && (
         <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[9999] animate-smooth-pop pointer-events-none">
           <div className={`px-6 py-4 rounded-lg border-2 shadow-[0_0_30px_rgba(0,0,0,0.8)] flex items-center gap-3 font-pixeloid-mono backdrop-blur-md text-lg
@@ -626,96 +635,67 @@ export default function TavernArchive() {
         </div>
       )}
 
-      {/* ОСТАЛЬНОЙ ИНТЕРФЕЙС */}
-      {selectedImage && (
-        <div className="fixed inset-0 z-[999] bg-black/90 flex items-center justify-center p-4 cursor-zoom-out animate-fade-in" onClick={() => setSelectedImage(null)}>
-          <div className="p-4 rounded-xl animate-smooth-pop" style={{ backgroundColor: '#d6c5b3', backgroundImage: 'radial-gradient(#b8a38a 1px, transparent 1px)', backgroundSize: '10px 10px' }}>
-            <img src={selectedImage} alt="Full size" className="max-w-full max-h-[85vh] object-contain rounded" onClick={(e) => e.stopPropagation()} />
+      {/* 3D КНИГА (ЭКРАН ВХОДА) */}
+      {!user && (
+        <div className={`fixed inset-0 z-[999] flex items-center justify-center overflow-hidden book-container ${isBookOpening ? 'book-open' : ''}`}>
+          
+          {/* Фоновый туман за книгой */}
+          <div className="absolute inset-0 bg-[#0a0705]"></div>
+
+          {/* Левая створка */}
+          <div className="book-cover-left flex items-center justify-end pr-4">
+            <div className="w-1/2 h-full border-r border-[#5c3a21]"></div>
+            <div className="book-corner book-corner-tl"></div>
+            <div className="book-corner book-corner-bl"></div>
           </div>
-        </div>
-      )}
 
-      {editingItem && (
-        <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl w-full max-w-2xl relative animate-smooth-pop">
-            <button onClick={() => setEditingItem(null)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 active:scale-90 transition-all"><X size={24}/></button>
-            <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49] mb-6">Редактировать</h2>
-            <form onSubmit={handleUpdateItem} className="space-y-4">
-              <input required placeholder="Название" value={editingItem.title} onChange={e => setEditingItem({...editingItem, title: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <select value={editingItem.category} onChange={e => setEditingItem({...editingItem, category: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none">
-                  {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                </select>
-                <select value={editingItem.dangerLevel || "Низкий"} onChange={e => setEditingItem({...editingItem, dangerLevel: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none">
-                  {DANGER_LEVELS.map(l => <option key={l} value={l}>Уровень: {l}</option>)}
-                </select>
-              </div>
-              <textarea required placeholder="Описание (Markdown)" value={editingItem.description} onChange={e => setEditingItem({...editingItem, description: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white h-32 font-mono text-sm focus:border-[#a37c49] outline-none" />
-              <button type="submit" className="px-6 py-2 bg-[#5c3a21] text-white font-bold rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Сохранить</button>
-            </form>
+          {/* Правая створка */}
+          <div className="book-cover-right flex items-center justify-start pl-4">
+            <div className="w-1/2 h-full border-l border-[#5c3a21]"></div>
+            <div className="book-corner book-corner-tr"></div>
+            <div className="book-corner book-corner-br"></div>
           </div>
-        </div>
-      )}
 
-      {showProfile && user && (
-        <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl w-full max-w-md relative animate-smooth-pop">
-            <button onClick={() => setShowProfile(false)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 active:scale-90 transition-all"><X size={24}/></button>
-            <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49] mb-6 text-center">Личный кабинет</h2>
-            <form onSubmit={handleUpdateProfile} className="space-y-4">
-              <div className="flex flex-col items-center mb-4 group/avatar">
-                <div className="w-24 h-24 rounded-full border-4 border-[#5c3a21] group-hover/avatar:border-[#a37c49] overflow-hidden bg-[#1c110b] mb-2 flex items-center justify-center relative cursor-pointer transition-colors">
-                  {user.avatar ? <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover group-hover/avatar:scale-110 transition-transform duration-300" /> : <UserIcon size={40} className="text-[#5c3a21] group-hover/avatar:text-[#a37c49] transition-colors" />}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity">
-                    <span className="text-xs text-white font-bold">Сменить</span>
-                  </div>
-                  <input type="file" accept="image/*" onChange={handleAvatarUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
-                </div>
-              </div>
+          {/* Корешок книги */}
+          <div className="book-spine"></div>
 
-              <div className="space-y-2 border-t border-[#5c3a21] pt-4">
-                <label className="text-sm font-pixeloid-mono text-[#a37c49]">Изменить имя</label>
-                <input type="text" placeholder="Новое имя" value={newAccountName} onChange={e => setNewAccountName(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
-              </div>
-
-              <div className="space-y-2 border-t border-[#5c3a21] pt-4">
-                <label className="text-sm font-pixeloid-mono text-[#a37c49]">Изменить логин</label>
-                <input type="text" placeholder="Новый логин" value={newUsername} onChange={e => setNewUsername(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
-              </div>
-
-              <div className="space-y-2 border-t border-[#5c3a21] pt-4">
-                <label className="text-sm font-pixeloid-mono text-[#a37c49]">Смена пароля</label>
-                <input type="password" placeholder="Старый пароль" value={oldPass} onChange={e => setOldPass(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
-                <input type="password" placeholder="Новый пароль" value={newPass} onChange={e => setNewPass(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
+          {/* Содержимое книги (Форма входа) */}
+          <div className="login-content">
+            <div className="bg-[#2e1b13]/95 border-4 border-[#a37c49] p-8 rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.9)] relative z-50">
+              <div className="flex justify-center mb-6 relative">
+                <div className="absolute inset-0 bg-[#a37c49] blur-2xl opacity-20 rounded-full animate-pulse"></div>
+                <img src="/logo.png" alt="Сытый Лис" className="w-32 h-32 object-cover rounded-full border-4 border-[#5c3a21] relative z-10 animate-float bg-[#1c110b]" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
               </div>
               
-              <button type="submit" className="w-full py-2 bg-[#5c3a21] text-white font-bold rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Сохранить изменения</button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {!user && (
-        <div className="flex-grow flex items-center justify-center p-4 relative z-10">
-          <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-8 pt-0 rounded-xl shadow-2xl w-full max-w-md relative mt-16 animate-smooth-fade-up">
-            <div className="flex justify-center -mt-16 mb-4 relative">
-              <div className="absolute inset-0 bg-[#a37c49] blur-2xl opacity-20 rounded-full animate-pulse"></div>
-              <img src="/logo.png" alt="Сытый Лис" className="w-32 h-32 object-cover rounded-full border-4 border-[#5c3a21] relative z-10 animate-float bg-[#1c110b] hover:scale-105 transition-transform" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              <h1 className="text-3xl font-bold font-pixeloid-mono text-center mb-2 text-[#E5B85C] uppercase flex justify-center items-center gap-2 drop-shadow-md">
+                <Flame /> Сытый Лис
+              </h1>
+              <p className="text-center text-[#8c6e52] mb-8 font-pixeloid-mono">Открыть древний фолиант</p>
+              
+              <form onSubmit={handleLogin} className="space-y-5">
+                <div>
+                  <label className="block text-sm font-pixeloid-mono text-[#a37c49] mb-1">Логин</label>
+                  <input type="text" required value={loginUser} onChange={(e) => setLoginUser(e.target.value)} className="w-full p-3 bg-[#1c110b] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none transition-colors" />
+                </div>
+                <div>
+                  <label className="block text-sm font-pixeloid-mono text-[#a37c49] mb-1">Пароль</label>
+                  <input type="password" required value={loginPass} onChange={(e) => setLoginPass(e.target.value)} className="w-full p-3 bg-[#1c110b] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none transition-colors" />
+                </div>
+                
+                {loginError && <p className="text-red-400 text-sm text-center animate-shake">{loginError}</p>}
+                
+                <button type="submit" className="w-full py-3 bg-[#5c3a21] text-[#e6d5b8] font-bold font-pixeloid-mono text-lg rounded hover:bg-[#7a4f2e] active:scale-95 transition-all shadow-[0_4px_0_#1c110b] hover:shadow-none hover:translate-y-1 flex items-center justify-center gap-2">
+                  <BookOpen size={20} /> Открыть
+                </button>
+              </form>
             </div>
-            <h1 className="text-3xl font-bold font-pixeloid-mono text-center mb-2 text-[#a37c49] uppercase flex justify-center items-center gap-2"><Flame /> Сытый Лис</h1>
-            <p className="text-center text-[#8c6e52] mb-8">Вход в закрытый архив</p>
-            <form onSubmit={handleLogin} className="space-y-5">
-              <input type="text" required placeholder="Логин" value={loginUser} onChange={(e) => setLoginUser(e.target.value)} className="w-full p-3 bg-[#1c110b] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none transition-colors" />
-              <input type="password" required placeholder="Пароль" value={loginPass} onChange={(e) => setLoginPass(e.target.value)} className="w-full p-3 bg-[#1c110b] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none transition-colors" />
-              {loginError && <p className="text-red-400 text-sm text-center animate-shake">{loginError}</p>}
-              <button type="submit" className="w-full py-3 bg-[#5c3a21] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#7a4f2e] active:scale-95 transition-all shadow-lg">Войти</button>
-            </form>
           </div>
         </div>
       )}
 
+      {/* ОСТАЛЬНОЙ ИНТЕРФЕЙС (Когда книга открыта) */}
       {user && (
-        <div className="flex-grow flex flex-col relative z-10 w-full">
+        <div className="flex-grow flex flex-col relative z-10 w-full animate-fade-in" style={{ animationDelay: '0.5s', animationFillMode: 'both' }}>
           
           {/* ВЕРХНЯЯ ПРАВАЯ ПАНЕЛЬ */}
           <div className="w-full flex justify-end p-4 relative z-50">
