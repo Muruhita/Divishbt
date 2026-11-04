@@ -10,41 +10,33 @@ body {
   overflow-x: hidden;
 }
 
-/* Шрифт */
+/* Пиксельный шрифт */
 .font-pixeloid-mono {
   font-family: var(--font-pixeloid-mono), monospace;
 }
 
 /* Кастомный скроллбар */
-::-webkit-scrollbar { width: 10px; }
-::-webkit-scrollbar-track { background: #160d08; }
-::-webkit-scrollbar-thumb { background: #5c3a21; border-radius: 5px; }
-::-webkit-scrollbar-thumb:hover { background: #a37c49; }
+::-webkit-scrollbar { 
+  width: 10px; 
+}
+::-webkit-scrollbar-track { 
+  background: #160d08; 
+}
+::-webkit-scrollbar-thumb { 
+  background: #5c3a21; 
+  border-radius: 5px; 
+}
+::-webkit-scrollbar-thumb:hover { 
+  background: #a37c49; 
+}
 
-/* Анимация появления */
+/* Анимация плавного появления контента */
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.animate-fade-in { animation: fade-in 0.4s ease-out forwards; }
-
-/* --- МЕРЦАНИЕ СВЕЧЕЙ (Candlelight Flicker) --- */
-@keyframes candle-flicker {
-  0%, 100% { opacity: 0.15; }
-  5% { opacity: 0.22; }
-  10% { opacity: 0.12; }
-  15% { opacity: 0.28; }
-  20% { opacity: 0.18; }
-  30% { opacity: 0.25; }
-  40% { opacity: 0.1; }
-  50% { opacity: 0.22; }
-  60% { opacity: 0.15; }
-  70% { opacity: 0.28; }
-  80% { opacity: 0.18; }
-  90% { opacity: 0.1; }
-}
-.animate-candle {
-  animation: candle-flicker 6s ease-in-out infinite;
+.animate-fade-in { 
+  animation: fade-in 0.4s ease-out forwards; 
 }
 
 /* --- ПАРЯЩИЕ РУНЫ (Floating Runes) --- */
@@ -54,7 +46,7 @@ body {
   color: #a37c49;
   text-shadow: 0 0 8px rgba(163, 124, 73, 0.8), 0 0 15px rgba(163, 124, 73, 0.4);
   opacity: 0;
-  font-family: serif; /* Руны лучше всего смотрятся со шрифтами с засечками */
+  font-family: serif;
   user-select: none;
   animation: rune-rise infinite linear;
 }
@@ -125,7 +117,6 @@ body {
   will-change: transform, left, top;
 }
 
-/* Хвост (псевдоэлемент для эффекта) */
 .fox-sprite::after {
   content: '';
   position: absolute;
