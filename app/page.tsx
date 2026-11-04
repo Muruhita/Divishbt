@@ -59,7 +59,7 @@ export default function TavernArchive() {
   const [adminTab, setAdminTab] = useState<"archive" | "bulk" | "users" | "diag" | "logs">("archive");
   
   const [usersList, setUsersList] = useState<DbUser[]>([]);
-  const [logsList, setLogsList] = useState<LogsList[]>([]);
+  const [logsList, setLogsList] = useState<LogItem[]>([]);
   const [diagResult, setDiagResult] = useState<{ status: string, latency?: number, message: string } | null>(null);
 
   const [soundEnabled, setSoundEnabled] = useState(false);
@@ -187,7 +187,7 @@ export default function TavernArchive() {
         oldPassword: oldPass, 
         newPassword: newPass, 
         avatar: user.avatar,
-        newUsername: newUsername !== user.username ? newUsername : undefined // Отправляем только если изменился
+        newUsername: newUsername !== user.username ? newUsername : undefined
       })
     });
 
@@ -196,7 +196,6 @@ export default function TavernArchive() {
     if (res.ok) {
       setProfileMsg("Профиль обновлен!");
       setOldPass(""); setNewPass("");
-      // Обновляем локальные данные
       const updatedUser = { ...user, username: newUsername };
       setUser(updatedUser);
       const saved = JSON.parse(localStorage.getItem("tavern_session")!);
@@ -418,7 +417,7 @@ export default function TavernArchive() {
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col">
       
-      {/* ФОН: ЗВЕЗДЫ, ТУМАН, РУНЫ, КОСТЁР */}
+      {/* ФОН: ЗВЕЗДЫ, ТУМАН, РУНЫ */}
       <div className="pixel-stars"></div>
       <div className="fog-container"><div className="fog-layer"></div><div className="fog-layer"></div></div>
       
@@ -426,27 +425,6 @@ export default function TavernArchive() {
         {RUNES.slice(0, 6).map((rune, i) => (
           <div key={i} className="rune">{rune}</div>
         ))}
-      </div>
-
-      {/* КОСТЁР */}
-      <div className="campfire-container">
-        <div className="campfire-glow"></div>
-        <div className="flame flame-1"></div>
-        <div className="flame flame-2"></div>
-        <div className="flame flame-3"></div>
-        <div className="flame flame-4"></div>
-        <div className="ember"></div>
-        <div className="ember"></div>
-        <div className="ember"></div>
-        <div className="ember"></div>
-        <div className="ember"></div>
-        <div className="ember"></div>
-        <div className="fire-logs">
-          <div className="fire-log-inner"></div>
-          <div className="fire-log-inner"></div>
-          <div className="fire-log-inner"></div>
-          <div className="fire-log-inner"></div>
-        </div>
       </div>
 
       <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 50% 0%, #a37c49 0%, transparent 70%)" }}></div>
