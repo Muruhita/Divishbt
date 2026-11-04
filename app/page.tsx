@@ -27,14 +27,12 @@ const DEFAULT_ROLES = [
 ];
 
 export default function TavernArchive() {
-  // --- КУРСОР ---
   const cursorDotRef = useRef<HTMLDivElement>(null);
   const cursorRingRef = useRef<HTMLDivElement>(null);
   const mousePos = useRef({ x: -100, y: -100 });
   const ringPos = useRef({ x: -100, y: -100 });
   const isHovering = useRef(false);
 
-  // --- ПЛАШКИ ---
   const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' | 'info' | 'warning' } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ msg: string, onConfirm: () => void } | null>(null);
   const [promptDialog, setPromptDialog] = useState<{ msg: string, val: string, onConfirm: (val: string) => void } | null>(null);
@@ -47,7 +45,6 @@ export default function TavernArchive() {
   const showConfirm = (msg: string, onConfirm: () => void) => setConfirmDialog({ msg, onConfirm });
   const showPrompt = (msg: string, onConfirm: (val: string) => void) => setPromptDialog({ msg, val: "", onConfirm });
 
-  // --- СТЕЙТЫ ---
   const [data, setData] = useState<ArchiveItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Все");
@@ -92,7 +89,6 @@ export default function TavernArchive() {
   const [soundEnabled, setSoundEnabled] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
-  // --- ЛОГИКА КУРСОРА ---
   useEffect(() => {
     if (window.matchMedia("(pointer: coarse)").matches) return;
 
@@ -134,7 +130,6 @@ export default function TavernArchive() {
     };
   }, []);
 
-  // --- ОСТАЛЬНАЯ ЛОГИКА ---
   useEffect(() => {
     const initAudio = () => {
       if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -585,7 +580,7 @@ export default function TavernArchive() {
         {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
       </button>
 
-      {/* ПЛАШКИ (TOASTS, MODALS) */}
+      {/* ПЛАШКИ */}
       {toast && (
         <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[9999] animate-smooth-pop pointer-events-none">
           <div className={`px-6 py-4 rounded-lg border-2 shadow-[0_0_30px_rgba(0,0,0,0.8)] flex items-center gap-3 font-pixeloid-mono backdrop-blur-md text-lg
@@ -716,44 +711,46 @@ export default function TavernArchive() {
       )}
 
       {user && (
-        <div className="flex-grow flex flex-col relative z-10">
+        <div className="flex-grow flex flex-col relative z-10 w-full">
           
           {/* ВЕРХНЯЯ ПРАВАЯ ПАНЕЛЬ (ПРОФИЛЬ + МЕНЮ) */}
-          <div className="absolute top-4 right-4 z-50 flex flex-col items-end gap-3">
-            {/* Профиль */}
-            <div className="flex items-center gap-3 bg-[#2e1b13]/90 border border-[#5c3a21] p-1.5 rounded-lg cursor-pointer hover:border-[#a37c49] hover:shadow-[0_0_15px_rgba(163,124,73,0.3)] transition-all group" onClick={openProfile}>
-              <div className="w-10 h-10 rounded bg-[#1c110b] overflow-hidden flex items-center justify-center border border-[#5c3a21] group-hover:border-[#a37c49] transition-colors">
-                {user.avatar ? <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" /> : <UserIcon size={20} className="text-[#5c3a21] group-hover:text-[#a37c49] transition-colors" />}
+          <div className="w-full flex justify-end p-4 relative z-50">
+            <div className="flex flex-col items-end gap-2">
+              {/* Профиль */}
+              <div className="flex items-center gap-3 bg-[#2e1b13]/90 border border-[#5c3a21] p-1.5 rounded-lg cursor-pointer hover:border-[#a37c49] hover:shadow-[0_0_15px_rgba(163,124,73,0.3)] transition-all group" onClick={openProfile}>
+                <div className="w-10 h-10 rounded bg-[#1c110b] overflow-hidden flex items-center justify-center border border-[#5c3a21] group-hover:border-[#a37c49] transition-colors">
+                  {user.avatar ? <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" /> : <UserIcon size={20} className="text-[#5c3a21] group-hover:text-[#a37c49] transition-colors" />}
+                </div>
+                <div className="flex flex-col text-right pr-2">
+                  <span className="text-sm font-bold font-pixeloid-mono">{user.account_name}</span>
+                  <span className={`text-xs font-bold font-pixeloid-mono ${getRoleColor(userRole.level)}`}>{userRole.name}</span>
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); handleLogout(); }} className="p-2 text-red-400 hover:bg-red-500/20 rounded active:scale-90 transition-all" title="Выйти"><LogOut size={18} /></button>
               </div>
-              <div className="flex flex-col text-right pr-2">
-                <span className="text-sm font-bold font-pixeloid-mono">{user.account_name}</span>
-                <span className={`text-xs font-bold font-pixeloid-mono ${getRoleColor(userRole.level)}`}>{userRole.name}</span>
-              </div>
-              <button onClick={(e) => { e.stopPropagation(); handleLogout(); }} className="p-2 text-red-400 hover:bg-red-500/20 rounded active:scale-90 transition-all" title="Выйти"><LogOut size={18} /></button>
-            </div>
 
-            {/* Меню навигации под профилем */}
-            <div className="flex flex-col gap-2 items-end animate-smooth-fade-up">
-              {view !== "home" && (
-                <button onClick={() => setView("home")} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/80 border border-[#5c3a21] text-[#a37c49] text-sm font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm">
-                  <Home size={16} /> На главную
-                </button>
-              )}
-              {view !== "archive" && (
-                <button onClick={() => setView("archive")} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/80 border border-[#5c3a21] text-[#a37c49] text-sm font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm">
-                  <ScrollText size={16} /> Свитки
-                </button>
-              )}
-              {view !== "admin" && userRole.level >= 1 && (
-                <button onClick={() => setView("admin")} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/80 border border-[#5c3a21] text-[#a37c49] text-sm font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm">
-                  <Settings size={16} /> Админка
-                </button>
-              )}
+              {/* Меню навигации под профилем */}
+              <div className="flex flex-col gap-1 items-end animate-smooth-fade-up">
+                {view !== "home" && (
+                  <button onClick={() => setView("home")} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/90 border border-[#5c3a21] text-[#a37c49] text-xs font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start">
+                    <Home size={14} /> На главную
+                  </button>
+                )}
+                {view !== "archive" && (
+                  <button onClick={() => setView("archive")} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/90 border border-[#5c3a21] text-[#a37c49] text-xs font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start">
+                    <ScrollText size={14} /> Открыть свитки
+                  </button>
+                )}
+                {view !== "admin" && userRole.level >= 1 && (
+                  <button onClick={() => setView("admin")} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/90 border border-[#5c3a21] text-[#a37c49] text-xs font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start">
+                    <Settings size={14} /> Админка
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="max-w-5xl mx-auto px-6 py-12 w-full flex flex-col flex-grow">
-            <header className="flex justify-center mb-12 cursor-pointer" onClick={() => setView("home")}>
+          <div className="max-w-5xl mx-auto px-6 pb-12 w-full flex flex-col flex-grow -mt-16">
+            <header className="flex justify-center mb-8 cursor-pointer" onClick={() => setView("home")}>
               <img src="/logo.png" alt="Сытый Лис" className="w-24 h-24 object-cover rounded-full border-4 border-[#5c3a21] animate-float bg-[#1c110b] hover:scale-105 transition-all" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             </header>
 
