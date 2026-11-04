@@ -126,14 +126,14 @@ export default function TavernArchive() {
   const showPrompt = (msg: string, onConfirm: (val: string) => void) => setPromptDialog({ msg, val: "", onConfirm });
 
   const [data, setData] = useState<ArchiveItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true); // Стейт загрузки
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Все");
-  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false); // Фильтр избранного
-  const [favorites, setFavorites] = useState<number[]>([]); // Массив ID избранных записей
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
+  const [favorites, setFavorites] = useState<number[]>([]);
   const [view, setView] = useState<"home" | "archive" | "admin">("home");
   
-  const [showScrollTop, setShowScrollTop] = useState(false); // Стейт кнопки "Наверх"
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -277,7 +277,7 @@ export default function TavernArchive() {
     const isCurrentlyFavorite = favorites.includes(archiveId);
     const action = isCurrentlyFavorite ? "remove" : "add";
 
-    // Оптимистичное обновление UI (сразу меняем цвет звездочки)
+    // Оптимистичное обновление UI
     if (isCurrentlyFavorite) {
       setFavorites(favorites.filter(id => id !== archiveId));
     } else {
@@ -285,15 +285,26 @@ export default function TavernArchive() {
     }
     playSound("click");
 
-    await fetch("/api/favorites", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: user.id, archiveId, action })
-    });
+    try {
+      const res = await fetch("/api/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, archiveId, action })
+      });
+      if (!res.ok) throw new Error("Ошибка сервера");
+    } catch (error) {
+      // Откат, если произошла ошибка
+      if (isCurrentlyFavorite) {
+        setFavorites([...favorites, archiveId]);
+      } else {
+        setFavorites(favorites.filter(id => id !== archiveId));
+      }
+      showToast("Не удалось сохранить избранное", "error");
+    }
   };
 
   const fetchArchive = async (page = 1, cat = selectedCategory, search = searchQuery) => {
-    setIsLoading(true); // Включаем скелетон
+    setIsLoading(true);
     try {
       const res = await fetch(`/api/archive?page=${page}&limit=${LIMIT}&category=${encodeURIComponent(cat)}&search=${encodeURIComponent(search)}&role=${user?.role || 'guest'}`);
       const result = await res.json();
@@ -309,7 +320,7 @@ export default function TavernArchive() {
       setTotalPages(Math.ceil((result.total || 0) / LIMIT));
       setCurrentPage(page);
     } catch (error) { setData([]); }
-    finally { setIsLoading(false); } // Выключаем скелетон
+    finally { setIsLoading(false); }
   };
 
   useEffect(() => {
@@ -366,7 +377,7 @@ export default function TavernArchive() {
         setTimeout(() => {
           setUser({ ...data }); 
           setLoginUser(""); setLoginPass("");
-          fetchFavorites(data.id); // Загружаем избранное
+          fetchFavorites(data.id);
           const expiresAt = Date.now() + (5 * 60 * 60 * 1000); 
           localStorage.setItem("tavern_session", JSON.stringify({ userData: { ...data }, expiresAt }));
           setIsBookOpening(false);
@@ -379,7 +390,6 @@ export default function TavernArchive() {
   const handleLogout = () => {
     playSound("click");
     
-    // Включаем анимацию закрытия книги
     setIsBookClosing(true);
     setStartBookCloseAnim(false); 
     
@@ -387,12 +397,10 @@ export default function TavernArchive() {
     setLoginPass("");
     setLoginError("");
 
-    // Даем React время отрендерить открытую книгу, затем запускаем закрытие
     setTimeout(() => {
       setStartBookCloseAnim(true);
     }, 50);
 
-    // Ждем окончания CSS-анимации (1.5s), затем разлогиниваем
     setTimeout(() => {
       setUser(null);
       setFavorites([]);
@@ -714,7 +722,6 @@ export default function TavernArchive() {
     }
   }, [view, adminTab]);
 
-  // Фильтрация данных для отображения (учитывая "Только избранное")
   const displayedData = showOnlyFavorites ? data.filter(item => favorites.includes(item.id)) : data;
 
   if (isCheckingAuth) return <main className="min-h-screen bg-[#160d08]"></main>;
@@ -1309,7 +1316,7 @@ export default function TavernArchive() {
         </button>
       )}
 
-      <div className="fixed bottom-4 right-4 z-[100] bg-[#1c110b]/70 border border-[#5c3a21]/40 px-3 py-1.5 rounded-md text-[11px] text-[#8c6e52]/70 font-pixeloid-mono hover:text-[#a37c49] transition-colors cursor-default select-none">Muruh1ta</div>
+      <div className="fixed bottom-4 right-4 z-[100] bg-[#1c110b]/70 border border-[#5c3a21]/40 px-3 py-1.5 rounded-md text-[11px] text-[#8c6e52]/70 font-pixeloid-mono hover:text-[#a37c49] transition-colors cursor-default select-none">Автор: muruh1ta</div>
     </main>
   );
 }
