@@ -176,3 +176,24 @@ body {
 .book-corner-tr { top: 20px; right: 20px; border-left: none; border-bottom: none; }
 .book-corner-bl { bottom: 20px; left: 20px; border-right: none; border-top: none; }
 .book-corner-br { bottom: 20px; right: 20px; border-left: none; border-top: none; }
+
+/* --- ПЛАВНОЕ ПОЯВЛЕНИЕ МЕНЮ --- */
+@keyframes menu-drop {
+  0% { opacity: 0; transform: translateY(-30px) scale(0.95); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-menu-drop {
+  animation: menu-drop 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0; /* Изначально невидимо */
+}
+
+@keyframes content-fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.animate-content-fade {
+  animation: content-fade-in 1s ease-out forwards;
+  opacity: 0;
+}
