@@ -160,6 +160,15 @@ export default function TavernArchive() {
   const canEdit = user?.role === 'owner' || user?.role === 'creator' || userRole.level >= 3;
   const canDelete = user?.role === 'owner' || user?.role === 'creator' || user?.role === 'high' || userRole.level >= 1;
 
+  // ФУНКЦИЯ ДЛЯ ВОЗВРАЩЕНИЯ ЦВЕТА ПО УРОВНЮ
+  const getRoleColor = (level: number) => {
+    if (level >= 4) return "text-red-500";
+    if (level === 3) return "text-purple-500";
+    if (level === 2) return "text-blue-500";
+    if (level === 1) return "text-green-500";
+    return "text-gray-400";
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError("");
@@ -590,7 +599,7 @@ export default function TavernArchive() {
               </div>
               <div className="flex flex-col text-right pr-2">
                 <span className="text-sm font-bold font-pixeloid-mono">{user.account_name}</span>
-                <span className={`text-xs font-bold font-pixeloid-mono text-[#a37c49]`}>{userRole.name}</span>
+                <span className={`text-xs font-bold font-pixeloid-mono ${getRoleColor(userRole.level)}`}>{userRole.name}</span>
               </div>
               {userRole.level >= 1 && (
                 <button onClick={(e) => { e.stopPropagation(); setView("admin"); }} className="p-2 bg-[#1c110b] rounded hover:bg-[#a37c49] hover:text-[#160d08] active:scale-90 transition-all" title="Админ-панель"><Settings size={18} /></button>
@@ -797,15 +806,22 @@ export default function TavernArchive() {
                         <table className="w-full text-left border-collapse">
                           <thead className="bg-[#1c110b]"><tr className="text-[#8c6e52] border-b border-[#5c3a21] font-pixeloid-mono text-sm"><th className="p-3">Имя</th><th className="p-3">Роль</th><th className="p-3">Логин</th><th className="p-3">Пароль</th><th className="p-3">Действие</th></tr></thead>
                           <tbody>
-                            {usersList.map(u => (
-                              <tr key={u.id} className="border-b border-[#3d2617] hover:bg-[#1c110b] transition-colors">
-                                <td className="p-3 font-medium">{u.account_name}</td>
-                                <td className={`p-3 text-sm font-bold font-pixeloid-mono text-[#a37c49]`}>{roles.find(r => r.id === u.role)?.name || u.role}</td>
-                                <td className="p-3 font-mono text-[#c4b5a5]">{u.username}</td>
-                                <td className="p-3 font-mono text-red-400 bg-red-500/5">{u.plain_password || "********"}</td>
-                                <td className="p-3">{(userRole.id === "owner" || userRole.id === "creator") && u.id !== user.id && (<button onClick={() => handleDeleteUser(u.id, u.account_name)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all"><Trash2 size={16} /></button>)}</td>
-                              </tr>
-                            ))}
+                            {usersList.map(u => {
+                              const roleObj = roles.find(r => r.id === u.role);
+                              const roleLevel = roleObj ? roleObj.level : 0;
+                              return (
+                                <tr key={u.id} className="border-b border-[#3d2617] hover:bg-[#1c110b] transition-colors">
+                                  <td className="p-3 font-medium">{u.account_name}</td>
+                                  {/* ВОЗВРАЩАЕМ ЦВЕТА РОЛЯМ ТУТ */}
+                                  <td className={`p-3 text-sm font-bold font-pixeloid-mono ${getRoleColor(roleLevel)}`}>
+                                    {roleObj?.name || u.role}
+                                  </td>
+                                  <td className="p-3 font-mono text-[#c4b5a5]">{u.username}</td>
+                                  <td className="p-3 font-mono text-red-400 bg-red-500/5">{u.plain_password || "********"}</td>
+                                  <td className="p-3">{(userRole.id === "owner" || userRole.id === "creator") && u.id !== user.id && (<button onClick={() => handleDeleteUser(u.id, u.account_name)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all"><Trash2 size={16} /></button>)}</td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
