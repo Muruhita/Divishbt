@@ -14,11 +14,13 @@ body {
   font-family: var(--font-pixeloid-mono), monospace;
 }
 
+/* Кастомный скроллбар */
 ::-webkit-scrollbar { width: 10px; }
 ::-webkit-scrollbar-track { background: #160d08; }
 ::-webkit-scrollbar-thumb { background: #5c3a21; border-radius: 5px; }
 ::-webkit-scrollbar-thumb:hover { background: #a37c49; }
 
+/* --- АНИМАЦИИ --- */
 @keyframes smooth-fade-up {
   0% { opacity: 0; transform: translateY(20px); }
   100% { opacity: 1; transform: translateY(0); }
@@ -41,6 +43,7 @@ body {
 }
 .animate-shake { animation: shake 0.3s ease-in-out; }
 
+/* --- ПИКСЕЛЬНЫЙ ЖИВОЙ ФОН --- */
 .pixel-stars {
   position: fixed; inset: 0; pointer-events: none; z-index: 0;
   background-image: radial-gradient(#a37c49 1px, transparent 1px);
@@ -50,6 +53,7 @@ body {
   0% { background-position: 0px 0px; } 100% { background-position: 50px 50px; }
 }
 
+/* --- ПАРЯЩИЕ РУНЫ --- */
 .rune {
   position: absolute; bottom: -30px; color: #a37c49;
   text-shadow: 0 0 8px rgba(163, 124, 73, 0.8); opacity: 0;
@@ -67,6 +71,7 @@ body {
 .rune:nth-child(5) { left: 70%; font-size: 28px; animation-duration: 21s; animation-delay: 5s; }
 .rune:nth-child(6) { left: 85%; font-size: 18px; animation-duration: 30s; animation-delay: 3s; }
 
+/* --- ТУМАН ВНИЗУ --- */
 .fog-container {
   position: fixed; bottom: 0; left: 0; width: 100vw; height: 40vh;
   pointer-events: none; z-index: 0; overflow: hidden; opacity: 0.5;
@@ -82,31 +87,32 @@ body {
 }
 @keyframes fog-drift { 0% { transform: translateX(0); } 100% { transform: translateX(-50vw); } }
 
-/* --- МЯГКИЙ КУРСОР --- */
+/* --- МЯГКИЙ КУРСОР (ТОЛЬКО ТОЧКА) --- */
 @media (pointer: fine) {
   body, a, button, input, textarea, select, [role="button"] {
     cursor: none !important;
   }
+  
   .custom-cursor-dot {
-    width: 8px; height: 8px; background-color: #E5B85C; border-radius: 50%;
-    position: fixed; top: 0; left: 0; pointer-events: none; z-index: 99999;
+    width: 6px;
+    height: 6px;
+    background-color: #E5B85C;
+    border-radius: 50%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 99999;
     transform: translate(-50%, -50%);
-    box-shadow: 0 0 10px #E5B85C, 0 0 20px #E5B85C;
+    box-shadow: 0 0 8px #E5B85C, 0 0 15px #E5B85C;
     transition: width 0.2s, height 0.2s, background-color 0.2s;
   }
-  .custom-cursor-ring {
-    width: 40px; height: 40px; border: 2px solid rgba(163, 124, 73, 0.5); border-radius: 50%;
-    position: fixed; top: 0; left: 0; pointer-events: none; z-index: 99998;
-    transform: translate(-50%, -50%);
-    box-shadow: 0 0 15px rgba(163, 124, 73, 0.2);
-    transition: width 0.3s, height 0.3s, background-color 0.3s, border-color 0.3s;
-    backdrop-filter: blur(2px);
-  }
-  .custom-cursor-ring.hovering {
-    width: 60px; height: 60px;
-    background-color: rgba(229, 184, 92, 0.1); border-color: #E5B85C;
-  }
+
+  /* Эффект при наведении на кнопки/ссылки */
   .custom-cursor-dot.hovering {
-    width: 12px; height: 12px; background-color: #fff;
+    width: 10px;
+    height: 10px;
+    background-color: #fff;
+    box-shadow: 0 0 10px #fff, 0 0 20px #E5B85C;
   }
 }
