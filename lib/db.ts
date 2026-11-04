@@ -1,20 +1,13 @@
 import { createClient } from "@libsql/client";
 
-// ИСПРАВЛЕНО: добавлена буква 'y' в tavernoydb
-const url = process.env.tavernoydb_TURSO_DATABASE_URL;
-const authToken = process.env.tavernoydb_TURSO_AUTH_TOKEN;
-
-console.log("==================================================");
-console.log("🔍 ДИАГНОСТИКА БАЗЫ ДАННЫХ (lib/db.ts)");
-console.log("URL базы:", url ? "✅ Загружен" : "❌ НЕ НАЙДЕН (undefined)");
-console.log("Токен:", authToken ? "✅ Загружен" : "❌ НЕ НАЙДЕН (undefined)");
-console.log("==================================================");
+const url = process.env.tavernoydb_TURSO_DATABASE_URL || process.env.tavernodb_TURSO_DATABASE_URL;
+const authToken = process.env.tavernoydb_TURSO_AUTH_TOKEN || process.env.tavernodb_TURSO_AUTH_TOKEN;
 
 if (!url || !authToken) {
-  throw new Error("Переменные окружения не найдены. Проверьте названия в Vercel!");
+  console.warn("⚠️ ВНИМАНИЕ: Переменные окружения Turso не найдены.");
 }
 
 export const db = createClient({
-  url: url,
-  authToken: authToken,
+  url: url || "libsql://dummy-url.turso.io",
+  authToken: authToken || "dummy-token",
 });
