@@ -95,7 +95,6 @@ export default function TavernArchive() {
     }
   };
 
-  // ОБНОВЛЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ
   const fetchArchive = async (page = 1, cat = selectedCategory, search = searchQuery) => {
     try {
       const res = await fetch(`/api/archive?page=${page}&limit=${LIMIT}&category=${encodeURIComponent(cat)}&search=${encodeURIComponent(search)}`);
@@ -132,7 +131,6 @@ export default function TavernArchive() {
     checkSession();
   }, []);
 
-  // ВЫЗЫВАЕМ ЗАГРУЗКУ ПРИ СМЕНЕ СТРАНИЦЫ, КАТЕГОРИИ ИЛИ ПОИСКА
   useEffect(() => {
     if (user) fetchArchive(currentPage, selectedCategory, searchQuery);
   }, [user, currentPage, selectedCategory, searchQuery]);
@@ -366,46 +364,48 @@ export default function TavernArchive() {
     if (view === "admin" && adminTab === "logs") fetchLogs();
   }, [view, adminTab]);
 
-  const ArchiveCard = ({ item, index }: { item: ArchiveItem, index: number }) => (
-    <div 
-      className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.6)] hover:border-[#a37c49] hover:shadow-[0_0_20px_rgba(163,124,73,0.15)] hover:-translate-y-1.5 transition-all duration-300 group flex flex-col relative z-10 overflow-hidden opacity-0"
-      style={{ animation: `smooth-fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards`, animationDelay: `${index * 40}ms` }}
-    >
-      {item.image && (
-        <div className="w-full h-56 overflow-hidden border-b-2 border-[#5c3a21] cursor-pointer relative group/img flex items-center justify-center"
-          style={{ backgroundColor: '#d6c5b3', backgroundImage: 'radial-gradient(#b8a38a 1px, transparent 1px)', backgroundSize: '10px 10px' }}
-          onClick={() => { playSound("click"); setSelectedImage(item.image!); }}>
-          <img src={item.image} alt={item.title} className="max-w-full max-h-full object-contain p-2 transition-transform duration-500 group-hover/img:scale-110 drop-shadow-md" />
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
-            <Maximize2 size={32} className="text-[#e6d5b8]" />
+  // Упрощенная карточка без проблемной анимации opacity
+  const ArchiveCard = ({ item }: { item: ArchiveItem }) => {
+    if (!item || !item.title) return null; // Защита от пустых записей
+
+    return (
+      <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.6)] hover:border-[#a37c49] hover:shadow-[0_0_20px_rgba(163,124,73,0.15)] hover:-translate-y-1.5 transition-all duration-300 group flex flex-col relative z-10 overflow-hidden">
+        {item.image && (
+          <div className="w-full h-56 overflow-hidden border-b-2 border-[#5c3a21] cursor-pointer relative group/img flex items-center justify-center"
+            style={{ backgroundColor: '#d6c5b3', backgroundImage: 'radial-gradient(#b8a38a 1px, transparent 1px)', backgroundSize: '10px 10px' }}
+            onClick={() => { playSound("click"); setSelectedImage(item.image!); }}>
+            <img src={item.image} alt={item.title} className="max-w-full max-h-full object-contain p-2 transition-transform duration-500 group-hover/img:scale-110 drop-shadow-md" />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+              <Maximize2 size={32} className="text-[#e6d5b8]" />
+            </div>
+          </div>
+        )}
+        <div className="p-6 flex flex-col flex-grow">
+          <div className="flex justify-between items-start mb-3 relative z-10">
+            <h3 className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8]">{item.title}</h3>
+            {item.symbol && <span className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8] bg-[#1c110b] px-3 py-1 rounded border border-[#5c3a21]">{item.symbol}</span>}
+          </div>
+          <div className="flex flex-wrap items-center gap-2 mb-4 relative z-10">
+            <span className="inline-block px-3 py-1 text-xs font-bold font-pixeloid-mono bg-[#1c110b] text-[#a37c49] rounded border border-[#5c3a21] uppercase">{item.category}</span>
+            {item.dangerLevel && <span className="inline-block px-2 py-1 text-xs font-bold font-pixeloid-mono rounded border border-red-900/50 bg-red-900/20 text-red-400 uppercase">{item.dangerLevel}</span>}
+            
+            {user && (user.role === "owner" || user.role === "creator") && (
+              <div className="ml-auto flex items-center gap-1">
+                <button onClick={() => setEditingItem(item)} className="text-blue-400 hover:text-blue-300 bg-blue-500/10 p-1.5 rounded active:scale-90 transition-all"><Pencil size={16} /></button>
+                <button onClick={() => handleDeleteItem(item.id, item.title)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all"><Trash2 size={16} /></button>
+              </div>
+            )}
+            {user && user.role === "high" && (
+              <button onClick={() => handleDeleteItem(item.id, item.title)} className="ml-auto text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all"><Trash2 size={16} /></button>
+            )}
+          </div>
+          <div className="text-[#c4b5a5] font-sans leading-relaxed flex-grow relative z-10 prose prose-invert prose-sm max-w-none">
+            <ReactMarkdown>{item.description}</ReactMarkdown>
           </div>
         </div>
-      )}
-      <div className="p-6 flex flex-col flex-grow">
-        <div className="flex justify-between items-start mb-3 relative z-10">
-          <h3 className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8]">{item.title}</h3>
-          {item.symbol && <span className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8] bg-[#1c110b] px-3 py-1 rounded border border-[#5c3a21]">{item.symbol}</span>}
-        </div>
-        <div className="flex flex-wrap items-center gap-2 mb-4 relative z-10">
-          <span className="inline-block px-3 py-1 text-xs font-bold font-pixeloid-mono bg-[#1c110b] text-[#a37c49] rounded border border-[#5c3a21] uppercase">{item.category}</span>
-          {item.dangerLevel && <span className="inline-block px-2 py-1 text-xs font-bold font-pixeloid-mono rounded border border-red-900/50 bg-red-900/20 text-red-400 uppercase">{item.dangerLevel}</span>}
-          
-          {user && (user.role === "owner" || user.role === "creator") && (
-            <div className="ml-auto flex items-center gap-1">
-              <button onClick={() => setEditingItem(item)} className="text-blue-400 hover:text-blue-300 bg-blue-500/10 p-1.5 rounded active:scale-90 transition-all"><Pencil size={16} /></button>
-              <button onClick={() => handleDeleteItem(item.id, item.title)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all"><Trash2 size={16} /></button>
-            </div>
-          )}
-          {user && user.role === "high" && (
-            <button onClick={() => handleDeleteItem(item.id, item.title)} className="ml-auto text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all"><Trash2 size={16} /></button>
-          )}
-        </div>
-        <div className="text-[#c4b5a5] font-sans leading-relaxed flex-grow relative z-10 prose prose-invert prose-sm max-w-none">
-          <ReactMarkdown>{item.description}</ReactMarkdown>
-        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   if (isCheckingAuth) return <main className="min-h-screen bg-[#160d08]"></main>;
 
@@ -541,7 +541,7 @@ export default function TavernArchive() {
                 </div>
                 {searchQuery.length > 0 || selectedCategory !== "Все" ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full text-left">
-                    {data.length > 0 ? data.map((item, idx) => <ArchiveCard key={item.id} item={item} index={idx} />) : <p className="text-center w-full col-span-2 text-[#8c6e52]">Ничего не найдено...</p>}
+                    {data.length > 0 ? data.map((item) => <ArchiveCard key={item.id} item={item} />) : <p className="text-center w-full col-span-2 text-[#8c6e52]">Ничего не найдено...</p>}
                   </div>
                 ) : (
                   <button onClick={() => setView("archive")} className="mt-8 px-10 py-4 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono text-xl rounded-lg shadow-[0_4px_0_#1c110b] hover:shadow-[0_0_20px_rgba(163,124,73,0.4)] hover:-translate-y-1 hover:bg-[#7a4f2e] active:translate-y-1 active:shadow-none transition-all duration-300">
@@ -566,7 +566,7 @@ export default function TavernArchive() {
                     ))}
                  </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {data.length > 0 ? data.map((item, idx) => <ArchiveCard key={item.id} item={item} index={idx} />) : <p className="text-center w-full col-span-2 text-[#8c6e52]">В этой категории пока нет записей...</p>}
+                    {data.length > 0 ? data.map((item) => <ArchiveCard key={item.id} item={item} />) : <p className="text-center w-full col-span-2 text-[#8c6e52]">В этой категории пока нет записей...</p>}
                  </div>
                  
                  {totalPages > 1 && (
