@@ -67,6 +67,8 @@ export default function TavernArchive() {
   const [loginError, setLoginError] = useState("");
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
+  // Профиль
+  const [newAccountName, setNewAccountName] = useState("");
   const [newUsername, setNewUsername] = useState("");
   const [newPass, setNewPass] = useState("");
   const [oldPass, setOldPass] = useState("");
@@ -89,7 +91,7 @@ export default function TavernArchive() {
   const [soundEnabled, setSoundEnabled] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
-  // --- ЛОГИКА КУРСОРА (ТОЛЬКО ТОЧКА) ---
+  // --- ЛОГИКА КУРСОРА ---
   useEffect(() => {
     if (window.matchMedia("(pointer: coarse)").matches) return;
 
@@ -110,13 +112,9 @@ export default function TavernArchive() {
     };
 
     window.addEventListener("mousemove", onMouseMove);
-
-    return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-    };
+    return () => window.removeEventListener("mousemove", onMouseMove);
   }, []);
 
-  // --- ОСТАЛЬНАЯ ЛОГИКА ---
   useEffect(() => {
     const initAudio = () => {
       if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -244,6 +242,7 @@ export default function TavernArchive() {
 
   const openProfile = () => {
     if (user) {
+      setNewAccountName(user.account_name); // Инициализируем имя
       setNewUsername(user.username);
       setNewPass("");
       setOldPass("");
@@ -259,8 +258,12 @@ export default function TavernArchive() {
     const res = await fetch("/api/user/update", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
-        userId: user.id, oldPassword: oldPass, newPassword: newPass, avatar: user.avatar,
-        newUsername: newUsername !== user.username ? newUsername : undefined
+        userId: user.id, 
+        oldPassword: oldPass, 
+        newPassword: newPass, 
+        avatar: user.avatar,
+        newUsername: newUsername !== user.username ? newUsername : undefined,
+        newAccountName: newAccountName !== user.account_name ? newAccountName : undefined // Отправляем имя, если изменилось
       })
     });
 
@@ -268,7 +271,14 @@ export default function TavernArchive() {
     if (res.ok) {
       showToast("Профиль успешно обновлен!", "success");
       setOldPass(""); setNewPass("");
-      const updatedUser = { ...user, username: newUsername };
+      
+      // Обновляем локального пользователя
+      const updatedUser = { 
+        ...user, 
+        username: newUsername || user.username, 
+        account_name: newAccountName || user.account_name 
+      };
+      
       setUser(updatedUser);
       const saved = JSON.parse(localStorage.getItem("tavern_session")!);
       saved.userData = updatedUser;
@@ -547,7 +557,7 @@ export default function TavernArchive() {
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col">
       
-      {/* КУРСОР (ТОЛЬКО ТОЧКА) */}
+      {/* КУРСОР */}
       <div ref={cursorDotRef} className="custom-cursor-dot hidden md:block" />
 
       <div className="pixel-stars"></div>
@@ -662,15 +672,23 @@ export default function TavernArchive() {
                   <input type="file" accept="image/*" onChange={handleAvatarUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
                 </div>
               </div>
+
+              <div className="space-y-2 border-t border-[#5c3a21] pt-4">
+                <label className="text-sm font-pixeloid-mono text-[#a37c49]">Изменить имя</label>
+                <input type="text" placeholder="Новое имя" value={newAccountName} onChange={e => setNewAccountName(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
+              </div>
+
               <div className="space-y-2 border-t border-[#5c3a21] pt-4">
                 <label className="text-sm font-pixeloid-mono text-[#a37c49]">Изменить логин</label>
                 <input type="text" placeholder="Новый логин" value={newUsername} onChange={e => setNewUsername(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
               </div>
+
               <div className="space-y-2 border-t border-[#5c3a21] pt-4">
                 <label className="text-sm font-pixeloid-mono text-[#a37c49]">Смена пароля</label>
                 <input type="password" placeholder="Старый пароль" value={oldPass} onChange={e => setOldPass(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
                 <input type="password" placeholder="Новый пароль" value={newPass} onChange={e => setNewPass(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
               </div>
+              
               <button type="submit" className="w-full py-2 bg-[#5c3a21] text-white font-bold rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Сохранить изменения</button>
             </form>
           </div>
