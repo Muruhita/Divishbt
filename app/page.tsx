@@ -84,13 +84,6 @@ export default function TavernArchive() {
   const [soundEnabled, setSoundEnabled] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
-  // --- ЛИСИЦА ---
-  const [foxPos, setFoxPos] = useState({ x: -100, y: -100 });
-  const [facingLeft, setFacingLeft] = useState(false);
-  const foxTarget = useRef({ x: -100, y: -100 });
-  const foxCurrent = useRef({ x: -100, y: -100 });
-  const animationRef = useRef<number | null>(null);
-
   useEffect(() => {
     const initAudio = () => {
       if (!audioCtxRef.current) {
@@ -133,37 +126,6 @@ export default function TavernArchive() {
       osc.start(now); osc.stop(now + 0.3);
     }
   };
-
-  // --- ЛОГИКА ДВИЖЕНИЯ ЛИСИЦЫ ---
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      foxTarget.current = { x: e.clientX + 30, y: e.clientY + 30 };
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-
-    const updateFox = () => {
-      const dx = foxTarget.current.x - foxCurrent.current.x;
-      const dy = foxTarget.current.y - foxCurrent.current.y;
-      
-      foxCurrent.current.x += dx * 0.08;
-      foxCurrent.current.y += dy * 0.08;
-      
-      if (Math.abs(dx) > 1) {
-        setFacingLeft(dx < 0);
-      }
-
-      setFoxPos({ x: foxCurrent.current.x, y: foxCurrent.current.y });
-      animationRef.current = requestAnimationFrame(updateFox);
-    };
-
-    animationRef.current = requestAnimationFrame(updateFox);
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      if (animationRef.current) cancelAnimationFrame(animationRef.current);
-    };
-  }, []);
 
   useEffect(() => {
     const checkSession = () => {
@@ -480,18 +442,6 @@ export default function TavernArchive() {
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col">
       
-      {/* ЛИСИЦА-КОМПАНЬОН */}
-      <div 
-        className="fixed pointer-events-none z-[45] fox-sprite"
-        style={{ 
-          left: foxPos.x, 
-          top: foxPos.y, 
-          transform: `translate(-50%, -50%) scaleX(${facingLeft ? -1 : 1})` 
-        }}
-      >
-        🦊
-      </div>
-
       {/* ТУМАН ВНИЗУ */}
       <div className="fog-container">
         <div className="fog-layer"></div>
@@ -505,7 +455,7 @@ export default function TavernArchive() {
         ))}
       </div>
 
-      {/* СТАТИЧНЫЙ ФОН (Убрали мерцание) */}
+      {/* СТАТИЧНЫЙ ФОН */}
       <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 50% 0%, #a37c49 0%, transparent 70%)" }}></div>
 
       {/* КНОПКА ЗВУКА */}
