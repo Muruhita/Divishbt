@@ -179,7 +179,6 @@ export default function TavernArchive() {
   const [soundEnabled, setSoundEnabled] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
-  // Стейт для раскрытия паролей в таблице
   const [revealedPasswords, setRevealedPasswords] = useState<Record<number, boolean>>({});
 
   const togglePassword = (userId: number) => {
@@ -625,7 +624,6 @@ export default function TavernArchive() {
     if (res.ok) {
       showToast(`Аккаунт создан! Логин: ${finalUsername} | Пароль: ${finalPassword}`, "success");
       
-      // --- ГЕНЕРАЦИЯ И СКАЧИВАНИЕ TXT ФАЙЛА ---
       const fileContent = `Данные для входа в Таверну "Сытый Лис"\n\n` +
                           `Имя аккаунта: ${newAcc.account_name}\n` +
                           `Логин: ${finalUsername}\n` +
@@ -641,7 +639,6 @@ export default function TavernArchive() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      // ----------------------------------------
 
       setNewAcc({ account_name: "", username: "", password: "", role: roles[roles.length - 1]?.id || "low" });
       setAutoUser(false); setAutoPass(false); fetchUsers();
@@ -970,7 +967,7 @@ export default function TavernArchive() {
 
           <div className="max-w-5xl mx-auto px-6 pb-12 w-full flex flex-col flex-grow -mt-16">
             <header className="flex justify-center mb-8 cursor-pointer" onClick={() => setView("home")}>
-              <img src="/logo.png" alt="Сытый Лис" className="w-64 h-64 object-cover rounded-full border-4 border-[#5c3a21] animate-float bg-[#1c110b] hover:scale-105 transition-all" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              <img src="/logo.png" alt="Сытый Лис" className="w-24 h-24 object-cover rounded-full border-4 border-[#5c3a21] animate-float bg-[#1c110b] hover:scale-105 transition-all" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             </header>
 
             {view === "home" && (
@@ -1046,7 +1043,12 @@ export default function TavernArchive() {
                 <div className="flex flex-wrap gap-4 mb-8 font-pixeloid-mono text-sm">
                   <button onClick={() => setAdminTab("dashboard")} className={`px-4 py-2 rounded transition-all active:scale-95 flex items-center gap-2 ${adminTab === 'dashboard' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}><LayoutDashboard size={16}/> Дашборд</button>
                   <button onClick={() => setAdminTab("archive")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'archive' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Добавить</button>
-                  <button onClick={() => setAdminTab("bulk")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'bulk' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Импорт</button>
+                  
+                  {/* ДОСТУП К ИМПОРТУ ТОЛЬКО С ХРАНИТЕЛЯ (level >= 2) */}
+                  {userRole.level >= 2 && (
+                    <button onClick={() => setAdminTab("bulk")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'bulk' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Импорт</button>
+                  )}
+
                   <button onClick={() => setAdminTab("users")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'users' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Аккаунты</button>
                   <button onClick={() => setAdminTab("media")} className={`px-4 py-2 rounded transition-all active:scale-95 flex items-center gap-2 ${adminTab === 'media' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}><ImagePlus size={16}/> Медиа</button>
                   
@@ -1206,7 +1208,8 @@ export default function TavernArchive() {
                   </div>
                 )}
 
-                {adminTab === "bulk" && (
+                {/* ДОСТУП К САМОЙ ВКЛАДКЕ ИМПОРТА ТОЛЬКО С ХРАНИТЕЛЯ (level >= 2) */}
+                {adminTab === "bulk" && userRole.level >= 2 && (
                   <div className="space-y-8 max-w-2xl animate-smooth-fade-up">
                     <div className="bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
                       <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Upload size={18}/> Массовый импорт</h3>
@@ -1262,7 +1265,6 @@ export default function TavernArchive() {
                                   <td className={`p-3 text-sm font-bold font-pixeloid-mono ${getRoleColor(roleLevel)}`}>{roleObj?.name || u.role}</td>
                                   <td className="p-3 font-mono text-[#c4b5a5]">{u.username}</td>
                                   
-                                  {/* ИЗМЕНЕННАЯ ЯЧЕЙКА ПАРОЛЯ С ГЛАЗИКОМ */}
                                   <td className="p-3 font-mono text-red-400 bg-red-500/5">
                                     <div className="flex items-center gap-2">
                                       <span className="w-24 truncate" title={isRevealed ? (u.plain_password || "") : "********"}>
