@@ -44,7 +44,6 @@ export default function TavernArchive() {
   const [loginError, setLoginError] = useState("");
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  // Профиль
   const [newUsername, setNewUsername] = useState("");
   const [newPass, setNewPass] = useState("");
   const [oldPass, setOldPass] = useState("");
@@ -96,9 +95,10 @@ export default function TavernArchive() {
     }
   };
 
-  const fetchArchive = async (page = 1) => {
+  // ОБНОВЛЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ
+  const fetchArchive = async (page = 1, cat = selectedCategory, search = searchQuery) => {
     try {
-      const res = await fetch(`/api/archive?page=${page}&limit=${LIMIT}`);
+      const res = await fetch(`/api/archive?page=${page}&limit=${LIMIT}&category=${encodeURIComponent(cat)}&search=${encodeURIComponent(search)}`);
       const result = await res.json();
       const items = result.items || [];
       
@@ -132,9 +132,10 @@ export default function TavernArchive() {
     checkSession();
   }, []);
 
+  // ВЫЗЫВАЕМ ЗАГРУЗКУ ПРИ СМЕНЕ СТРАНИЦЫ, КАТЕГОРИИ ИЛИ ПОИСКА
   useEffect(() => {
-    if (user) fetchArchive(currentPage);
-  }, [user, currentPage]);
+    if (user) fetchArchive(currentPage, selectedCategory, searchQuery);
+  }, [user, currentPage, selectedCategory, searchQuery]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -365,12 +366,6 @@ export default function TavernArchive() {
     if (view === "admin" && adminTab === "logs") fetchLogs();
   }, [view, adminTab]);
 
-  const filteredData = data.filter((item) => {
-    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) || item.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "Все" || item.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
-
   const ArchiveCard = ({ item, index }: { item: ArchiveItem, index: number }) => (
     <div 
       className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.6)] hover:border-[#a37c49] hover:shadow-[0_0_20px_rgba(163,124,73,0.15)] hover:-translate-y-1.5 transition-all duration-300 group flex flex-col relative z-10 overflow-hidden opacity-0"
@@ -417,7 +412,6 @@ export default function TavernArchive() {
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col">
       
-      {/* ФОН: ЗВЕЗДЫ, ТУМАН, РУНЫ */}
       <div className="pixel-stars"></div>
       <div className="fog-container"><div className="fog-layer"></div><div className="fog-layer"></div></div>
       
@@ -434,7 +428,6 @@ export default function TavernArchive() {
         {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
       </button>
 
-      {/* МОДАЛКИ */}
       {selectedImage && (
         <div className="fixed inset-0 z-[999] bg-black/90 flex items-center justify-center p-4 cursor-zoom-out animate-fade-in" onClick={() => setSelectedImage(null)}>
           <div className="p-4 rounded-xl animate-smooth-pop" style={{ backgroundColor: '#d6c5b3', backgroundImage: 'radial-gradient(#b8a38a 1px, transparent 1px)', backgroundSize: '10px 10px' }}>
@@ -491,7 +484,6 @@ export default function TavernArchive() {
         </div>
       )}
 
-      {/* ЭКРАН ВХОДА */}
       {!user && (
         <div className="flex-grow flex items-center justify-center p-4 relative z-10">
           <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-8 pt-0 rounded-xl shadow-2xl w-full max-w-md relative mt-16 animate-smooth-fade-up">
@@ -511,7 +503,6 @@ export default function TavernArchive() {
         </div>
       )}
 
-      {/* ОСНОВНОЙ САЙТ */}
       {user && (
         <div className="flex-grow flex flex-col relative z-10">
           <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
@@ -539,12 +530,18 @@ export default function TavernArchive() {
               <div className="flex-grow flex flex-col items-center animate-smooth-fade-up text-center pb-20">
                 <h2 className="text-4xl font-bold font-pixeloid-mono text-[#a37c49] mb-6">Запретный Архив</h2>
                 <div className="relative w-full max-w-2xl mb-8 group">
-                  <input type="text" placeholder="Поиск..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-4 pl-12 bg-[#2e1b13] border-2 border-[#5c3a21] rounded-lg text-[#e6d5b8] font-pixeloid-mono focus:border-[#a37c49] transition-colors shadow-lg" />
+                  <input 
+                    type="text" 
+                    placeholder="Поиск..." 
+                    value={searchQuery} 
+                    onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} 
+                    className="w-full p-4 pl-12 bg-[#2e1b13] border-2 border-[#5c3a21] rounded-lg text-[#e6d5b8] font-pixeloid-mono focus:border-[#a37c49] transition-colors shadow-lg" 
+                  />
                   <Search className="absolute left-4 top-4 text-[#6b513b] group-focus-within:text-[#a37c49] transition-colors" size={24} />
                 </div>
-                {searchQuery.length > 0 ? (
+                {searchQuery.length > 0 || selectedCategory !== "Все" ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full text-left">
-                    {filteredData.map((item, idx) => <ArchiveCard key={item.id} item={item} index={idx} />)}
+                    {data.length > 0 ? data.map((item, idx) => <ArchiveCard key={item.id} item={item} index={idx} />) : <p className="text-center w-full col-span-2 text-[#8c6e52]">Ничего не найдено...</p>}
                   </div>
                 ) : (
                   <button onClick={() => setView("archive")} className="mt-8 px-10 py-4 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono text-xl rounded-lg shadow-[0_4px_0_#1c110b] hover:shadow-[0_0_20px_rgba(163,124,73,0.4)] hover:-translate-y-1 hover:bg-[#7a4f2e] active:translate-y-1 active:shadow-none transition-all duration-300">
@@ -569,14 +566,16 @@ export default function TavernArchive() {
                     ))}
                  </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {filteredData.map((item, idx) => <ArchiveCard key={item.id} item={item} index={idx} />)}
+                    {data.length > 0 ? data.map((item, idx) => <ArchiveCard key={item.id} item={item} index={idx} />) : <p className="text-center w-full col-span-2 text-[#8c6e52]">В этой категории пока нет записей...</p>}
                  </div>
                  
-                 <div className="flex justify-center items-center gap-4 mt-12 pb-8">
-                   <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => prev - 1)} className="p-3 bg-[#2e1b13] border border-[#5c3a21] rounded text-[#a37c49] disabled:opacity-30 hover:bg-[#5c3a21] hover:text-white active:scale-90 transition-all"><ChevronLeft size={24}/></button>
-                   <span className="font-pixeloid-mono text-lg text-[#a37c49]">Стр. {currentPage} из {totalPages}</span>
-                   <button disabled={currentPage === totalPages || totalPages === 0} onClick={() => setCurrentPage(prev => prev + 1)} className="p-3 bg-[#2e1b13] border border-[#5c3a21] rounded text-[#a37c49] disabled:opacity-30 hover:bg-[#5c3a21] hover:text-white active:scale-90 transition-all"><ChevronRight size={24}/></button>
-                 </div>
+                 {totalPages > 1 && (
+                   <div className="flex justify-center items-center gap-4 mt-12 pb-8">
+                     <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => prev - 1)} className="p-3 bg-[#2e1b13] border border-[#5c3a21] rounded text-[#a37c49] disabled:opacity-30 hover:bg-[#5c3a21] hover:text-white active:scale-90 transition-all"><ChevronLeft size={24}/></button>
+                     <span className="font-pixeloid-mono text-lg text-[#a37c49]">Стр. {currentPage} из {totalPages}</span>
+                     <button disabled={currentPage === totalPages || totalPages === 0} onClick={() => setCurrentPage(prev => prev + 1)} className="p-3 bg-[#2e1b13] border border-[#5c3a21] rounded text-[#a37c49] disabled:opacity-30 hover:bg-[#5c3a21] hover:text-white active:scale-90 transition-all"><ChevronRight size={24}/></button>
+                   </div>
+                 )}
               </div>
             )}
 
@@ -597,7 +596,6 @@ export default function TavernArchive() {
                   <button onClick={() => setAdminTab("diag")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'diag' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Диагностика</button>
                 </div>
 
-                {/* ВКЛАДКА: ДОБАВИТЬ */}
                 {adminTab === "archive" && (
                   <div className="animate-smooth-fade-up">
                     <form onSubmit={handleAddMultipleItems} className="space-y-6 max-w-xl">
@@ -627,7 +625,6 @@ export default function TavernArchive() {
                   </div>
                 )}
 
-                {/* ВКЛАДКА: ИМПОРТ/ЭКСПОРТ */}
                 {adminTab === "bulk" && (
                   <div className="space-y-8 max-w-2xl animate-smooth-fade-up">
                     <div className="bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
@@ -653,7 +650,6 @@ export default function TavernArchive() {
                   </div>
                 )}
 
-                {/* ВКЛАДКА: АККАУНТЫ */}
                 {adminTab === "users" && (
                   <div className="space-y-10 font-sans animate-smooth-fade-up">
                     <form onSubmit={handleCreateUser} className="space-y-4 max-w-xl bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
@@ -689,7 +685,6 @@ export default function TavernArchive() {
                   </div>
                 )}
 
-                {/* ВКЛАДКА: ЛОГИ */}
                 {adminTab === "logs" && (user.role === "owner" || user.role === "creator") && (
                   <div className="animate-smooth-fade-up">
                     <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><History size={18}/> История действий (Последние 100)</h3>
@@ -711,7 +706,6 @@ export default function TavernArchive() {
                   </div>
                 )}
 
-                {/* ВКЛАДКА: ДИАГНОСТИКА */}
                 {adminTab === "diag" && (
                   <div className="max-w-xl font-sans animate-smooth-fade-up">
                     <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Database size={18}/> Проверка системы</h3>
