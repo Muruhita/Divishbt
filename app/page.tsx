@@ -81,11 +81,17 @@ export default function TavernArchive() {
   const [diagResult, setDiagResult] = useState<{ status: string, latency?: number, message: string } | null>(null);
 
   // --- ЗВУКИ ---
-  const [soundEnabled, setSoundEnabled] = useState(false); // По умолчанию выключено, чтобы не пугать
+  const [soundEnabled, setSoundEnabled] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
+  // --- ЛИСИЦА ---
+  const [foxPos, setFoxPos] = useState({ x: -100, y: -100 });
+  const [facingLeft, setFacingLeft] = useState(false);
+  const foxTarget = useRef({ x: -100, y: -100 });
+  const foxCurrent = useRef({ x: -100, y: -100 });
+  const animationRef = useRef<number | null>(null);
+
   useEffect(() => {
-    // Инициализация AudioContext при первом клике пользователя
     const initAudio = () => {
       if (!audioCtxRef.current) {
         audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -98,44 +104,70 @@ export default function TavernArchive() {
   const playSound = (type: "click" | "save" | "delete" | "success") => {
     if (!soundEnabled || !audioCtxRef.current) return;
     const ctx = audioCtxRef.current;
-    
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    
     osc.connect(gain);
     gain.connect(ctx.destination);
-
     const now = ctx.currentTime;
 
     if (type === "click") {
-      // Деревянный стук
       osc.type = "triangle";
       osc.frequency.setValueAtTime(150, now);
       osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
       gain.gain.setValueAtTime(0.5, now);
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-      osc.start(now);
-      osc.stop(now + 0.1);
+      osc.start(now); osc.stop(now + 0.1);
     } else if (type === "save" || type === "success") {
-      // Магический перелив (два тона)
       osc.type = "sine";
       osc.frequency.setValueAtTime(440, now);
       osc.frequency.exponentialRampToValueAtTime(880, now + 0.2);
       gain.gain.setValueAtTime(0.3, now);
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-      osc.start(now);
-      osc.stop(now + 0.4);
+      osc.start(now); osc.stop(now + 0.4);
     } else if (type === "delete") {
-      // Низкий глухой звук
       osc.type = "sawtooth";
       osc.frequency.setValueAtTime(100, now);
       osc.frequency.exponentialRampToValueAtTime(30, now + 0.3);
       gain.gain.setValueAtTime(0.3, now);
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-      osc.start(now);
-      osc.stop(now + 0.3);
+      osc.start(now); osc.stop(now + 0.3);
     }
   };
+
+  // --- ЛОГИКА ДВИЖЕНИЯ ЛИСИЦЫ ---
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      // Лисица бежит за мышкой с небольшим смещением
+      foxTarget.current = { x: e.clientX + 30, y: e.clientY + 30 };
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+
+    const updateFox = () => {
+      // Плавное движение (интерполяция)
+      const dx = foxTarget.current.x - foxCurrent.current.x;
+      const dy = foxTarget.current.y - foxCurrent.current.y;
+      
+      // Скорость лисицы (0.08 - довольно шустрая)
+      foxCurrent.current.x += dx * 0.08;
+      foxCurrent.current.y += dy * 0.08;
+      
+      // Определяем направление (если движется влево - переворачиваем)
+      if (Math.abs(dx) > 1) {
+        setFacingLeft(dx < 0);
+      }
+
+      setFoxPos({ x: foxCurrent.current.x, y: foxCurrent.current.y });
+      animationRef.current = requestAnimationFrame(updateFox);
+    };
+
+    animationRef.current = requestAnimationFrame(updateFox);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     const checkSession = () => {
@@ -452,6 +484,18 @@ export default function TavernArchive() {
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col">
       
+      {/* ЛИСИЦА-КОМПАНЬОН */}
+      <div 
+        className="fixed pointer-events-none z-[45] fox-sprite"
+        style={{ 
+          left: foxPos.x, 
+          top: foxPos.y, 
+          transform: `translate(-50%, -50%) scaleX(${facingLeft ? -1 : 1})` 
+        }}
+      >
+        🦊
+      </div>
+
       {/* ТУМАН ВНИЗУ */}
       <div className="fog-container">
         <div className="fog-layer"></div>
