@@ -16,28 +16,17 @@ body {
 }
 
 /* Кастомный скроллбар */
-::-webkit-scrollbar { 
-  width: 10px; 
-}
-::-webkit-scrollbar-track { 
-  background: #160d08; 
-}
-::-webkit-scrollbar-thumb { 
-  background: #5c3a21; 
-  border-radius: 5px; 
-}
-::-webkit-scrollbar-thumb:hover { 
-  background: #a37c49; 
-}
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: #160d08; }
+::-webkit-scrollbar-thumb { background: #5c3a21; border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: #a37c49; }
 
 /* Анимация плавного появления контента */
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.animate-fade-in { 
-  animation: fade-in 0.4s ease-out forwards; 
-}
+.animate-fade-in { animation: fade-in 0.4s ease-out forwards; }
 
 /* --- ПАРЯЩИЕ РУНЫ (Floating Runes) --- */
 .rune {
@@ -101,37 +90,4 @@ body {
 @keyframes fog-drift {
   0% { transform: translateX(0) translateY(0); }
   100% { transform: translateX(-50vw) translateY(-20px); }
-}
-
-/* --- ЛИСИЦА-КОМПАНЬОН --- */
-@keyframes fox-idle {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-5px) rotate(5deg); }
-}
-
-.fox-sprite {
-  font-size: 40px;
-  filter: drop-shadow(0 0 10px rgba(163, 124, 73, 0.8));
-  animation: fox-idle 2s ease-in-out infinite;
-  user-select: none;
-  will-change: transform, left, top;
-}
-
-.fox-sprite::after {
-  content: '';
-  position: absolute;
-  bottom: 5px;
-  right: -10px;
-  width: 15px;
-  height: 15px;
-  background-color: #e67e22;
-  border-radius: 50%;
-  opacity: 0.6;
-  filter: blur(4px);
-  animation: pulse 1s infinite alternate;
-}
-
-@keyframes pulse {
-  from { transform: scale(1); opacity: 0.4; }
-  to { transform: scale(1.5); opacity: 0.8; }
 }
