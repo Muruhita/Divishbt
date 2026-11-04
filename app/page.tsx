@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
-import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, LockKeyhole, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle, Save, Tag, CheckCircle2, Info } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, LockKeyhole, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle, Save, Tag, CheckCircle2, Info, Home } from "lucide-react";
 
 type ArchiveItem = { id: number; title: string; category: string; description: string; symbol?: string; dangerLevel?: string; image?: string; };
 type DbArchiveItem = { id: number; title: string; category: string; description: string; symbol: string | null; danger_level: string | null; image: string | null; };
@@ -27,7 +27,14 @@ const DEFAULT_ROLES = [
 ];
 
 export default function TavernArchive() {
-  // --- СТЕЙТЫ ДЛЯ КАСТОМНЫХ ПЛАШЕК ---
+  // --- КУРСОР ---
+  const cursorDotRef = useRef<HTMLDivElement>(null);
+  const cursorRingRef = useRef<HTMLDivElement>(null);
+  const mousePos = useRef({ x: -100, y: -100 });
+  const ringPos = useRef({ x: -100, y: -100 });
+  const isHovering = useRef(false);
+
+  // --- ПЛАШКИ ---
   const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' | 'info' | 'warning' } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ msg: string, onConfirm: () => void } | null>(null);
   const [promptDialog, setPromptDialog] = useState<{ msg: string, val: string, onConfirm: (val: string) => void } | null>(null);
@@ -37,15 +44,10 @@ export default function TavernArchive() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const showConfirm = (msg: string, onConfirm: () => void) => {
-    setConfirmDialog({ msg, onConfirm });
-  };
+  const showConfirm = (msg: string, onConfirm: () => void) => setConfirmDialog({ msg, onConfirm });
+  const showPrompt = (msg: string, onConfirm: (val: string) => void) => setPromptDialog({ msg, val: "", onConfirm });
 
-  const showPrompt = (msg: string, onConfirm: (val: string) => void) => {
-    setPromptDialog({ msg, val: "", onConfirm });
-  };
-
-  // --- ОСНОВНЫЕ СТЕЙТЫ ---
+  // --- СТЕЙТЫ ---
   const [data, setData] = useState<ArchiveItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Все");
@@ -90,6 +92,49 @@ export default function TavernArchive() {
   const [soundEnabled, setSoundEnabled] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
+  // --- ЛОГИКА КУРСОРА ---
+  useEffect(() => {
+    if (window.matchMedia("(pointer: coarse)").matches) return;
+
+    const onMouseMove = (e: MouseEvent) => {
+      mousePos.current = { x: e.clientX, y: e.clientY };
+      if (cursorDotRef.current) {
+        cursorDotRef.current.style.transform = `translate(${e.clientX}px, ${e.clientY}px) translate(-50%, -50%)`;
+      }
+      const target = e.target as HTMLElement;
+      const isClickable = target.closest('a, button, input, select, textarea, [role="button"]');
+      
+      if (isClickable && !isHovering.current) {
+        isHovering.current = true;
+        cursorRingRef.current?.classList.add("hovering");
+        cursorDotRef.current?.classList.add("hovering");
+      } else if (!isClickable && isHovering.current) {
+        isHovering.current = false;
+        cursorRingRef.current?.classList.remove("hovering");
+        cursorDotRef.current?.classList.remove("hovering");
+      }
+    };
+
+    let animationFrameId: number;
+    const render = () => {
+      ringPos.current.x += (mousePos.current.x - ringPos.current.x) * 0.15;
+      ringPos.current.y += (mousePos.current.y - ringPos.current.y) * 0.15;
+      if (cursorRingRef.current) {
+        cursorRingRef.current.style.transform = `translate(${ringPos.current.x}px, ${ringPos.current.y}px) translate(-50%, -50%)`;
+      }
+      animationFrameId = requestAnimationFrame(render);
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    animationFrameId = requestAnimationFrame(render);
+
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
+
+  // --- ОСТАЛЬНАЯ ЛОГИКА ---
   useEffect(() => {
     const initAudio = () => {
       if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -519,6 +564,11 @@ export default function TavernArchive() {
 
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col">
+      
+      {/* КУРСОР */}
+      <div ref={cursorDotRef} className="custom-cursor-dot hidden md:block" />
+      <div ref={cursorRingRef} className="custom-cursor-ring hidden md:block" />
+
       <div className="pixel-stars"></div>
       <div className="fog-container"><div className="fog-layer"></div><div className="fog-layer"></div></div>
       
@@ -535,9 +585,7 @@ export default function TavernArchive() {
         {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
       </button>
 
-      {/* --- КАСТОМНЫЕ ПЛАШКИ --- */}
-      
-      {/* 1. Уведомления (Toasts) */}
+      {/* ПЛАШКИ (TOASTS, MODALS) */}
       {toast && (
         <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[9999] animate-smooth-pop pointer-events-none">
           <div className={`px-6 py-4 rounded-lg border-2 shadow-[0_0_30px_rgba(0,0,0,0.8)] flex items-center gap-3 font-pixeloid-mono backdrop-blur-md text-lg
@@ -554,23 +602,20 @@ export default function TavernArchive() {
         </div>
       )}
 
-      {/* 2. Окно подтверждения (Confirm) */}
       {confirmDialog && (
         <div className="fixed inset-0 z-[9998] bg-black/80 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm">
           <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-8 rounded-xl max-w-md w-full animate-smooth-pop text-center shadow-2xl relative overflow-hidden">
-            <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: "radial-gradient(#a37c49 1px, transparent 1px)", backgroundSize: "20px 20px" }}></div>
             <AlertTriangle size={56} className="mx-auto text-orange-500 mb-6 drop-shadow-lg relative z-10" />
             <h3 className="text-2xl font-bold font-pixeloid-mono text-[#e6d5b8] mb-4 relative z-10">Подтверждение</h3>
             <p className="text-[#c4b5a5] font-sans text-lg mb-8 relative z-10">{confirmDialog.msg}</p>
             <div className="flex justify-center gap-4 relative z-10">
               <button onClick={() => { playSound("click"); setConfirmDialog(null); }} className="px-6 py-3 bg-[#3d2617] border border-[#5c3a21] text-[#a37c49] font-bold rounded-lg hover:bg-[#5c3a21] active:scale-95 transition-all w-32">Отмена</button>
-              <button onClick={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }} className="px-6 py-3 bg-red-900/40 border border-red-500 text-red-400 font-bold rounded-lg hover:bg-red-900/60 active:scale-95 transition-all w-32 shadow-[0_0_15px_rgba(239,68,68,0.3)]">Да</button>
+              <button onClick={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }} className="px-6 py-3 bg-red-900/40 border border-red-500 text-red-400 font-bold rounded-lg hover:bg-red-900/60 active:scale-95 transition-all w-32">Да</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 3. Окно ввода (Prompt) для очистки базы */}
       {promptDialog && (
         <div className="fixed inset-0 z-[9998] bg-black/80 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm">
           <div className="bg-[#2e1b13] border-double border-4 border-red-900/50 p-8 rounded-xl max-w-md w-full animate-smooth-pop text-center shadow-2xl relative overflow-hidden">
@@ -578,23 +623,19 @@ export default function TavernArchive() {
             <h3 className="text-2xl font-bold font-pixeloid-mono text-red-500 mb-4">Опасная зона</h3>
             <p className="text-[#c4b5a5] font-sans text-sm mb-6">{promptDialog.msg}</p>
             <input 
-              type="text" 
-              value={promptDialog.val}
-              onChange={e => setPromptDialog({ ...promptDialog, val: e.target.value })}
+              type="text" value={promptDialog.val} onChange={e => setPromptDialog({ ...promptDialog, val: e.target.value })}
               className="w-full p-3 bg-[#1c110b] border-2 border-[#5c3a21] rounded text-white text-center font-bold tracking-widest focus:border-red-500 outline-none mb-6"
-              placeholder="УДАЛИТЬ"
-              autoFocus
+              placeholder="УДАЛИТЬ" autoFocus
             />
             <div className="flex justify-center gap-4">
               <button onClick={() => setPromptDialog(null)} className="px-6 py-3 bg-[#3d2617] border border-[#5c3a21] text-[#a37c49] font-bold rounded-lg hover:bg-[#5c3a21] active:scale-95 transition-all w-32">Отмена</button>
-              <button onClick={() => { promptDialog.onConfirm(promptDialog.val); setPromptDialog(null); }} className="px-6 py-3 bg-red-900/60 border border-red-500 text-white font-bold rounded-lg hover:bg-red-700 active:scale-95 transition-all w-32 shadow-[0_0_15px_rgba(239,68,68,0.5)]">Удалить</button>
+              <button onClick={() => { promptDialog.onConfirm(promptDialog.val); setPromptDialog(null); }} className="px-6 py-3 bg-red-900/60 border border-red-500 text-white font-bold rounded-lg hover:bg-red-700 active:scale-95 transition-all w-32">Удалить</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* --- ОСТАЛЬНОЙ ИНТЕРФЕЙС --- */}
-
+      {/* ОСТАЛЬНОЙ ИНТЕРФЕЙС */}
       {selectedImage && (
         <div className="fixed inset-0 z-[999] bg-black/90 flex items-center justify-center p-4 cursor-zoom-out animate-fade-in" onClick={() => setSelectedImage(null)}>
           <div className="p-4 rounded-xl animate-smooth-pop" style={{ backgroundColor: '#d6c5b3', backgroundImage: 'radial-gradient(#b8a38a 1px, transparent 1px)', backgroundSize: '10px 10px' }}>
@@ -610,7 +651,6 @@ export default function TavernArchive() {
             <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49] mb-6">Редактировать</h2>
             <form onSubmit={handleUpdateItem} className="space-y-4">
               <input required placeholder="Название" value={editingItem.title} onChange={e => setEditingItem({...editingItem, title: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white" />
-              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <select value={editingItem.category} onChange={e => setEditingItem({...editingItem, category: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none">
                   {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
@@ -619,7 +659,6 @@ export default function TavernArchive() {
                   {DANGER_LEVELS.map(l => <option key={l} value={l}>Уровень: {l}</option>)}
                 </select>
               </div>
-
               <textarea required placeholder="Описание (Markdown)" value={editingItem.description} onChange={e => setEditingItem({...editingItem, description: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white h-32 font-mono text-sm focus:border-[#a37c49] outline-none" />
               <button type="submit" className="px-6 py-2 bg-[#5c3a21] text-white font-bold rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Сохранить</button>
             </form>
@@ -642,18 +681,15 @@ export default function TavernArchive() {
                   <input type="file" accept="image/*" onChange={handleAvatarUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
                 </div>
               </div>
-
               <div className="space-y-2 border-t border-[#5c3a21] pt-4">
                 <label className="text-sm font-pixeloid-mono text-[#a37c49]">Изменить логин</label>
                 <input type="text" placeholder="Новый логин" value={newUsername} onChange={e => setNewUsername(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
               </div>
-
               <div className="space-y-2 border-t border-[#5c3a21] pt-4">
                 <label className="text-sm font-pixeloid-mono text-[#a37c49]">Смена пароля</label>
                 <input type="password" placeholder="Старый пароль" value={oldPass} onChange={e => setOldPass(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
                 <input type="password" placeholder="Новый пароль" value={newPass} onChange={e => setNewPass(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
               </div>
-              
               <button type="submit" className="w-full py-2 bg-[#5c3a21] text-white font-bold rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Сохранить изменения</button>
             </form>
           </div>
@@ -681,7 +717,10 @@ export default function TavernArchive() {
 
       {user && (
         <div className="flex-grow flex flex-col relative z-10">
-          <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
+          
+          {/* ВЕРХНЯЯ ПРАВАЯ ПАНЕЛЬ (ПРОФИЛЬ + МЕНЮ) */}
+          <div className="absolute top-4 right-4 z-50 flex flex-col items-end gap-3">
+            {/* Профиль */}
             <div className="flex items-center gap-3 bg-[#2e1b13]/90 border border-[#5c3a21] p-1.5 rounded-lg cursor-pointer hover:border-[#a37c49] hover:shadow-[0_0_15px_rgba(163,124,73,0.3)] transition-all group" onClick={openProfile}>
               <div className="w-10 h-10 rounded bg-[#1c110b] overflow-hidden flex items-center justify-center border border-[#5c3a21] group-hover:border-[#a37c49] transition-colors">
                 {user.avatar ? <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" /> : <UserIcon size={20} className="text-[#5c3a21] group-hover:text-[#a37c49] transition-colors" />}
@@ -690,10 +729,26 @@ export default function TavernArchive() {
                 <span className="text-sm font-bold font-pixeloid-mono">{user.account_name}</span>
                 <span className={`text-xs font-bold font-pixeloid-mono ${getRoleColor(userRole.level)}`}>{userRole.name}</span>
               </div>
-              {userRole.level >= 1 && (
-                <button onClick={(e) => { e.stopPropagation(); setView("admin"); }} className="p-2 bg-[#1c110b] rounded hover:bg-[#a37c49] hover:text-[#160d08] active:scale-90 transition-all" title="Админ-панель"><Settings size={18} /></button>
-              )}
               <button onClick={(e) => { e.stopPropagation(); handleLogout(); }} className="p-2 text-red-400 hover:bg-red-500/20 rounded active:scale-90 transition-all" title="Выйти"><LogOut size={18} /></button>
+            </div>
+
+            {/* Меню навигации под профилем */}
+            <div className="flex flex-col gap-2 items-end animate-smooth-fade-up">
+              {view !== "home" && (
+                <button onClick={() => setView("home")} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/80 border border-[#5c3a21] text-[#a37c49] text-sm font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm">
+                  <Home size={16} /> На главную
+                </button>
+              )}
+              {view !== "archive" && (
+                <button onClick={() => setView("archive")} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/80 border border-[#5c3a21] text-[#a37c49] text-sm font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm">
+                  <ScrollText size={16} /> Свитки
+                </button>
+              )}
+              {view !== "admin" && userRole.level >= 1 && (
+                <button onClick={() => setView("admin")} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/80 border border-[#5c3a21] text-[#a37c49] text-sm font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm">
+                  <Settings size={16} /> Админка
+                </button>
+              )}
             </div>
           </div>
 
@@ -709,21 +764,22 @@ export default function TavernArchive() {
                   <input type="text" placeholder="Поиск..." value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} className="w-full p-4 pl-12 bg-[#2e1b13] border-2 border-[#5c3a21] rounded-lg text-[#e6d5b8] font-pixeloid-mono focus:border-[#a37c49] transition-colors shadow-lg" />
                   <Search className="absolute left-4 top-4 text-[#6b513b] group-focus-within:text-[#a37c49] transition-colors" size={24} />
                 </div>
+                
                 {searchQuery.length > 0 || selectedCategory !== "Все" ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full text-left">
                     {data.length > 0 ? data.map((item) => <ArchiveCard key={item.id} item={item} />) : <p className="text-center w-full col-span-2 text-[#8c6e52]">Ничего не найдено...</p>}
                   </div>
                 ) : (
-                  <button onClick={() => setView("archive")} className="mt-8 px-10 py-4 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono text-xl rounded-lg shadow-[0_4px_0_#1c110b] hover:shadow-[0_0_20px_rgba(163,124,73,0.4)] hover:-translate-y-1 hover:bg-[#7a4f2e] active:translate-y-1 active:shadow-none transition-all duration-300">
-                    Открыть все свитки
-                  </button>
+                  <div className="text-[#8c6e52] mt-12 text-lg font-pixeloid-mono opacity-50 flex flex-col items-center gap-4">
+                    <ScrollText size={64} className="opacity-20" />
+                    Используйте поиск или меню справа сверху, чтобы открыть свитки.
+                  </div>
                 )}
               </div>
             )}
 
             {view === "archive" && (
               <div className="animate-smooth-fade-up w-full text-left">
-                 <button onClick={() => setView("home")} className="mb-6 flex items-center gap-2 text-[#8c6e52] hover:text-[#a37c49] transition-colors group"><ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform"/> На главную</button>
                  <div className="flex flex-wrap gap-2 mb-8">
                     <button onClick={() => { setSelectedCategory("Все"); setCurrentPage(1); }} className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 ${selectedCategory === "Все" ? 'bg-[#a37c49] text-[#160d08] border-[#a37c49] shadow-[0_0_15px_rgba(163,124,73,0.3)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-[#a37c49] hover:text-[#e6d5b8]'}`}>Все</button>
                     {categories.map(c => (
@@ -748,7 +804,6 @@ export default function TavernArchive() {
               <div className="animate-smooth-fade-up w-full bg-[#2e1b13] p-8 rounded-xl border-double border-4 border-[#5c3a21]">
                 <div className="flex justify-between items-center mb-8 border-b border-[#5c3a21] pb-4">
                    <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49]">Панель Управления</h2>
-                   <button onClick={() => setView("home")} className="text-sm font-pixeloid-mono text-[#8c6e52] hover:text-white active:scale-95 transition-all">На главную</button>
                 </div>
 
                 <div className="flex flex-wrap gap-4 mb-8 font-pixeloid-mono text-sm">
@@ -811,12 +866,10 @@ export default function TavernArchive() {
                 {adminTab === "categories" && userRole.level >= 2 && (
                   <div className="animate-smooth-fade-up max-w-xl">
                     <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Tag size={18}/> Управление категориями</h3>
-                    
                     <div className="flex gap-2 mb-6">
                       <input type="text" placeholder="Новая категория..." value={newCatName} onChange={e => setNewCatName(e.target.value)} className="flex-grow p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
                       <button onClick={handleAddCategory} className="px-4 py-2 bg-[#5c3a21] border border-[#a37c49] text-white font-bold rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Добавить</button>
                     </div>
-
                     <div className="space-y-2">
                       {categories.map(c => (
                         <div key={c.id} className="flex justify-between items-center p-3 bg-[#1c110b] border border-[#5c3a21] rounded">
@@ -831,13 +884,11 @@ export default function TavernArchive() {
                 {adminTab === "roles" && userRole.level >= 3 && (
                   <div className="animate-smooth-fade-up max-w-2xl">
                     <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><ShieldAlert size={18}/> Уровни доступа (Роли)</h3>
-                    
                     <div className="flex flex-wrap gap-2 mb-6 p-4 bg-[#1c110b] border border-[#5c3a21] rounded-lg">
                       <input type="text" placeholder="Название роли..." value={newRoleName} onChange={e => setNewRoleName(e.target.value)} className="flex-grow p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
                       <input type="number" placeholder="Уровень (цифра)" value={newRoleLevel} onChange={e => setNewRoleLevel(parseInt(e.target.value))} className="w-32 p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
                       <button onClick={handleAddRole} className="px-4 py-2 bg-[#5c3a21] border border-[#a37c49] text-white font-bold rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Создать</button>
                     </div>
-
                     <div className="space-y-2">
                       {roles.map(r => (
                         <div key={r.id} className="flex flex-wrap items-center gap-2 p-3 bg-[#1c110b] border border-[#5c3a21] rounded">
@@ -845,14 +896,11 @@ export default function TavernArchive() {
                             const newRoles = roles.map(role => role.id === r.id ? { ...role, name: e.target.value } : role);
                             setRoles(newRoles);
                           }} className="flex-grow p-1 bg-transparent border-b border-transparent hover:border-[#5c3a21] focus:border-[#a37c49] outline-none text-white font-pixeloid-mono" />
-                          
                           <input type="number" value={r.level} onChange={e => {
                             const newRoles = roles.map(role => role.id === r.id ? { ...role, level: parseInt(e.target.value) } : role);
                             setRoles(newRoles);
                           }} className="w-20 p-1 bg-[#160d08] border border-[#5c3a21] rounded text-center text-white" title="Уровень доступа" />
-                          
                           <button onClick={() => handleUpdateRole(r.id, r.name, r.level)} className="text-green-500 hover:text-green-400 p-1.5 rounded active:scale-90 transition-all" title="Сохранить изменения"><Save size={16}/></button>
-                          
                           {r.id !== "owner" && (
                             <button onClick={() => handleDeleteRole(r.id)} className="text-red-500 hover:text-red-400 p-1.5 rounded active:scale-90 transition-all" title="Удалить роль"><Trash2 size={16}/></button>
                           )}
