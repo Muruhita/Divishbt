@@ -26,7 +26,6 @@ const DEFAULT_ROLES = [
   { id: "low", name: "Лоу Стафф", level: 0 }
 ];
 
-// --- ВЫНЕСЕННЫЙ КОМПОНЕНТ КАРТОЧКИ ---
 const ArchiveCard = ({ 
   item, canEdit, canDelete, onEdit, onDelete, onViewImage 
 }: { 
@@ -64,11 +63,7 @@ const ArchiveCard = ({
               {canEdit && (
                 <button 
                   type="button" 
-                  onClick={(e) => { 
-                    e.preventDefault(); 
-                    e.stopPropagation(); 
-                    onEdit(item); 
-                  }} 
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(item); }} 
                   className="text-blue-400 hover:text-blue-300 bg-blue-500/10 p-1.5 rounded active:scale-90 transition-all cursor-pointer relative z-[70]"
                 >
                   <Pencil size={16} />
@@ -77,11 +72,7 @@ const ArchiveCard = ({
               {canDelete && (
                 <button 
                   type="button" 
-                  onClick={(e) => { 
-                    e.preventDefault(); 
-                    e.stopPropagation(); 
-                    onDelete(item.id, item.title); 
-                  }} 
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(item.id, item.title); }} 
                   className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all cursor-pointer relative z-[70]"
                 >
                   <Trash2 size={16} />
@@ -607,7 +598,6 @@ export default function TavernArchive() {
         {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
       </button>
 
-      {/* ПЛАШКИ (TOASTS, MODALS) */}
       {toast && (
         <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[9999] animate-smooth-pop pointer-events-none">
           <div className={`px-6 py-4 rounded-lg border-2 shadow-[0_0_30px_rgba(0,0,0,0.8)] flex items-center gap-3 font-pixeloid-mono backdrop-blur-md text-lg
@@ -680,6 +670,45 @@ export default function TavernArchive() {
         </div>
       )}
 
+      {/* МОДАЛЬНОЕ ОКНО ПРОФИЛЯ */}
+      {showProfile && user && (
+        <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowProfile(false)}>
+          <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl w-full max-w-md relative animate-smooth-pop" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setShowProfile(false)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 active:scale-90 transition-all"><X size={24}/></button>
+            <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49] mb-6 text-center">Личный кабинет</h2>
+            <form onSubmit={handleUpdateProfile} className="space-y-4">
+              <div className="flex flex-col items-center mb-4 group/avatar">
+                <div className="w-24 h-24 rounded-full border-4 border-[#5c3a21] group-hover/avatar:border-[#a37c49] overflow-hidden bg-[#1c110b] mb-2 flex items-center justify-center relative cursor-pointer transition-colors">
+                  {user.avatar ? <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover group-hover/avatar:scale-110 transition-transform duration-300" /> : <UserIcon size={40} className="text-[#5c3a21] group-hover/avatar:text-[#a37c49] transition-colors" />}
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity">
+                    <span className="text-xs text-white font-bold">Сменить</span>
+                  </div>
+                  <input type="file" accept="image/*" onChange={handleAvatarUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+                </div>
+              </div>
+
+              <div className="space-y-2 border-t border-[#5c3a21] pt-4">
+                <label className="text-sm font-pixeloid-mono text-[#a37c49]">Изменить имя</label>
+                <input type="text" placeholder="Новое имя" value={newAccountName} onChange={e => setNewAccountName(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
+              </div>
+
+              <div className="space-y-2 border-t border-[#5c3a21] pt-4">
+                <label className="text-sm font-pixeloid-mono text-[#a37c49]">Изменить логин</label>
+                <input type="text" placeholder="Новый логин" value={newUsername} onChange={e => setNewUsername(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
+              </div>
+
+              <div className="space-y-2 border-t border-[#5c3a21] pt-4">
+                <label className="text-sm font-pixeloid-mono text-[#a37c49]">Смена пароля</label>
+                <input type="password" placeholder="Старый пароль" value={oldPass} onChange={e => setOldPass(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
+                <input type="password" placeholder="Новый пароль" value={newPass} onChange={e => setNewPass(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
+              </div>
+              
+              <button type="submit" className="w-full py-2 bg-[#5c3a21] text-white font-bold rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Сохранить изменения</button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {!user && (
         <div className={`fixed inset-0 z-[999] flex items-center justify-center overflow-hidden book-container ${isBookOpening ? 'book-open' : ''}`}>
           <div className="absolute inset-0 bg-[#0a0705]"></div>
@@ -734,9 +763,13 @@ export default function TavernArchive() {
       {user && (
         <div className="flex-grow flex flex-col relative z-10 w-full animate-content-fade">
           
-          <div className="w-full flex justify-end p-4 relative z-50 animate-menu-drop" style={{ animationDelay: '0.2s' }}>
+          <div className="w-full flex justify-end p-4 relative z-[60] animate-menu-drop" style={{ animationDelay: '0.2s' }}>
             <div className="flex flex-col items-end gap-2">
-              <div className={`flex items-center gap-3 bg-[#2e1b13]/90 border ${userRole.id === 'owner' ? 'owner-border' : 'border-[#5c3a21]'} p-1.5 rounded-lg cursor-pointer hover:border-[#a37c49] transition-all group`} onClick={openProfile}>
+              <button 
+                type="button"
+                className={`flex items-center gap-3 bg-[#2e1b13]/90 border ${userRole.id === 'owner' ? 'owner-border' : 'border-[#5c3a21]'} p-1.5 rounded-lg cursor-pointer hover:border-[#a37c49] transition-all group text-left`} 
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); openProfile(); }}
+              >
                 <div className="w-10 h-10 rounded bg-[#1c110b] overflow-hidden flex items-center justify-center border border-[#5c3a21] group-hover:border-[#a37c49] transition-colors">
                   {user.avatar ? <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" /> : <UserIcon size={20} className="text-[#5c3a21] group-hover:text-[#a37c49] transition-colors" />}
                 </div>
@@ -744,8 +777,8 @@ export default function TavernArchive() {
                   <span className="text-sm font-bold font-pixeloid-mono">{user.account_name}</span>
                   <span className={`text-xs font-bold font-pixeloid-mono ${getRoleColor(userRole.level)}`}>{userRole.name}</span>
                 </div>
-                <button onClick={(e) => { e.stopPropagation(); handleLogout(); }} className="p-2 text-red-400 hover:bg-red-500/20 rounded active:scale-90 transition-all" title="Выйти"><LogOut size={18} /></button>
-              </div>
+                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleLogout(); }} className="p-2 text-red-400 hover:bg-red-500/20 rounded active:scale-90 transition-all" title="Выйти"><LogOut size={18} /></button>
+              </button>
 
               <div className="flex flex-col gap-1 items-end">
                 {view !== "home" && (
