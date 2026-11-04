@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
-import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, LockKeyhole, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle, Save, Tag } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, LockKeyhole, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle, Save, Tag, CheckCircle2, Info } from "lucide-react";
 
 type ArchiveItem = { id: number; title: string; category: string; description: string; symbol?: string; dangerLevel?: string; image?: string; };
 type DbArchiveItem = { id: number; title: string; category: string; description: string; symbol: string | null; danger_level: string | null; image: string | null; };
@@ -27,6 +27,25 @@ const DEFAULT_ROLES = [
 ];
 
 export default function TavernArchive() {
+  // --- СТЕЙТЫ ДЛЯ КАСТОМНЫХ ПЛАШЕК ---
+  const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' | 'info' | 'warning' } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ msg: string, onConfirm: () => void } | null>(null);
+  const [promptDialog, setPromptDialog] = useState<{ msg: string, val: string, onConfirm: (val: string) => void } | null>(null);
+
+  const showToast = (msg: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const showConfirm = (msg: string, onConfirm: () => void) => {
+    setConfirmDialog({ msg, onConfirm });
+  };
+
+  const showPrompt = (msg: string, onConfirm: (val: string) => void) => {
+    setPromptDialog({ msg, val: "", onConfirm });
+  };
+
+  // --- ОСНОВНЫЕ СТЕЙТЫ ---
   const [data, setData] = useState<ArchiveItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Все");
@@ -52,7 +71,6 @@ export default function TavernArchive() {
   const [newUsername, setNewUsername] = useState("");
   const [newPass, setNewPass] = useState("");
   const [oldPass, setOldPass] = useState("");
-  const [profileMsg, setProfileMsg] = useState("");
 
   const [newItems, setNewItems] = useState<NewArchiveItem[]>([{ ...INITIAL_NEW_ITEM }]);
   const [newAcc, setNewAcc] = useState({ account_name: "", username: "", password: "", role: "low" });
@@ -160,7 +178,6 @@ export default function TavernArchive() {
   const canEdit = user?.role === 'owner' || user?.role === 'creator' || userRole.level >= 3;
   const canDelete = user?.role === 'owner' || user?.role === 'creator' || user?.role === 'high' || userRole.level >= 1;
 
-  // ФУНКЦИЯ ДЛЯ ВОЗВРАЩЕНИЯ ЦВЕТА ПО УРОВНЮ
   const getRoleColor = (level: number) => {
     if (level >= 4) return "text-red-500";
     if (level === 3) return "text-purple-500";
@@ -186,6 +203,7 @@ export default function TavernArchive() {
         const expiresAt = Date.now() + (5 * 60 * 60 * 1000); 
         localStorage.setItem("tavern_session", JSON.stringify({ userData: { ...data }, expiresAt }));
         playSound("success");
+        showToast("Добро пожаловать в таверну!", "success");
       } else { setLoginError(data.error || "Ошибка входа"); }
     } catch { setLoginError("Ошибка соединения"); }
   };
@@ -202,7 +220,6 @@ export default function TavernArchive() {
       setNewUsername(user.username);
       setNewPass("");
       setOldPass("");
-      setProfileMsg("");
       setShowProfile(true);
     }
   };
@@ -211,7 +228,6 @@ export default function TavernArchive() {
     e.preventDefault();
     if (!user) return;
     playSound("save");
-    setProfileMsg("");
 
     const res = await fetch("/api/user/update", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -223,7 +239,7 @@ export default function TavernArchive() {
 
     const data = await res.json();
     if (res.ok) {
-      setProfileMsg("Профиль обновлен!");
+      showToast("Профиль успешно обновлен!", "success");
       setOldPass(""); setNewPass("");
       const updatedUser = { ...user, username: newUsername };
       setUser(updatedUser);
@@ -231,58 +247,66 @@ export default function TavernArchive() {
       saved.userData = updatedUser;
       localStorage.setItem("tavern_session", JSON.stringify(saved));
     } else { 
-      setProfileMsg(`Ошибка: ${data.error}`); 
+      showToast(`Ошибка: ${data.error}`, "error"); 
     }
   };
 
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 500 * 1024) return alert("Аватарка должна быть меньше 500КБ!");
+    if (file.size > 500 * 1024) {
+      showToast("Аватарка должна быть меньше 500КБ!", "warning");
+      return;
+    }
     const reader = new FileReader();
     reader.onloadend = () => setUser(prev => prev ? { ...prev, avatar: reader.result as string } : null);
     reader.readAsDataURL(file);
   };
 
-  const handleDeleteItem = async (id: number, title: string) => {
-    if (!user || !confirm("Удалить запись?")) return;
-    playSound("delete");
-    await fetch(`/api/archive?id=${id}&title=${encodeURIComponent(title)}&authorName=${encodeURIComponent(user.account_name)}&authorRole=${user.role}`, { method: "DELETE" });
-    fetchArchive(currentPage);
-  };
-
-  const handleClearDatabase = async () => {
+  const handleDeleteItem = (id: number, title: string) => {
     if (!user) return;
-    const confirmText = prompt("ВНИМАНИЕ! Это удалит ВСЕ записи навсегда. Введите слово 'УДАЛИТЬ' для подтверждения:");
-    if (confirmText !== "УДАЛИТЬ") return alert("Отменено.");
-    
-    playSound("delete");
-    const res = await fetch(`/api/archive?clear=true&authorName=${encodeURIComponent(user.account_name)}&authorRole=${user.role}`, { method: "DELETE" });
-    if (res.ok) {
-      alert("База данных полностью очищена!");
-      fetchArchive(1);
-    } else {
-      alert("Ошибка при очистке базы.");
-    }
+    showConfirm(`Вы уверены, что хотите удалить запись "${title}"?`, async () => {
+      playSound("delete");
+      await fetch(`/api/archive?id=${id}&title=${encodeURIComponent(title)}&authorName=${encodeURIComponent(user.account_name)}&authorRole=${user.role}`, { method: "DELETE" });
+      fetchArchive(currentPage);
+      showToast("Запись удалена", "info");
+    });
   };
 
-  const handleClearLogs = async () => {
-    if (!user || !confirm("Очистить все логи? Это действие необратимо.")) return;
-    playSound("delete");
-    const res = await fetch("/api/admin/logs", { method: "DELETE" });
-    if (res.ok) {
-      setLogsList([]);
-      alert("Логи успешно очищены!");
-    } else {
-      alert("Ошибка при очистке логов");
-    }
+  const handleClearDatabase = () => {
+    if (!user) return;
+    showPrompt("ВНИМАНИЕ! Это удалит ВСЕ записи навсегда. Введите слово 'УДАЛИТЬ':", async (val) => {
+      if (val !== "УДАЛИТЬ") return showToast("Отменено. Слово введено неверно.", "warning");
+      playSound("delete");
+      const res = await fetch(`/api/archive?clear=true&authorName=${encodeURIComponent(user.account_name)}&authorRole=${user.role}`, { method: "DELETE" });
+      if (res.ok) {
+        showToast("База данных полностью очищена!", "success");
+        fetchArchive(1);
+      } else {
+        showToast("Ошибка при очистке базы.", "error");
+      }
+    });
+  };
+
+  const handleClearLogs = () => {
+    if (!user) return;
+    showConfirm("Очистить все логи? Это действие необратимо.", async () => {
+      playSound("delete");
+      const res = await fetch("/api/admin/logs", { method: "DELETE" });
+      if (res.ok) {
+        setLogsList([]);
+        showToast("Логи успешно очищены!", "success");
+      } else {
+        showToast("Ошибка при очистке логов", "error");
+      }
+    });
   };
 
   const handleAddMultipleItems = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     const validItems = newItems.filter(item => item.title.trim() !== "" && item.description.trim() !== "");
-    if (validItems.length === 0) return alert("Заполните хотя бы одну запись");
+    if (validItems.length === 0) return showToast("Заполните хотя бы одну запись", "warning");
     playSound("save");
 
     const itemsWithAuthor = validItems.map(item => ({ ...item, authorName: user.account_name, authorRole: user.role }));
@@ -293,10 +317,10 @@ export default function TavernArchive() {
     
     if (res.ok) { 
       const result = await res.json();
-      alert(`Успешно добавлено ${result.count} записей!`);
+      showToast(`Успешно добавлено ${result.count} записей!`, "success");
       fetchArchive(1); 
       setNewItems([{ ...INITIAL_NEW_ITEM }]); 
-    } else { alert("Ошибка при сохранении"); }
+    } else { showToast("Ошибка при сохранении", "error"); }
   };
 
   const handleUpdateItem = async (e: React.FormEvent) => {
@@ -310,8 +334,8 @@ export default function TavernArchive() {
     });
     
     if (res.ok) { 
-      alert("Запись обновлена!"); setEditingItem(null); fetchArchive(currentPage); 
-    } else { alert("Ошибка при обновлении"); }
+      showToast("Запись обновлена!", "success"); setEditingItem(null); fetchArchive(currentPage); 
+    } else { showToast("Ошибка при обновлении", "error"); }
   };
 
   const handleAddCategory = async () => {
@@ -320,15 +344,16 @@ export default function TavernArchive() {
     const res = await fetch("/api/admin/categories", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: newCatName })
     });
-    if (res.ok) { setNewCatName(""); fetchSettings(); }
-    else { alert("Ошибка при добавлении категории"); }
+    if (res.ok) { setNewCatName(""); fetchSettings(); showToast("Категория добавлена", "success"); }
+    else { showToast("Ошибка при добавлении категории", "error"); }
   };
 
-  const handleDeleteCategory = async (id: number) => {
-    if (!confirm("Удалить категорию?")) return;
-    playSound("delete");
-    const res = await fetch(`/api/admin/categories?id=${id}`, { method: "DELETE" });
-    if (res.ok) fetchSettings();
+  const handleDeleteCategory = (id: number) => {
+    showConfirm("Удалить категорию?", async () => {
+      playSound("delete");
+      const res = await fetch(`/api/admin/categories?id=${id}`, { method: "DELETE" });
+      if (res.ok) { fetchSettings(); showToast("Категория удалена", "info"); }
+    });
   };
 
   const handleAddRole = async () => {
@@ -337,8 +362,8 @@ export default function TavernArchive() {
     const res = await fetch("/api/admin/roles", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: newRoleName, level: newRoleLevel })
     });
-    if (res.ok) { setNewRoleName(""); setNewRoleLevel(1); fetchSettings(); }
-    else { alert("Ошибка при добавлении роли"); }
+    if (res.ok) { setNewRoleName(""); setNewRoleLevel(1); fetchSettings(); showToast("Уровень создан", "success"); }
+    else { showToast("Ошибка при добавлении роли", "error"); }
   };
 
   const handleUpdateRole = async (id: string, name: string, level: number) => {
@@ -346,15 +371,16 @@ export default function TavernArchive() {
     const res = await fetch("/api/admin/roles", {
       method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name, level })
     });
-    if (res.ok) fetchSettings();
+    if (res.ok) { fetchSettings(); showToast("Уровень обновлен", "success"); }
   };
 
-  const handleDeleteRole = async (id: string) => {
-    if (!confirm("Удалить уровень доступа?")) return;
-    playSound("delete");
-    const res = await fetch(`/api/admin/roles?id=${id}`, { method: "DELETE" });
-    if (res.ok) fetchSettings();
-    else { const err = await res.json(); alert(err.error); }
+  const handleDeleteRole = (id: string) => {
+    showConfirm("Удалить уровень доступа?", async () => {
+      playSound("delete");
+      const res = await fetch(`/api/admin/roles?id=${id}`, { method: "DELETE" });
+      if (res.ok) { fetchSettings(); showToast("Уровень удален", "info"); }
+      else { const err = await res.json(); showToast(err.error, "error"); }
+    });
   };
 
   const generateRandom = (length = 15) => {
@@ -377,17 +403,20 @@ export default function TavernArchive() {
     });
 
     if (res.ok) {
-      alert(`Аккаунт создан!\nЛогин: ${finalUsername}\nПароль: ${finalPassword}`);
+      showToast(`Аккаунт создан! Логин: ${finalUsername} | Пароль: ${finalPassword}`, "success");
       setNewAcc({ account_name: "", username: "", password: "", role: roles[roles.length - 1]?.id || "low" });
       setAutoUser(false); setAutoPass(false); fetchUsers();
-    } else { const err = await res.json(); alert(err.error); }
+    } else { const err = await res.json(); showToast(err.error, "error"); }
   };
 
-  const handleDeleteUser = async (id: number, targetName: string) => {
-    if (!user || !confirm(`Удалить "${targetName}"?`)) return;
-    playSound("delete");
-    const res = await fetch(`/api/admin/users?id=${id}&requesterRole=${user.role}`, { method: "DELETE" });
-    if (res.ok) fetchUsers(); else { const err = await res.json(); alert(err.error); }
+  const handleDeleteUser = (id: number, targetName: string) => {
+    if (!user) return;
+    showConfirm(`Удалить аккаунт "${targetName}"?`, async () => {
+      playSound("delete");
+      const res = await fetch(`/api/admin/users?id=${id}&requesterRole=${user.role}`, { method: "DELETE" });
+      if (res.ok) { fetchUsers(); showToast("Аккаунт удален", "info"); }
+      else { const err = await res.json(); showToast(err.error, "error"); }
+    });
   };
 
   const fetchUsers = async () => {
@@ -415,7 +444,8 @@ export default function TavernArchive() {
       const a = document.createElement("a");
       a.href = url; a.download = "tavern_archive_export.json"; a.click();
       URL.revokeObjectURL(url);
-    } catch { alert("Ошибка при экспорте"); }
+      showToast("Экспорт начат", "success");
+    } catch { showToast("Ошибка при экспорте", "error"); }
   };
 
   const handleBulkImport = async () => {
@@ -432,10 +462,10 @@ export default function TavernArchive() {
       
       if (res.ok) {
         const result = await res.json();
-        alert(`Успешно добавлено ${result.count} записей!`);
+        showToast(`Успешно добавлено ${result.count} записей!`, "success");
         setBulkJson(""); fetchArchive(1);
-      } else { alert("Ошибка при импорте"); }
-    } catch (e) { alert("Ошибка формата JSON."); }
+      } else { showToast("Ошибка при импорте", "error"); }
+    } catch (e) { showToast("Ошибка формата JSON.", "error"); }
   };
 
   useEffect(() => {
@@ -505,6 +535,66 @@ export default function TavernArchive() {
         {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
       </button>
 
+      {/* --- КАСТОМНЫЕ ПЛАШКИ --- */}
+      
+      {/* 1. Уведомления (Toasts) */}
+      {toast && (
+        <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[9999] animate-smooth-pop pointer-events-none">
+          <div className={`px-6 py-4 rounded-lg border-2 shadow-[0_0_30px_rgba(0,0,0,0.8)] flex items-center gap-3 font-pixeloid-mono backdrop-blur-md text-lg
+            ${toast.type === 'success' ? 'bg-[#1a2e1c]/95 border-green-500 text-green-100' :
+              toast.type === 'error' ? 'bg-[#2e1a1a]/95 border-red-500 text-red-100' :
+              toast.type === 'warning' ? 'bg-[#2e2a1a]/95 border-orange-500 text-orange-100' :
+              'bg-[#2e1b13]/95 border-[#a37c49] text-[#e6d5b8]'}`}>
+            {toast.type === 'success' && <CheckCircle2 size={24} className="text-green-400" />}
+            {toast.type === 'error' && <Skull size={24} className="text-red-400" />}
+            {toast.type === 'warning' && <AlertTriangle size={24} className="text-orange-400" />}
+            {toast.type === 'info' && <Info size={24} className="text-[#a37c49]" />}
+            {toast.msg}
+          </div>
+        </div>
+      )}
+
+      {/* 2. Окно подтверждения (Confirm) */}
+      {confirmDialog && (
+        <div className="fixed inset-0 z-[9998] bg-black/80 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm">
+          <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-8 rounded-xl max-w-md w-full animate-smooth-pop text-center shadow-2xl relative overflow-hidden">
+            <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: "radial-gradient(#a37c49 1px, transparent 1px)", backgroundSize: "20px 20px" }}></div>
+            <AlertTriangle size={56} className="mx-auto text-orange-500 mb-6 drop-shadow-lg relative z-10" />
+            <h3 className="text-2xl font-bold font-pixeloid-mono text-[#e6d5b8] mb-4 relative z-10">Подтверждение</h3>
+            <p className="text-[#c4b5a5] font-sans text-lg mb-8 relative z-10">{confirmDialog.msg}</p>
+            <div className="flex justify-center gap-4 relative z-10">
+              <button onClick={() => { playSound("click"); setConfirmDialog(null); }} className="px-6 py-3 bg-[#3d2617] border border-[#5c3a21] text-[#a37c49] font-bold rounded-lg hover:bg-[#5c3a21] active:scale-95 transition-all w-32">Отмена</button>
+              <button onClick={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }} className="px-6 py-3 bg-red-900/40 border border-red-500 text-red-400 font-bold rounded-lg hover:bg-red-900/60 active:scale-95 transition-all w-32 shadow-[0_0_15px_rgba(239,68,68,0.3)]">Да</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Окно ввода (Prompt) для очистки базы */}
+      {promptDialog && (
+        <div className="fixed inset-0 z-[9998] bg-black/80 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm">
+          <div className="bg-[#2e1b13] border-double border-4 border-red-900/50 p-8 rounded-xl max-w-md w-full animate-smooth-pop text-center shadow-2xl relative overflow-hidden">
+            <Skull size={56} className="mx-auto text-red-500 mb-6 animate-pulse drop-shadow-lg" />
+            <h3 className="text-2xl font-bold font-pixeloid-mono text-red-500 mb-4">Опасная зона</h3>
+            <p className="text-[#c4b5a5] font-sans text-sm mb-6">{promptDialog.msg}</p>
+            <input 
+              type="text" 
+              value={promptDialog.val}
+              onChange={e => setPromptDialog({ ...promptDialog, val: e.target.value })}
+              className="w-full p-3 bg-[#1c110b] border-2 border-[#5c3a21] rounded text-white text-center font-bold tracking-widest focus:border-red-500 outline-none mb-6"
+              placeholder="УДАЛИТЬ"
+              autoFocus
+            />
+            <div className="flex justify-center gap-4">
+              <button onClick={() => setPromptDialog(null)} className="px-6 py-3 bg-[#3d2617] border border-[#5c3a21] text-[#a37c49] font-bold rounded-lg hover:bg-[#5c3a21] active:scale-95 transition-all w-32">Отмена</button>
+              <button onClick={() => { promptDialog.onConfirm(promptDialog.val); setPromptDialog(null); }} className="px-6 py-3 bg-red-900/60 border border-red-500 text-white font-bold rounded-lg hover:bg-red-700 active:scale-95 transition-all w-32 shadow-[0_0_15px_rgba(239,68,68,0.5)]">Удалить</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- ОСТАЛЬНОЙ ИНТЕРФЕЙС --- */}
+
       {selectedImage && (
         <div className="fixed inset-0 z-[999] bg-black/90 flex items-center justify-center p-4 cursor-zoom-out animate-fade-in" onClick={() => setSelectedImage(null)}>
           <div className="p-4 rounded-xl animate-smooth-pop" style={{ backgroundColor: '#d6c5b3', backgroundImage: 'radial-gradient(#b8a38a 1px, transparent 1px)', backgroundSize: '10px 10px' }}>
@@ -564,7 +654,6 @@ export default function TavernArchive() {
                 <input type="password" placeholder="Новый пароль" value={newPass} onChange={e => setNewPass(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
               </div>
               
-              {profileMsg && <p className="text-center text-sm text-green-400 bg-green-900/20 p-2 rounded border border-green-500/30">{profileMsg}</p>}
               <button type="submit" className="w-full py-2 bg-[#5c3a21] text-white font-bold rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Сохранить изменения</button>
             </form>
           </div>
@@ -812,10 +901,7 @@ export default function TavernArchive() {
                               return (
                                 <tr key={u.id} className="border-b border-[#3d2617] hover:bg-[#1c110b] transition-colors">
                                   <td className="p-3 font-medium">{u.account_name}</td>
-                                  {/* ВОЗВРАЩАЕМ ЦВЕТА РОЛЯМ ТУТ */}
-                                  <td className={`p-3 text-sm font-bold font-pixeloid-mono ${getRoleColor(roleLevel)}`}>
-                                    {roleObj?.name || u.role}
-                                  </td>
+                                  <td className={`p-3 text-sm font-bold font-pixeloid-mono ${getRoleColor(roleLevel)}`}>{roleObj?.name || u.role}</td>
                                   <td className="p-3 font-mono text-[#c4b5a5]">{u.username}</td>
                                   <td className="p-3 font-mono text-red-400 bg-red-500/5">{u.plain_password || "********"}</td>
                                   <td className="p-3">{(userRole.id === "owner" || userRole.id === "creator") && u.id !== user.id && (<button onClick={() => handleDeleteUser(u.id, u.account_name)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all"><Trash2 size={16} /></button>)}</td>
