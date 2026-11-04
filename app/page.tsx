@@ -695,10 +695,10 @@ export default function TavernArchive() {
 
       {/* ОСТАЛЬНОЙ ИНТЕРФЕЙС (Когда книга открыта) */}
       {user && (
-        <div className="flex-grow flex flex-col relative z-10 w-full animate-fade-in" style={{ animationDelay: '0.5s', animationFillMode: 'both' }}>
+        <div className="flex-grow flex flex-col relative z-10 w-full animate-content-fade">
           
-          {/* ВЕРХНЯЯ ПРАВАЯ ПАНЕЛЬ */}
-          <div className="w-full flex justify-end p-4 relative z-50">
+          {/* ВЕРХНЯЯ ПРАВАЯ ПАНЕЛЬ (С плавным выездом) */}
+          <div className="w-full flex justify-end p-4 relative z-50 animate-menu-drop" style={{ animationDelay: '0.2s' }}>
             <div className="flex flex-col items-end gap-2">
               {/* Профиль */}
               <div className="flex items-center gap-3 bg-[#2e1b13]/90 border border-[#5c3a21] p-1.5 rounded-lg cursor-pointer hover:border-[#a37c49] hover:shadow-[0_0_15px_rgba(163,124,73,0.3)] transition-all group" onClick={openProfile}>
@@ -713,7 +713,7 @@ export default function TavernArchive() {
               </div>
 
               {/* Меню навигации под профилем */}
-              <div className="flex flex-col gap-1 items-end animate-smooth-fade-up">
+              <div className="flex flex-col gap-1 items-end">
                 {view !== "home" && (
                   <button onClick={() => setView("home")} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/90 border border-[#5c3a21] text-[#a37c49] text-xs font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start">
                     <Home size={14} /> На главную
