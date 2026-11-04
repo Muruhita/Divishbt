@@ -26,7 +26,7 @@ const DEFAULT_ROLES = [
   { id: "low", name: "Лоу Стафф", level: 0 }
 ];
 
-// --- ВЫНЕСЕННЫЙ КОМПОНЕНТ КАРТОЧКИ (Исправляет баг с кнопкой) ---
+// --- ВЫНЕСЕННЫЙ КОМПОНЕНТ КАРТОЧКИ ---
 const ArchiveCard = ({ 
   item, canEdit, canDelete, onEdit, onDelete, onViewImage 
 }: { 
@@ -60,12 +60,32 @@ const ArchiveCard = ({
           {item.dangerLevel && <span className="inline-block px-2 py-1 text-xs font-bold font-pixeloid-mono rounded border border-red-900/50 bg-red-900/20 text-red-400 uppercase">{item.dangerLevel}</span>}
           
           {(canEdit || canDelete) && (
-            <div className="ml-auto flex items-center gap-1 relative z-50">
+            <div className="ml-auto flex items-center gap-1 relative z-[60]">
               {canEdit && (
-                <button type="button" onClick={() => onEdit(item)} className="text-blue-400 hover:text-blue-300 bg-blue-500/10 p-1.5 rounded active:scale-90 transition-all cursor-pointer"><Pencil size={16} /></button>
+                <button 
+                  type="button" 
+                  onClick={(e) => { 
+                    e.preventDefault(); 
+                    e.stopPropagation(); 
+                    onEdit(item); 
+                  }} 
+                  className="text-blue-400 hover:text-blue-300 bg-blue-500/10 p-1.5 rounded active:scale-90 transition-all cursor-pointer relative z-[70]"
+                >
+                  <Pencil size={16} />
+                </button>
               )}
               {canDelete && (
-                <button type="button" onClick={() => onDelete(item.id, item.title)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all cursor-pointer"><Trash2 size={16} /></button>
+                <button 
+                  type="button" 
+                  onClick={(e) => { 
+                    e.preventDefault(); 
+                    e.stopPropagation(); 
+                    onDelete(item.id, item.title); 
+                  }} 
+                  className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all cursor-pointer relative z-[70]"
+                >
+                  <Trash2 size={16} />
+                </button>
               )}
             </div>
           )}
@@ -587,6 +607,7 @@ export default function TavernArchive() {
         {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
       </button>
 
+      {/* ПЛАШКИ (TOASTS, MODALS) */}
       {toast && (
         <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[9999] animate-smooth-pop pointer-events-none">
           <div className={`px-6 py-4 rounded-lg border-2 shadow-[0_0_30px_rgba(0,0,0,0.8)] flex items-center gap-3 font-pixeloid-mono backdrop-blur-md text-lg
@@ -632,6 +653,29 @@ export default function TavernArchive() {
               <button onClick={() => setPromptDialog(null)} className="px-6 py-3 bg-[#3d2617] border border-[#5c3a21] text-[#a37c49] font-bold rounded-lg hover:bg-[#5c3a21] active:scale-95 transition-all w-32">Отмена</button>
               <button onClick={() => { promptDialog.onConfirm(promptDialog.val); setPromptDialog(null); }} className="px-6 py-3 bg-red-900/60 border border-red-500 text-white font-bold rounded-lg hover:bg-red-700 active:scale-95 transition-all w-32">Удалить</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ */}
+      {editingItem && (
+        <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm" onClick={() => setEditingItem(null)}>
+          <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl w-full max-w-2xl relative animate-smooth-pop" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setEditingItem(null)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 active:scale-90 transition-all"><X size={24}/></button>
+            <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49] mb-6">Редактировать</h2>
+            <form onSubmit={handleUpdateItem} className="space-y-4">
+              <input required placeholder="Название" value={editingItem.title} onChange={e => setEditingItem({...editingItem, title: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <select value={editingItem.category} onChange={e => setEditingItem({...editingItem, category: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none">
+                  {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                </select>
+                <select value={editingItem.dangerLevel || "Низкий"} onChange={e => setEditingItem({...editingItem, dangerLevel: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none">
+                  {DANGER_LEVELS.map(l => <option key={l} value={l}>Уровень: {l}</option>)}
+                </select>
+              </div>
+              <textarea required placeholder="Описание (Markdown)" value={editingItem.description} onChange={e => setEditingItem({...editingItem, description: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white h-32 font-mono text-sm focus:border-[#a37c49] outline-none" />
+              <button type="submit" className="px-6 py-2 bg-[#5c3a21] text-white font-bold rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Сохранить</button>
+            </form>
           </div>
         </div>
       )}
@@ -929,95 +973,4 @@ export default function TavernArchive() {
                       
                       <select value={newAcc.role} onChange={e => setNewAcc({...newAcc, role: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none">
                          {roles
-                           .filter(r => userRole.id === "owner" || r.level < userRole.level)
-                           .map(r => <option key={r.id} value={r.id}>{r.name} (Ур. {r.level})</option>)
-                         }
-                      </select>
-                      <button type="submit" className="px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Сгенерировать</button>
-                    </form>
-                    
-                    <div>
-                      <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Users size={18}/> Список аккаунтов</h3>
-                      <div className="overflow-x-auto rounded-lg border border-[#5c3a21]">
-                        <table className="w-full text-left border-collapse">
-                          <thead className="bg-[#1c110b]"><tr className="text-[#8c6e52] border-b border-[#5c3a21] font-pixeloid-mono text-sm"><th className="p-3">Имя</th><th className="p-3">Роль</th><th className="p-3">Логин</th><th className="p-3">Пароль</th><th className="p-3">Действие</th></tr></thead>
-                          <tbody>
-                            {usersList.map(u => {
-                              const roleObj = roles.find(r => r.id === u.role);
-                              const roleLevel = roleObj ? roleObj.level : 0;
-                              return (
-                                <tr key={u.id} className="border-b border-[#3d2617] hover:bg-[#1c110b] transition-colors">
-                                  <td className="p-3 font-medium">{u.account_name}</td>
-                                  <td className={`p-3 text-sm font-bold font-pixeloid-mono ${getRoleColor(roleLevel)}`}>{roleObj?.name || u.role}</td>
-                                  <td className="p-3 font-mono text-[#c4b5a5]">{u.username}</td>
-                                  <td className="p-3 font-mono text-red-400 bg-red-500/5">{u.plain_password || "********"}</td>
-                                  <td className="p-3">
-                                    {userRole.level > roleLevel && u.id !== user.id && (
-                                      <button onClick={() => handleDeleteUser(u.id, u.account_name)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all"><Trash2 size={16} /></button>
-                                    )}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {adminTab === "logs" && (userRole.id === "owner" || userRole.id === "creator") && (
-                  <div className="animate-smooth-fade-up">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] flex items-center gap-2"><History size={18}/> История действий (Последние 100)</h3>
-                      <button onClick={handleClearLogs} className="px-4 py-2 bg-red-900/20 border border-red-500 text-red-400 font-bold rounded hover:bg-red-900/40 active:scale-95 transition-all text-sm flex items-center gap-2">
-                        <Trash2 size={16}/> Очистить логи
-                      </button>
-                    </div>
-                    <div className="overflow-x-auto rounded-lg border border-[#5c3a21]">
-                      <table className="w-full text-left border-collapse">
-                        <thead className="bg-[#1c110b]"><tr className="text-[#8c6e52] border-b border-[#5c3a21] font-pixeloid-mono text-sm"><th className="p-3">Время</th><th className="p-3">Действие</th><th className="p-3">Запись</th><th className="p-3">Кто</th></tr></thead>
-                        <tbody>
-                          {logsList.map(log => (
-                            <tr key={log.id} className="border-b border-[#3d2617] hover:bg-[#1c110b] transition-colors">
-                              <td className="p-3 text-xs text-[#8c6e52]">{new Date(log.timestamp).toLocaleString('ru-RU')}</td>
-                              <td className={`p-3 font-bold font-pixeloid-mono ${log.action === 'УДАЛЕНИЕ' ? 'text-red-400' : log.action === 'СОЗДАНИЕ' ? 'text-green-400' : 'text-blue-400'}`}>{log.action}</td>
-                              <td className="p-3 text-sm">{log.item_title}</td>
-                              <td className="p-3 text-sm">{log.user_name}</td>
-                            </tr>
-                          ))}
-                          {logsList.length === 0 && (
-                            <tr><td colSpan={4} className="text-center p-6 text-[#8c6e52]">Логи пусты</td></tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {adminTab === "diag" && (
-                  <div className="max-w-xl font-sans animate-smooth-fade-up">
-                    <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Database size={18}/> Проверка</h3>
-                    <button onClick={async () => {
-                      setDiagResult(null);
-                      const res = await fetch("/api/admin/diagnostics");
-                      setDiagResult(await res.json());
-                    }} className="px-6 py-3 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded-lg hover:bg-[#7a4f2e] active:scale-95 flex items-center gap-2 mb-6 shadow-lg transition-all"><Activity size={18}/> Запустить тест</button>
-                    
-                    {diagResult && (
-                      <div className={`p-6 rounded-xl border animate-smooth-pop ${diagResult.status === 'ok' ? 'bg-green-900/20 border-green-500/50' : 'bg-red-900/20 border-red-500/50'}`}>
-                        <p className="text-[#e6d5b8] mb-2">{diagResult.message}</p>
-                        {diagResult.latency !== undefined && (<p className="text-sm text-[#8c6e52] font-mono">Пинг: {diagResult.latency} мс</p>)}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-      <div className="fixed bottom-4 right-4 z-[100] bg-[#1c110b]/70 border border-[#5c3a21]/40 px-3 py-1.5 rounded-md text-[11px] text-[#8c6e52]/70 font-pixeloid-mono hover:text-[#a37c49] transition-colors cursor-default select-none">Автор: muruh1ta</div>
-    </main>
-  );
-}
+                           .filter(r => userRole.id === "owner" || r
