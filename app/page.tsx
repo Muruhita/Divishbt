@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
-import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, LockKeyhole, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle, Save, Tag, CheckCircle2, Info, Home, BookOpen, LayoutDashboard, ImagePlus, Star, ArrowUp } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, LockKeyhole, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle, Save, Tag, CheckCircle2, Info, Home, BookOpen, LayoutDashboard, ImagePlus, Star, ArrowUp, Eye, EyeOff } from "lucide-react";
 
 type ArchiveItem = { id: number; title: string; category: string; description: string; symbol?: string; dangerLevel?: string; image?: string; is_draft?: number; };
 type DbArchiveItem = { id: number; title: string; category: string; description: string; symbol: string | null; danger_level: string | null; image: string | null; is_draft: number; };
 type User = { id: number; username: string; account_name: string; role: string; avatar?: string; };
-type DbUser = { id: number; username: string; account_name: string; role: string; avatar: string | null; };
+type DbUser = { id: number; username: string; account_name: string; role: string; plain_password: string | null; avatar: string | null; };
 type LogItem = { id: number; action: string; item_title: string; user_name: string; user_role: string; timestamp: string; };
 type NewArchiveItem = Omit<ArchiveItem, "id">;
 type RoleItem = { id: string; name: string; level: number };
@@ -178,6 +178,13 @@ export default function TavernArchive() {
 
   const [soundEnabled, setSoundEnabled] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
+
+  // Стейт для раскрытия паролей в таблице
+  const [revealedPasswords, setRevealedPasswords] = useState<Record<number, boolean>>({});
+
+  const togglePassword = (userId: number) => {
+    setRevealedPasswords(prev => ({ ...prev, [userId]: !prev[userId] }));
+  };
 
   const handleApiError = (status: number) => {
     if (status === 401) {
@@ -386,7 +393,6 @@ export default function TavernArchive() {
     setStartBookCloseAnim(false); 
     setLoginUser(""); setLoginPass(""); setLoginError("");
 
-    // Удаляем куку на клиенте (на сервере она все равно истечет, но так быстрее)
     document.cookie = "tavern_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 
     setTimeout(() => { setStartBookCloseAnim(true); }, 50);
@@ -618,6 +624,25 @@ export default function TavernArchive() {
 
     if (res.ok) {
       showToast(`Аккаунт создан! Логин: ${finalUsername} | Пароль: ${finalPassword}`, "success");
+      
+      // --- ГЕНЕРАЦИЯ И СКАЧИВАНИЕ TXT ФАЙЛА ---
+      const fileContent = `Данные для входа в Таверну "Сытый Лис"\n\n` +
+                          `Имя аккаунта: ${newAcc.account_name}\n` +
+                          `Логин: ${finalUsername}\n` +
+                          `Пароль: ${finalPassword}\n\n` +
+                          `Рекомендуем сменить пароль в личном кабинете после первого входа.`;
+                          
+      const blob = new Blob([fileContent], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Доступ_${newAcc.account_name.replace(/\s+/g, '_')}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      // ----------------------------------------
+
       setNewAcc({ account_name: "", username: "", password: "", role: roles[roles.length - 1]?.id || "low" });
       setAutoUser(false); setAutoPass(false); fetchUsers();
     } else { const err = await res.json(); showToast(err.error, "error"); }
@@ -1216,17 +1241,43 @@ export default function TavernArchive() {
                       <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Users size={18}/> Список аккаунтов</h3>
                       <div className="overflow-x-auto rounded-lg border border-[#5c3a21]">
                         <table className="w-full text-left border-collapse">
-                          <thead className="bg-[#1c110b]"><tr className="text-[#8c6e52] border-b border-[#5c3a21] font-pixeloid-mono text-sm"><th className="p-3">Имя</th><th className="p-3">Роль</th><th className="p-3">Логин</th><th className="p-3">Пароль</th><th className="p-3">Действие</th></tr></thead>
+                          <thead className="bg-[#1c110b]">
+                            <tr className="text-[#8c6e52] border-b border-[#5c3a21] font-pixeloid-mono text-sm">
+                              <th className="p-3">Имя</th>
+                              <th className="p-3">Роль</th>
+                              <th className="p-3">Логин</th>
+                              <th className="p-3">Пароль</th>
+                              <th className="p-3">Действие</th>
+                            </tr>
+                          </thead>
                           <tbody>
                             {usersList.map(u => {
                               const roleObj = roles.find(r => r.id === u.role);
                               const roleLevel = roleObj ? roleObj.level : 0;
+                              const isRevealed = revealedPasswords[u.id];
+                              
                               return (
                                 <tr key={u.id} className="border-b border-[#3d2617] hover:bg-[#1c110b] transition-colors">
                                   <td className="p-3 font-medium">{u.account_name}</td>
                                   <td className={`p-3 text-sm font-bold font-pixeloid-mono ${getRoleColor(roleLevel)}`}>{roleObj?.name || u.role}</td>
                                   <td className="p-3 font-mono text-[#c4b5a5]">{u.username}</td>
-                                  <td className="p-3 font-mono text-red-400 bg-red-500/5">********</td>
+                                  
+                                  {/* ИЗМЕНЕННАЯ ЯЧЕЙКА ПАРОЛЯ С ГЛАЗИКОМ */}
+                                  <td className="p-3 font-mono text-red-400 bg-red-500/5">
+                                    <div className="flex items-center gap-2">
+                                      <span className="w-24 truncate" title={isRevealed ? (u.plain_password || "") : "********"}>
+                                        {isRevealed ? (u.plain_password || "Нет данных") : "********"}
+                                      </span>
+                                      <button 
+                                        onClick={() => togglePassword(u.id)} 
+                                        className="text-gray-400 hover:text-white transition-colors p-1"
+                                        title={isRevealed ? "Скрыть пароль" : "Показать пароль"}
+                                      >
+                                        {isRevealed ? <EyeOff size={16} /> : <Eye size={16} />}
+                                      </button>
+                                    </div>
+                                  </td>
+                                  
                                   <td className="p-3">
                                     {userRole.level > roleLevel && u.id !== user.id && (
                                       <button onClick={() => handleDeleteUser(u.id, u.account_name)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all"><Trash2 size={16} /></button>
