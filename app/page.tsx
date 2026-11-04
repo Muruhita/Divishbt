@@ -22,7 +22,6 @@ const ROLES_MAP: Record<string, { name: string, level: number, color: string }> 
 };
 
 const INITIAL_NEW_ITEM: NewArchiveItem = { title: "", category: "Комбинации Цифр", description: "", symbol: "", dangerLevel: "Низкий", image: "" };
-
 const RUNES = ["ᚠ", "ᚢ", "ᚦ", "ᚨ", "ᚱ", "ᚲ", "ᚷ", "ᚹ", "ᚺ", "ᚾ", "ᛁ", "ᛃ", "ᛈ", "ᛇ", "ᛉ", "ᛊ", "ᛏ", "ᛒ", "ᛖ", "ᛗ", "ᛚ", "ᛜ", "ᛞ", "ᛟ"];
 
 export default function TavernArchive() {
@@ -53,8 +52,10 @@ export default function TavernArchive() {
   const [newAcc, setNewAcc] = useState({ account_name: "", username: "", password: "", role: "low" });
   const [autoUser, setAutoUser] = useState(false);
   const [autoPass, setAutoPass] = useState(false);
+  
   const [bulkJson, setBulkJson] = useState(""); 
   const [adminTab, setAdminTab] = useState<"archive" | "bulk" | "users" | "diag" | "logs">("archive");
+  
   const [usersList, setUsersList] = useState<DbUser[]>([]);
   const [logsList, setLogsList] = useState<LogItem[]>([]);
   const [diagResult, setDiagResult] = useState<{ status: string, latency?: number, message: string } | null>(null);
@@ -197,7 +198,6 @@ export default function TavernArchive() {
     fetchArchive(currentPage);
   };
 
-  // ОЧИСТКА ВСЕЙ БАЗЫ
   const handleClearDatabase = async () => {
     if (!user) return;
     const confirmText = prompt("ВНИМАНИЕ! Это удалит ВСЕ записи навсегда. Введите слово 'УДАЛИТЬ' для подтверждения:");
@@ -308,6 +308,32 @@ export default function TavernArchive() {
       a.href = url; a.download = "tavern_archive_export.json"; a.click();
       URL.revokeObjectURL(url);
     } catch { alert("Ошибка при экспорте"); }
+  };
+
+  const handleBulkImport = async () => {
+    if (!user) return;
+    playSound("save");
+    try {
+      const parsed = JSON.parse(bulkJson);
+      if (!Array.isArray(parsed)) throw new Error("JSON должен быть массивом");
+      
+      const itemsWithAuthor = parsed.map((item: any) => ({ 
+        ...item, 
+        authorName: user.account_name, 
+        authorRole: user.role 
+      }));
+
+      const res = await fetch("/api/archive", {
+        method: "POST", headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify(itemsWithAuthor)
+      });
+      
+      if (res.ok) {
+        const result = await res.json();
+        alert(`Успешно добавлено ${result.count} записей!`);
+        setBulkJson(""); fetchArchive(1);
+      } else { alert("Ошибка при импорте"); }
+    } catch (e) { alert("Ошибка формата JSON. Проверьте синтаксис."); }
   };
 
   useEffect(() => {
@@ -520,6 +546,7 @@ export default function TavernArchive() {
                   <button onClick={() => setAdminTab("diag")} className={`px-4 py-2 rounded ${adminTab === 'diag' ? 'bg-[#5c3a21] text-white' : 'text-gray-500'}`}>Диагностика</button>
                 </div>
 
+                {/* ВКЛАДКА: ДОБАВИТЬ */}
                 {adminTab === "archive" && (
                   <div>
                     <form onSubmit={handleAddMultipleItems} className="space-y-6 max-w-xl">
@@ -537,7 +564,6 @@ export default function TavernArchive() {
                       </div>
                     </form>
 
-                    {/* КНОПКА ОЧИСТКИ БАЗЫ */}
                     <div className="mt-12 pt-6 border-t border-red-900/50 max-w-xl">
                       <h3 className="text-red-500 font-bold font-pixeloid-mono mb-2 flex items-center gap-2"><AlertTriangle size={18}/> Опасная зона</h3>
                       <p className="text-sm text-gray-500 mb-4">Эта кнопка безвозвратно удалит ВСЕ записи из архива.</p>
@@ -548,12 +574,107 @@ export default function TavernArchive() {
                   </div>
                 )}
 
-                {/* Остальные вкладки админки (bulk, users, logs, diag) оставляем как были */}
-                {adminTab === "users" && (
-                  <div className="text-white">Вкладка аккаунтов (оставьте свой прошлый код)</div>
+                {/* ВКЛАДКА: ИМПОРТ/ЭКСПОРТ */}
+                {adminTab === "bulk" && (
+                  <div className="space-y-8 max-w-2xl animate-fade-in">
+                    <div className="bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
+                      <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Upload size={18}/> Массовый импорт (JSON)</h3>
+                      <p className="text-[#8c6e52] mb-4 text-sm font-sans">Вставьте JSON массив записей в формате:</p>
+                      <pre className="text-xs text-[#a37c49] bg-[#160d08] p-3 rounded mb-4 overflow-x-auto font-mono">
+{`[{"title": "Название", "category": "Символика", "description": "Описание", "symbol": "1/11", "dangerLevel": "Высокий", "image": "data:image..."}]`}
+                      </pre>
+                      <textarea 
+                        placeholder="Вставьте JSON сюда..." 
+                        value={bulkJson} 
+                        onChange={e => setBulkJson(e.target.value)} 
+                        className="w-full p-3 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] font-mono text-sm focus:border-[#a37c49] outline-none h-48" 
+                      />
+                      <button onClick={handleBulkImport} className="mt-4 px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#7a4f2e] transition-colors shadow-lg">Импортировать данные</button>
+                    </div>
+
+                    <div className="bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
+                      <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Download size={18}/> Экспорт</h3>
+                      <p className="text-[#8c6e52] mb-4 text-sm font-sans">Скачать весь текущий архив в формате JSON.</p>
+                      <button onClick={handleExport} className="px-6 py-2 bg-[#3d2617] border border-[#5c3a21] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#5c3a21] transition-colors shadow-lg">Скачать файл</button>
+                    </div>
+                  </div>
                 )}
-                {adminTab === "logs" && (
-                  <div className="text-white">Вкладка логов (оставьте свой прошлый код)</div>
+
+                {/* ВКЛАДКА: АККАУНТЫ */}
+                {adminTab === "users" && (
+                  <div className="space-y-10 font-sans animate-fade-in">
+                    <form onSubmit={handleCreateUser} className="space-y-4 max-w-xl bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
+                      <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] flex items-center gap-2"><Plus size={18}/> Создать аккаунт</h3>
+                      <input required placeholder="Название аккаунта (Никнейм)" value={newAcc.account_name} onChange={e => setNewAcc({...newAcc, account_name: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8]" />
+                      <div className="flex items-center gap-2"><input required={!autoUser} placeholder="Логин" value={newAcc.username} onChange={e => setNewAcc({...newAcc, username: e.target.value})} disabled={autoUser} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] disabled:opacity-50" /><label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer font-pixeloid-mono"><input type="checkbox" checked={autoUser} onChange={e => setAutoUser(e.target.checked)} /> Рандом</label></div>
+                      <div className="flex items-center gap-2"><input required={!autoPass} placeholder="Пароль" value={newAcc.password} onChange={e => setNewAcc({...newAcc, password: e.target.value})} disabled={autoPass} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] disabled:opacity-50" /><label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer font-pixeloid-mono"><input type="checkbox" checked={autoPass} onChange={e => setAutoPass(e.target.checked)} /> Рандом</label></div>
+                      <select value={newAcc.role} onChange={e => setNewAcc({...newAcc, role: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8]">
+                         <option value="low">Лоу Стафф</option><option value="high">Хай Стафф</option><option value="guardian">Хранитель</option><option value="creator">Создатель Сервера</option>
+                      </select>
+                      <button type="submit" className="px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#7a4f2e]">Сгенерировать</button>
+                    </form>
+                    
+                    <div>
+                      <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Users size={18}/> Список аккаунтов</h3>
+                      <div className="overflow-x-auto rounded-lg border border-[#5c3a21]">
+                        <table className="w-full text-left border-collapse">
+                          <thead className="bg-[#1c110b]"><tr className="text-[#8c6e52] border-b border-[#5c3a21] font-pixeloid-mono text-sm"><th className="p-3">Имя</th><th className="p-3">Роль</th><th className="p-3">Логин</th><th className="p-3">Пароль</th><th className="p-3">Действие</th></tr></thead>
+                          <tbody>
+                            {usersList.map(u => (
+                              <tr key={u.id} className="border-b border-[#3d2617] hover:bg-[#1c110b] transition-colors">
+                                <td className="p-3 font-medium">{u.account_name}</td>
+                                <td className={`p-3 text-sm font-bold font-pixeloid-mono ${ROLES_MAP[u.role]?.color.split(' ')[0] || "text-white"}`}>{ROLES_MAP[u.role]?.name || u.role}</td>
+                                <td className="p-3 font-mono text-[#c4b5a5]">{u.username}</td>
+                                <td className="p-3 font-mono text-red-400 bg-red-500/5">{u.plain_password || "********"}</td>
+                                <td className="p-3">{(user.role === "owner" || user.role === "creator") && u.id !== user.id && (<button onClick={() => handleDeleteUser(u.id, u.account_name)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded"><Trash2 size={16} /></button>)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ВКЛАДКА: ЛОГИ */}
+                {adminTab === "logs" && (user.role === "owner" || user.role === "creator") && (
+                  <div className="animate-fade-in">
+                    <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><History size={18}/> История действий (Последние 100)</h3>
+                    <div className="overflow-x-auto rounded-lg border border-[#5c3a21]">
+                      <table className="w-full text-left border-collapse">
+                        <thead className="bg-[#1c110b]"><tr className="text-[#8c6e52] border-b border-[#5c3a21] font-pixeloid-mono text-sm"><th className="p-3">Время</th><th className="p-3">Действие</th><th className="p-3">Запись</th><th className="p-3">Кто сделал</th></tr></thead>
+                        <tbody>
+                          {logsList.map(log => (
+                            <tr key={log.id} className="border-b border-[#3d2617] hover:bg-[#1c110b]">
+                              <td className="p-3 text-xs text-[#8c6e52]">{new Date(log.timestamp).toLocaleString('ru-RU')}</td>
+                              <td className={`p-3 font-bold font-pixeloid-mono ${log.action === 'УДАЛЕНИЕ' ? 'text-red-400' : log.action === 'СОЗДАНИЕ' ? 'text-green-400' : 'text-blue-400'}`}>{log.action}</td>
+                              <td className="p-3 text-sm">{log.item_title}</td>
+                              <td className="p-3 text-sm">{log.user_name} <span className="text-xs text-[#8c6e52]">({log.user_role})</span></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* ВКЛАДКА: ДИАГНОСТИКА */}
+                {adminTab === "diag" && (
+                  <div className="max-w-xl font-sans animate-fade-in">
+                    <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Database size={18}/> Проверка системы</h3>
+                    <button onClick={async () => {
+                      setDiagResult(null);
+                      const res = await fetch("/api/admin/diagnostics");
+                      setDiagResult(await res.json());
+                    }} className="px-6 py-3 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded-lg hover:bg-[#7a4f2e] flex items-center gap-2 mb-6 shadow-lg"><Activity size={18}/> Запустить тест</button>
+                    
+                    {diagResult && (
+                      <div className={`p-6 rounded-xl border ${diagResult.status === 'ok' ? 'bg-green-900/20 border-green-500/50' : 'bg-red-900/20 border-red-500/50'}`}>
+                        <p className="text-[#e6d5b8] mb-2">{diagResult.message}</p>
+                        {diagResult.latency !== undefined && (<p className="text-sm text-[#8c6e52] font-mono">Пинг до базы: {diagResult.latency} мс</p>)}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             )}
