@@ -44,6 +44,8 @@ export default function TavernArchive() {
   const [loginError, setLoginError] = useState("");
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
+  // Профиль
+  const [newUsername, setNewUsername] = useState("");
   const [newPass, setNewPass] = useState("");
   const [oldPass, setOldPass] = useState("");
   const [profileMsg, setProfileMsg] = useState("");
@@ -57,7 +59,7 @@ export default function TavernArchive() {
   const [adminTab, setAdminTab] = useState<"archive" | "bulk" | "users" | "diag" | "logs">("archive");
   
   const [usersList, setUsersList] = useState<DbUser[]>([]);
-  const [logsList, setLogsList] = useState<LogItem[]>([]);
+  const [logsList, setLogsList] = useState<LogsList[]>([]);
   const [diagResult, setDiagResult] = useState<{ status: string, latency?: number, message: string } | null>(null);
 
   const [soundEnabled, setSoundEnabled] = useState(false);
@@ -162,6 +164,16 @@ export default function TavernArchive() {
     setView("home");
   };
 
+  const openProfile = () => {
+    if (user) {
+      setNewUsername(user.username);
+      setNewPass("");
+      setOldPass("");
+      setProfileMsg("");
+      setShowProfile(true);
+    }
+  };
+
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -170,16 +182,29 @@ export default function TavernArchive() {
 
     const res = await fetch("/api/user/update", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: user.id, oldPassword: oldPass, newPassword: newPass, avatar: user.avatar })
+      body: JSON.stringify({ 
+        userId: user.id, 
+        oldPassword: oldPass, 
+        newPassword: newPass, 
+        avatar: user.avatar,
+        newUsername: newUsername !== user.username ? newUsername : undefined // Отправляем только если изменился
+      })
     });
+
+    const data = await res.json();
 
     if (res.ok) {
       setProfileMsg("Профиль обновлен!");
       setOldPass(""); setNewPass("");
+      // Обновляем локальные данные
+      const updatedUser = { ...user, username: newUsername };
+      setUser(updatedUser);
       const saved = JSON.parse(localStorage.getItem("tavern_session")!);
-      saved.userData = { ...user };
+      saved.userData = updatedUser;
       localStorage.setItem("tavern_session", JSON.stringify(saved));
-    } else { const err = await res.json(); setProfileMsg(`Ошибка: ${err.error}`); }
+    } else { 
+      setProfileMsg(`Ошибка: ${data.error}`); 
+    }
   };
 
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -350,7 +375,7 @@ export default function TavernArchive() {
   const ArchiveCard = ({ item, index }: { item: ArchiveItem, index: number }) => (
     <div 
       className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.6)] hover:border-[#a37c49] hover:shadow-[0_0_20px_rgba(163,124,73,0.15)] hover:-translate-y-1.5 transition-all duration-300 group flex flex-col relative z-10 overflow-hidden opacity-0"
-      style={{ animation: `pixel-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards`, animationDelay: `${index * 50}ms` }}
+      style={{ animation: `smooth-fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards`, animationDelay: `${index * 40}ms` }}
     >
       {item.image && (
         <div className="w-full h-56 overflow-hidden border-b-2 border-[#5c3a21] cursor-pointer relative group/img flex items-center justify-center"
@@ -393,14 +418,37 @@ export default function TavernArchive() {
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col">
       
-      {/* ФОН: ПИКСЕЛЬНЫЕ ЗВЕЗДЫ, ТУМАН, РУНЫ */}
+      {/* ФОН: ЗВЕЗДЫ, ТУМАН, РУНЫ, КОСТЁР */}
       <div className="pixel-stars"></div>
       <div className="fog-container"><div className="fog-layer"></div><div className="fog-layer"></div></div>
+      
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-        {RUNES.slice(0, 10).map((rune, i) => (
+        {RUNES.slice(0, 6).map((rune, i) => (
           <div key={i} className="rune">{rune}</div>
         ))}
       </div>
+
+      {/* КОСТЁР */}
+      <div className="campfire-container">
+        <div className="campfire-glow"></div>
+        <div className="flame flame-1"></div>
+        <div className="flame flame-2"></div>
+        <div className="flame flame-3"></div>
+        <div className="flame flame-4"></div>
+        <div className="ember"></div>
+        <div className="ember"></div>
+        <div className="ember"></div>
+        <div className="ember"></div>
+        <div className="ember"></div>
+        <div className="ember"></div>
+        <div className="fire-logs">
+          <div className="fire-log-inner"></div>
+          <div className="fire-log-inner"></div>
+          <div className="fire-log-inner"></div>
+          <div className="fire-log-inner"></div>
+        </div>
+      </div>
+
       <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 50% 0%, #a37c49 0%, transparent 70%)" }}></div>
 
       <button onClick={() => { setSoundEnabled(!soundEnabled); if (!soundEnabled) playSound("success"); }}
@@ -411,7 +459,7 @@ export default function TavernArchive() {
       {/* МОДАЛКИ */}
       {selectedImage && (
         <div className="fixed inset-0 z-[999] bg-black/90 flex items-center justify-center p-4 cursor-zoom-out animate-fade-in" onClick={() => setSelectedImage(null)}>
-          <div className="p-4 rounded-xl animate-bounce-in" style={{ backgroundColor: '#d6c5b3', backgroundImage: 'radial-gradient(#b8a38a 1px, transparent 1px)', backgroundSize: '10px 10px' }}>
+          <div className="p-4 rounded-xl animate-smooth-pop" style={{ backgroundColor: '#d6c5b3', backgroundImage: 'radial-gradient(#b8a38a 1px, transparent 1px)', backgroundSize: '10px 10px' }}>
             <img src={selectedImage} alt="Full size" className="max-w-full max-h-[85vh] object-contain rounded" onClick={(e) => e.stopPropagation()} />
           </div>
         </div>
@@ -419,7 +467,7 @@ export default function TavernArchive() {
 
       {editingItem && (
         <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl w-full max-w-2xl relative animate-bounce-in">
+          <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl w-full max-w-2xl relative animate-smooth-pop">
             <button onClick={() => setEditingItem(null)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 active:scale-90 transition-all"><X size={24}/></button>
             <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49] mb-6">Редактировать</h2>
             <form onSubmit={handleUpdateItem} className="space-y-4">
@@ -433,7 +481,7 @@ export default function TavernArchive() {
 
       {showProfile && user && (
         <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl w-full max-w-md relative animate-bounce-in">
+          <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl w-full max-w-md relative animate-smooth-pop">
             <button onClick={() => setShowProfile(false)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 active:scale-90 transition-all"><X size={24}/></button>
             <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49] mb-6 text-center">Личный кабинет</h2>
             <form onSubmit={handleUpdateProfile} className="space-y-4">
@@ -446,11 +494,18 @@ export default function TavernArchive() {
                   <input type="file" accept="image/*" onChange={handleAvatarUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
                 </div>
               </div>
+
+              <div className="space-y-2 border-t border-[#5c3a21] pt-4">
+                <label className="text-sm font-pixeloid-mono text-[#a37c49]">Изменить логин</label>
+                <input type="text" placeholder="Новый логин" value={newUsername} onChange={e => setNewUsername(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
+              </div>
+
               <div className="space-y-2 border-t border-[#5c3a21] pt-4">
                 <label className="text-sm font-pixeloid-mono text-[#a37c49]">Смена пароля</label>
                 <input type="password" placeholder="Старый пароль" value={oldPass} onChange={e => setOldPass(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
                 <input type="password" placeholder="Новый пароль" value={newPass} onChange={e => setNewPass(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
               </div>
+              
               {profileMsg && <p className="text-center text-sm text-green-400 bg-green-900/20 p-2 rounded border border-green-500/30">{profileMsg}</p>}
               <button type="submit" className="w-full py-2 bg-[#5c3a21] text-white font-bold rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Сохранить изменения</button>
             </form>
@@ -461,10 +516,10 @@ export default function TavernArchive() {
       {/* ЭКРАН ВХОДА */}
       {!user && (
         <div className="flex-grow flex items-center justify-center p-4 relative z-10">
-          <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-8 pt-0 rounded-xl shadow-2xl w-full max-w-md relative mt-16 animate-pixel-in">
+          <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-8 pt-0 rounded-xl shadow-2xl w-full max-w-md relative mt-16 animate-smooth-fade-up">
             <div className="flex justify-center -mt-16 mb-4 relative">
               <div className="absolute inset-0 bg-[#a37c49] blur-2xl opacity-20 rounded-full animate-pulse"></div>
-              <img src="/logo.png" alt="Сытый Лис" className="w-32 h-32 object-cover rounded-full border-4 border-[#5c3a21] relative z-10 animate-float bg-[#1c110b] hover:glitch cursor-pointer" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              <img src="/logo.png" alt="Сытый Лис" className="w-32 h-32 object-cover rounded-full border-4 border-[#5c3a21] relative z-10 animate-float bg-[#1c110b] hover:scale-105 transition-transform" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             </div>
             <h1 className="text-3xl font-bold font-pixeloid-mono text-center mb-2 text-[#a37c49] uppercase flex justify-center items-center gap-2"><Flame /> Сытый Лис</h1>
             <p className="text-center text-[#8c6e52] mb-8">Вход в закрытый архив</p>
@@ -482,7 +537,7 @@ export default function TavernArchive() {
       {user && (
         <div className="flex-grow flex flex-col relative z-10">
           <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
-            <div className="flex items-center gap-3 bg-[#2e1b13]/90 border border-[#5c3a21] p-1.5 rounded-lg cursor-pointer hover:border-[#a37c49] hover:shadow-[0_0_15px_rgba(163,124,73,0.3)] transition-all group" onClick={() => setShowProfile(true)}>
+            <div className="flex items-center gap-3 bg-[#2e1b13]/90 border border-[#5c3a21] p-1.5 rounded-lg cursor-pointer hover:border-[#a37c49] hover:shadow-[0_0_15px_rgba(163,124,73,0.3)] transition-all group" onClick={openProfile}>
               <div className="w-10 h-10 rounded bg-[#1c110b] overflow-hidden flex items-center justify-center border border-[#5c3a21] group-hover:border-[#a37c49] transition-colors">
                 {user.avatar ? <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" /> : <UserIcon size={20} className="text-[#5c3a21] group-hover:text-[#a37c49] transition-colors" />}
               </div>
@@ -499,12 +554,12 @@ export default function TavernArchive() {
 
           <div className="max-w-5xl mx-auto px-6 py-12 w-full flex flex-col flex-grow">
             <header className="flex justify-center mb-12 cursor-pointer" onClick={() => setView("home")}>
-              <img src="/logo.png" alt="Сытый Лис" className="w-24 h-24 object-cover rounded-full border-4 border-[#5c3a21] animate-float bg-[#1c110b] hover:scale-105 hover:glitch transition-all" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              <img src="/logo.png" alt="Сытый Лис" className="w-24 h-24 object-cover rounded-full border-4 border-[#5c3a21] animate-float bg-[#1c110b] hover:scale-105 transition-all" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             </header>
 
             {view === "home" && (
-              <div className="flex-grow flex flex-col items-center animate-pixel-in text-center pb-20">
-                <h2 className="text-4xl font-bold font-pixeloid-mono text-[#a37c49] mb-6 hover-glitch cursor-default">Запретный Архив</h2>
+              <div className="flex-grow flex flex-col items-center animate-smooth-fade-up text-center pb-20">
+                <h2 className="text-4xl font-bold font-pixeloid-mono text-[#a37c49] mb-6">Запретный Архив</h2>
                 <div className="relative w-full max-w-2xl mb-8 group">
                   <input type="text" placeholder="Поиск..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-4 pl-12 bg-[#2e1b13] border-2 border-[#5c3a21] rounded-lg text-[#e6d5b8] font-pixeloid-mono focus:border-[#a37c49] transition-colors shadow-lg" />
                   <Search className="absolute left-4 top-4 text-[#6b513b] group-focus-within:text-[#a37c49] transition-colors" size={24} />
@@ -522,7 +577,7 @@ export default function TavernArchive() {
             )}
 
             {view === "archive" && (
-              <div className="animate-pixel-in w-full text-left">
+              <div className="animate-smooth-fade-up w-full text-left">
                  <button onClick={() => setView("home")} className="mb-6 flex items-center gap-2 text-[#8c6e52] hover:text-[#a37c49] transition-colors group"><ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform"/> На главную</button>
                  <div className="flex flex-wrap gap-2 mb-8">
                     {CATEGORIES.map(c => (
@@ -548,9 +603,9 @@ export default function TavernArchive() {
             )}
 
             {view === "admin" && ROLES_MAP[user.role]?.level >= 1 && (
-              <div className="animate-pixel-in w-full bg-[#2e1b13] p-8 rounded-xl border-double border-4 border-[#5c3a21]">
+              <div className="animate-smooth-fade-up w-full bg-[#2e1b13] p-8 rounded-xl border-double border-4 border-[#5c3a21]">
                 <div className="flex justify-between items-center mb-8 border-b border-[#5c3a21] pb-4">
-                   <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49] hover-glitch cursor-default">Панель Управления</h2>
+                   <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49]">Панель Управления</h2>
                    <button onClick={() => setView("home")} className="text-sm font-pixeloid-mono text-[#8c6e52] hover:text-white active:scale-95 transition-all">На главную</button>
                 </div>
 
@@ -566,7 +621,7 @@ export default function TavernArchive() {
 
                 {/* ВКЛАДКА: ДОБАВИТЬ */}
                 {adminTab === "archive" && (
-                  <div className="animate-pixel-in">
+                  <div className="animate-smooth-fade-up">
                     <form onSubmit={handleAddMultipleItems} className="space-y-6 max-w-xl">
                       {newItems.map((item, index) => (
                         <div key={index} className="p-4 bg-[#1c110b] border border-[#5c3a21] rounded-lg">
@@ -583,7 +638,7 @@ export default function TavernArchive() {
                     </form>
 
                     {(user.role === "owner" || user.role === "creator") && (
-                      <div className="mt-12 pt-6 border-t border-red-900/50 max-w-xl animate-pixel-in">
+                      <div className="mt-12 pt-6 border-t border-red-900/50 max-w-xl animate-smooth-fade-up">
                         <h3 className="text-red-500 font-bold font-pixeloid-mono mb-2 flex items-center gap-2"><AlertTriangle size={18}/> Опасная зона</h3>
                         <p className="text-sm text-gray-500 mb-4">Эта кнопка безвозвратно удалит ВСЕ записи из архива.</p>
                         <button onClick={handleClearDatabase} className="px-6 py-2 bg-red-900/20 border border-red-500 text-red-400 font-bold rounded hover:bg-red-900/40 active:scale-95 transition-all">
@@ -596,7 +651,7 @@ export default function TavernArchive() {
 
                 {/* ВКЛАДКА: ИМПОРТ/ЭКСПОРТ */}
                 {adminTab === "bulk" && (
-                  <div className="space-y-8 max-w-2xl animate-pixel-in">
+                  <div className="space-y-8 max-w-2xl animate-smooth-fade-up">
                     <div className="bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
                       <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Upload size={18}/> Массовый импорт (JSON)</h3>
                       <p className="text-[#8c6e52] mb-4 text-sm font-sans">Вставьте JSON массив записей в формате:</p>
@@ -622,7 +677,7 @@ export default function TavernArchive() {
 
                 {/* ВКЛАДКА: АККАУНТЫ */}
                 {adminTab === "users" && (
-                  <div className="space-y-10 font-sans animate-pixel-in">
+                  <div className="space-y-10 font-sans animate-smooth-fade-up">
                     <form onSubmit={handleCreateUser} className="space-y-4 max-w-xl bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
                       <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] flex items-center gap-2"><Plus size={18}/> Создать аккаунт</h3>
                       <input required placeholder="Название аккаунта (Никнейм)" value={newAcc.account_name} onChange={e => setNewAcc({...newAcc, account_name: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none" />
@@ -658,7 +713,7 @@ export default function TavernArchive() {
 
                 {/* ВКЛАДКА: ЛОГИ */}
                 {adminTab === "logs" && (user.role === "owner" || user.role === "creator") && (
-                  <div className="animate-pixel-in">
+                  <div className="animate-smooth-fade-up">
                     <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><History size={18}/> История действий (Последние 100)</h3>
                     <div className="overflow-x-auto rounded-lg border border-[#5c3a21]">
                       <table className="w-full text-left border-collapse">
@@ -680,7 +735,7 @@ export default function TavernArchive() {
 
                 {/* ВКЛАДКА: ДИАГНОСТИКА */}
                 {adminTab === "diag" && (
-                  <div className="max-w-xl font-sans animate-pixel-in">
+                  <div className="max-w-xl font-sans animate-smooth-fade-up">
                     <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Database size={18}/> Проверка системы</h3>
                     <button onClick={async () => {
                       setDiagResult(null);
@@ -689,7 +744,7 @@ export default function TavernArchive() {
                     }} className="px-6 py-3 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded-lg hover:bg-[#7a4f2e] active:scale-95 flex items-center gap-2 mb-6 shadow-lg transition-all"><Activity size={18}/> Запустить тест</button>
                     
                     {diagResult && (
-                      <div className={`p-6 rounded-xl border animate-pixel-in ${diagResult.status === 'ok' ? 'bg-green-900/20 border-green-500/50' : 'bg-red-900/20 border-red-500/50'}`}>
+                      <div className={`p-6 rounded-xl border animate-smooth-pop ${diagResult.status === 'ok' ? 'bg-green-900/20 border-green-500/50' : 'bg-red-900/20 border-red-500/50'}`}>
                         <p className="text-[#e6d5b8] mb-2">{diagResult.message}</p>
                         {diagResult.latency !== undefined && (<p className="text-sm text-[#8c6e52] font-mono">Пинг до базы: {diagResult.latency} мс</p>)}
                       </div>
@@ -701,7 +756,7 @@ export default function TavernArchive() {
           </div>
         </div>
       )}
-      <div className="fixed bottom-4 right-4 z-[100] bg-[#1c110b]/70 border border-[#5c3a21]/40 px-3 py-1.5 rounded-md text-[11px] text-[#8c6e52]/70 font-pixeloid-mono hover:text-[#a37c49] hover:bg-[#2e1b13] transition-all cursor-default select-none">Автор: muruh1ta</div>
+      <div className="fixed bottom-4 right-4 z-[100] bg-[#1c110b]/70 border border-[#5c3a21]/40 px-3 py-1.5 rounded-md text-[11px] text-[#8c6e52]/70 font-pixeloid-mono hover:text-[#a37c49] transition-colors cursor-default select-none">Автор: muruh1ta</div>
     </main>
   );
 }
