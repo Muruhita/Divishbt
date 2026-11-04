@@ -42,9 +42,7 @@ export async function POST(req: Request) {
           sql: "INSERT INTO logs (action, item_title, user_name, user_role) VALUES (?, ?, ?, ?)",
           args: ["СОЗДАНИЕ", item.title, userName, userRole],
         });
-      } catch (e) {
-        console.error("Лог не записан:", e);
-      }
+      } catch (e) { console.error("Лог не записан:", e); }
     }
     return NextResponse.json({ success: true, count: items.length });
   } catch (error) {
@@ -67,9 +65,7 @@ export async function PUT(req: Request) {
         sql: "INSERT INTO logs (action, item_title, user_name, user_role) VALUES (?, ?, ?, ?)",
         args: ["ИЗМЕНЕНИЕ", item.title, item.authorName || "Неизвестно", item.authorRole || "low"],
       });
-    } catch (e) {
-      console.error("Лог не записан:", e);
-    }
+    } catch (e) { console.error("Лог не записан:", e); }
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -81,10 +77,8 @@ export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     
-    // ПОЛНАЯ ОЧИСТКА
     if (searchParams.get("clear") === "true") {
       await db.execute("DELETE FROM archive");
-      
       try {
         const authorName = searchParams.get("authorName") || "Неизвестно";
         const authorRole = searchParams.get("authorRole") || "low";
@@ -92,14 +86,10 @@ export async function DELETE(req: Request) {
           sql: "INSERT INTO logs (action, item_title, user_name, user_role) VALUES (?, ?, ?, ?)",
           args: ["ПОЛНАЯ ОЧИСТКА", "Вся база данных", authorName, authorRole],
         });
-      } catch (e) {
-        console.error("Лог не записан (возможно, нет таблицы logs):", e);
-      }
-      
+      } catch (e) { console.error("Лог не записан:", e); }
       return NextResponse.json({ success: true });
     }
 
-    // УДАЛЕНИЕ ОДНОЙ ЗАПИСИ
     const id = searchParams.get("id");
     const title = searchParams.get("title");
     const authorName = searchParams.get("authorName") || "Неизвестно";
@@ -114,13 +104,10 @@ export async function DELETE(req: Request) {
         sql: "INSERT INTO logs (action, item_title, user_name, user_role) VALUES (?, ?, ?, ?)",
         args: ["УДАЛЕНИЕ", title, authorName, authorRole],
       });
-    } catch (e) {
-      console.error("Лог не записан:", e);
-    }
+    } catch (e) { console.error("Лог не записан:", e); }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Критическая ошибка удаления:", error);
     return NextResponse.json({ error: "Ошибка при удалении" }, { status: 500 });
   }
 }
