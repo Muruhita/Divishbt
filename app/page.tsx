@@ -564,13 +564,16 @@ export default function TavernArchive() {
                       </div>
                     </form>
 
-                    <div className="mt-12 pt-6 border-t border-red-900/50 max-w-xl">
-                      <h3 className="text-red-500 font-bold font-pixeloid-mono mb-2 flex items-center gap-2"><AlertTriangle size={18}/> Опасная зона</h3>
-                      <p className="text-sm text-gray-500 mb-4">Эта кнопка безвозвратно удалит ВСЕ записи из архива.</p>
-                      <button onClick={handleClearDatabase} className="px-6 py-2 bg-red-900/20 border border-red-500 text-red-400 font-bold rounded hover:bg-red-900/40 transition-colors">
-                        Очистить базу данных
-                      </button>
-                    </div>
+                    {/* КНОПКА ОЧИСТКИ БАЗЫ (ТОЛЬКО ДЛЯ ОВНЕРА) */}
+                    {user.role === "owner" && (
+                      <div className="mt-12 pt-6 border-t border-red-900/50 max-w-xl">
+                        <h3 className="text-red-500 font-bold font-pixeloid-mono mb-2 flex items-center gap-2"><AlertTriangle size={18}/> Опасная зона</h3>
+                        <p className="text-sm text-gray-500 mb-4">Эта кнопка безвозвратно удалит ВСЕ записи из архива.</p>
+                        <button onClick={handleClearDatabase} className="px-6 py-2 bg-red-900/20 border border-red-500 text-red-400 font-bold rounded hover:bg-red-900/40 transition-colors">
+                          Очистить базу данных
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 
