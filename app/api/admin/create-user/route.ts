@@ -8,26 +8,24 @@ export async function POST(req: Request) {
   try {
     const { username, password, account_name, role, requesterRole } = await req.json();
 
-    // Проверка иерархии
-    const roles = ["low", "high", "guardian", "creator", "owner"];
-    const reqIdx = roles.indexOf(requesterRole);
-    const newIdx = roles.indexOf(role);
+    const rolesRes = await db.execute("SELECT id, level FROM roles");
+    const rolesMap = new Map(rolesRes.rows.map(r => [r.id, r.level]));
+    
+    const reqLevel = rolesMap.get(requesterRole) as number || 0;
+    const newLevel = rolesMap.get(role) as number || 0;
 
-    if (reqIdx <= newIdx) {
-      return NextResponse.json({ error: "Недостаточно прав для создания этого ранга" }, { status: 403 });
+    if (reqLevel <= newLevel) {
+      return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
     }
 
-    // Хешируем пароль для безопасного входа
     const hashedPassword = await bcrypt.hash(password, 10);
-
     await db.execute({
       sql: "INSERT INTO users (username, password, plain_password, account_name, role) VALUES (?, ?, ?, ?, ?)",
-      args: [username, hashedPassword, password, account_name, role], // <--- password записывается в plain_password
+      args: [username, hashedPassword, password, account_name, role],
     });
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Ошибка при создании пользователя:", error);
-    return NextResponse.json({ error: "Ошибка (возможно, логин занят)" }, { status: 400 });
+    return NextResponse.json({ error: "Логин занят" }, { status: 400 });
   }
 }
