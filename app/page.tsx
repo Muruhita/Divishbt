@@ -196,11 +196,13 @@ export default function TavernArchive() {
   }, [user, currentPage, selectedCategory, searchQuery]);
 
   const userRole = roles.find(r => r.id === user?.role) || DEFAULT_ROLES.find(r => r.id === user?.role) || { level: 0, id: "guest", name: "Гость" };
+  
+  // ИСПРАВЛЕННАЯ ЛОГИКА ПРАВ
   const canEdit = user?.role === 'owner' || user?.role === 'creator' || userRole.level >= 3;
   const canDelete = user?.role === 'owner' || user?.role === 'creator' || user?.role === 'high' || userRole.level >= 1;
 
   const getRoleColor = (level: number) => {
-    if (level >= 4) return "text-owner-glow"; // Овнер
+    if (level >= 4) return "text-owner-glow";
     if (level === 3) return "text-purple-500";
     if (level === 2) return "text-blue-500";
     if (level === 1) return "text-green-500";
@@ -304,7 +306,7 @@ export default function TavernArchive() {
   };
 
   const handleClearDatabase = () => {
-    if (!user || userRole.id !== "owner") return; // Только Овнер
+    if (!user || userRole.id !== "owner") return;
     showPrompt("ВНИМАНИЕ! Это удалит ВСЕ записи навсегда. Введите слово 'УДАЛИТЬ':", async (val) => {
       if (val !== "УДАЛИТЬ") return showToast("Отменено. Слово введено неверно.", "warning");
       playSound("delete");
@@ -399,15 +401,17 @@ export default function TavernArchive() {
   const handleUpdateRole = async (id: string, name: string, level: number) => {
     playSound("save");
     const res = await fetch("/api/admin/roles", {
-      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name, level })
+      method: "PUT", headers: { "Content-Type": "application/json" }, 
+      body: JSON.stringify({ id, name, level, requesterRole: user?.role })
     });
     if (res.ok) { fetchSettings(); showToast("Уровень обновлен", "success"); }
+    else { const err = await res.json(); showToast(err.error, "error"); }
   };
 
   const handleDeleteRole = (id: string) => {
     showConfirm("Удалить уровень доступа?", async () => {
       playSound("delete");
-      const res = await fetch(`/api/admin/roles?id=${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/roles?id=${id}&requesterRole=${user?.role}`, { method: "DELETE" });
       if (res.ok) { fetchSettings(); showToast("Уровень удален", "info"); }
       else { const err = await res.json(); showToast(err.error, "error"); }
     });
@@ -425,7 +429,6 @@ export default function TavernArchive() {
     if (!user) return;
     playSound("save");
     
-    // Проверка на Овнера на фронтенде
     if (newAcc.role === "owner" && userRole.id !== "owner") {
       return showToast("Только Овнер может создать Овнера", "error");
     }
@@ -858,8 +861,13 @@ export default function TavernArchive() {
                             const newRoles = roles.map(role => role.id === r.id ? { ...role, level: parseInt(e.target.value) } : role);
                             setRoles(newRoles);
                           }} className="w-20 p-1 bg-[#160d08] border border-[#5c3a21] rounded text-center text-white" title="Уровень доступа" />
-                          <button onClick={() => handleUpdateRole(r.id, r.name, r.level)} className="text-green-500 hover:text-green-400 p-1.5 rounded active:scale-90 transition-all" title="Сохранить изменения"><Save size={16}/></button>
-                          {r.id !== "owner" && (
+                          
+                          {/* Исправленная проверка кнопки сохранения */}
+                          {(userRole.id === "owner" || userRole.level > r.level) && (
+                            <button onClick={() => handleUpdateRole(r.id, r.name, r.level)} className="text-green-500 hover:text-green-400 p-1.5 rounded active:scale-90 transition-all" title="Сохранить изменения"><Save size={16}/></button>
+                          )}
+                          
+                          {r.id !== "owner" && (userRole.id === "owner" || userRole.level > r.level) && (
                             <button onClick={() => handleDeleteRole(r.id)} className="text-red-500 hover:text-red-400 p-1.5 rounded active:scale-90 transition-all" title="Удалить роль"><Trash2 size={16}/></button>
                           )}
                         </div>
@@ -890,10 +898,9 @@ export default function TavernArchive() {
                       <div className="flex items-center gap-2"><input required={!autoUser} placeholder="Логин" value={newAcc.username} onChange={e => setNewAcc({...newAcc, username: e.target.value})} disabled={autoUser} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none disabled:opacity-50" /><label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer font-pixeloid-mono hover:text-white transition-colors"><input type="checkbox" checked={autoUser} onChange={e => setAutoUser(e.target.checked)} /> Рандом</label></div>
                       <div className="flex items-center gap-2"><input required={!autoPass} placeholder="Пароль" value={newAcc.password} onChange={e => setNewAcc({...newAcc, password: e.target.value})} disabled={autoPass} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none disabled:opacity-50" /><label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer font-pixeloid-mono hover:text-white transition-colors"><input type="checkbox" checked={autoPass} onChange={e => setAutoPass(e.target.checked)} /> Рандом</label></div>
                       
-                      {/* Отфильтрованный список ролей */}
                       <select value={newAcc.role} onChange={e => setNewAcc({...newAcc, role: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none">
                          {roles
-                           .filter(r => userRole.id === "owner" || r.level < userRole.level) // Овнер видит всё, остальные только ниже себя
+                           .filter(r => userRole.id === "owner" || r.level < userRole.level)
                            .map(r => <option key={r.id} value={r.id}>{r.name} (Ур. {r.level})</option>)
                          }
                       </select>
@@ -916,7 +923,6 @@ export default function TavernArchive() {
                                   <td className="p-3 font-mono text-[#c4b5a5]">{u.username}</td>
                                   <td className="p-3 font-mono text-red-400 bg-red-500/5">{u.plain_password || "********"}</td>
                                   <td className="p-3">
-                                    {/* Проверка иерархии для удаления */}
                                     {userRole.level > roleLevel && u.id !== user.id && (
                                       <button onClick={() => handleDeleteUser(u.id, u.account_name)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all"><Trash2 size={16} /></button>
                                     )}
