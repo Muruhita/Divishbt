@@ -8,25 +8,23 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const requesterRole = searchParams.get("role") || "low";
     
-    // Загружаем роли
     const rolesRes = await db.execute("SELECT id, level FROM roles");
     const rolesMap = new Map(rolesRes.rows.map(r => [r.id, Number(r.level)]));
-    
     const reqLevel = rolesMap.get(requesterRole) || 0;
 
-    // Загружаем всех юзеров
     const result = await db.execute("SELECT id, username, account_name, role, plain_password, avatar FROM users");
     
-    // Фильтруем по иерархии
     const filtered = result.rows.filter(u => {
+      // Скрываем Овнера от всех, кроме Овнера
+      if (u.role === 'owner' && requesterRole !== 'owner') return false;
+      
       const userLevel = rolesMap.get(u.role as string) || 0;
       return userLevel <= reqLevel; 
     });
 
     return NextResponse.json(filtered);
-  } catch (error: any) {
-    console.error("ОШИБКА ЗАГРУЗКИ СПИСКА ЮЗЕРОВ:", error);
-    return NextResponse.json({ error: error.message || "Ошибка получения списка" }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ error: "Ошибка получения списка" }, { status: 500 });
   }
 }
 
@@ -40,20 +38,24 @@ export async function DELETE(req: Request) {
 
     const rolesRes = await db.execute("SELECT id, level FROM roles");
     const rolesMap = new Map(rolesRes.rows.map(r => [r.id, Number(r.level)]));
-    
     const reqLevel = rolesMap.get(requesterRole) || 0;
 
     const targetRes = await db.execute({ sql: "SELECT role FROM users WHERE id = ?", args: [id] });
     if (targetRes.rows.length === 0) return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 });
 
-    const targetLevel = rolesMap.get(targetRes.rows[0].role as string) || 0;
+    const targetRole = targetRes.rows[0].role as string;
+    
+    // Запрещаем удалять Овнера вообще
+    if (targetRole === 'owner') return NextResponse.json({ error: "Нельзя удалить Овнера" }, { status: 403 });
 
+    const targetLevel = rolesMap.get(targetRole) || 0;
+
+    // Нельзя удалять тех, кто равен или выше по рангу
     if (reqLevel <= targetLevel) return NextResponse.json({ error: "Недостаточно прав для удаления" }, { status: 403 });
 
     await db.execute({ sql: "DELETE FROM users WHERE id = ?", args: [id] });
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error("ОШИБКА УДАЛЕНИЯ ЮЗЕРА:", error);
+  } catch (error) {
     return NextResponse.json({ error: "Ошибка при удалении" }, { status: 500 });
   }
 }
