@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
-import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, LockKeyhole, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle, Save, Tag, CheckCircle2, Info, Home, BookOpen } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, LockKeyhole, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle, Save, Tag, CheckCircle2, Info, Home, BookOpen, LayoutDashboard, FileText, ImagePlus } from "lucide-react";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
-type ArchiveItem = { id: number; title: string; category: string; description: string; symbol?: string; dangerLevel?: string; image?: string; };
-type DbArchiveItem = { id: number; title: string; category: string; description: string; symbol: string | null; danger_level: string | null; image: string | null; };
+type ArchiveItem = { id: number; title: string; category: string; description: string; symbol?: string; dangerLevel?: string; image?: string; is_draft?: number; };
+type DbArchiveItem = { id: number; title: string; category: string; description: string; symbol: string | null; danger_level: string | null; image: string | null; is_draft: number; };
 type User = { id: number; username: string; account_name: string; role: string; avatar?: string; };
 type DbUser = { id: number; username: string; account_name: string; role: string; plain_password: string | null; avatar: string | null; };
 type LogItem = { id: number; action: string; item_title: string; user_name: string; user_role: string; timestamp: string; };
@@ -14,7 +16,7 @@ type RoleItem = { id: string; name: string; level: number };
 type CategoryItem = { id: number; name: string };
 
 const DANGER_LEVELS = ["Низкий", "Средний", "Высокий", "Смертельный"];
-const INITIAL_NEW_ITEM: NewArchiveItem = { title: "", category: "Комбинации Цифр", description: "", symbol: "", dangerLevel: "Низкий", image: "" };
+const INITIAL_NEW_ITEM: NewArchiveItem = { title: "", category: "Комбинации Цифр", description: "", symbol: "", dangerLevel: "Низкий", image: "", is_draft: 0 };
 const RUNES = ["ᚠ", "ᚢ", "ᚦ", "ᚨ", "ᚱ", "ᚲ", "ᚷ", "ᚹ", "ᚺ", "ᚾ", "ᛁ", "ᛃ", "ᛈ", "ᛇ", "ᛉ", "ᛊ", "ᛏ", "ᛒ", "ᛖ", "ᛗ", "ᛚ", "ᛜ", "ᛞ", "ᛟ"];
 
 const DEFAULT_CATEGORIES = ["Комбинации Цифр", "Слова", "Термины", "Комбинации Букв", "Символика", "Картинки", "Другое"].map((name, i) => ({ id: i+1, name }));
@@ -26,8 +28,9 @@ const DEFAULT_ROLES = [
   { id: "low", name: "Лоу Стафф", level: 0 }
 ];
 
+// --- КОМПОНЕНТ КАРТОЧКИ ---
 const ArchiveCard = ({ 
-  item, canEdit, canDelete, onEdit, onDelete, onViewImage 
+  item, canEdit, canDelete, onEdit, onDelete, onViewImage, onExportPDF
 }: { 
   item: ArchiveItem; 
   canEdit: boolean; 
@@ -35,10 +38,11 @@ const ArchiveCard = ({
   onEdit: (item: ArchiveItem) => void;
   onDelete: (id: number, title: string) => void;
   onViewImage: (img: string) => void;
+  onExportPDF: (item: ArchiveItem) => void;
 }) => {
   if (!item || !item.title) return null;
   return (
-    <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.6)] hover:border-[#a37c49] hover:shadow-[0_0_20px_rgba(163,124,73,0.15)] hover:-translate-y-1.5 transition-all duration-300 group flex flex-col relative z-10 overflow-hidden">
+    <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.6)] hover:border-[#a37c49] hover:shadow-[0_0_20px_rgba(163,124,73,0.15)] hover:-translate-y-1.5 transition-all duration-300 group flex flex-col relative z-10 overflow-hidden" id={`record-${item.id}`}>
       {item.image && (
         <div className="w-full h-56 overflow-hidden border-b-2 border-[#5c3a21] cursor-pointer relative group/img flex items-center justify-center"
           style={{ backgroundColor: '#d6c5b3', backgroundImage: 'radial-gradient(#b8a38a 1px, transparent 1px)', backgroundSize: '10px 10px' }}
@@ -52,34 +56,24 @@ const ArchiveCard = ({
       <div className="p-6 flex flex-col flex-grow">
         <div className="flex justify-between items-start mb-3 relative z-10">
           <h3 className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8]">{item.title}</h3>
-          {item.symbol && <span className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8] bg-[#1c110b] px-3 py-1 rounded border border-[#5c3a21]">{item.symbol}</span>}
+          <div className="flex gap-2">
+             {item.is_draft === 1 && <span className="text-xs bg-yellow-600 text-white px-2 py-1 rounded font-bold">Черновик</span>}
+             {item.symbol && <span className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8] bg-[#1c110b] px-3 py-1 rounded border border-[#5c3a21]">{item.symbol}</span>}
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 mb-4 relative z-10">
           <span className="inline-block px-3 py-1 text-xs font-bold font-pixeloid-mono bg-[#1c110b] text-[#a37c49] rounded border border-[#5c3a21] uppercase">{item.category}</span>
           {item.dangerLevel && <span className="inline-block px-2 py-1 text-xs font-bold font-pixeloid-mono rounded border border-red-900/50 bg-red-900/20 text-red-400 uppercase">{item.dangerLevel}</span>}
           
-          {(canEdit || canDelete) && (
-            <div className="ml-auto flex items-center gap-1 relative z-[60]">
-              {canEdit && (
-                <button 
-                  type="button" 
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(item); }} 
-                  className="text-blue-400 hover:text-blue-300 bg-blue-500/10 p-1.5 rounded active:scale-90 transition-all cursor-pointer relative z-[70]"
-                >
-                  <Pencil size={16} />
-                </button>
-              )}
-              {canDelete && (
-                <button 
-                  type="button" 
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(item.id, item.title); }} 
-                  className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all cursor-pointer relative z-[70]"
-                >
-                  <Trash2 size={16} />
-                </button>
-              )}
-            </div>
-          )}
+          <div className="ml-auto flex items-center gap-1 relative z-[60]">
+            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onExportPDF(item); }} className="text-green-400 hover:text-green-300 bg-green-500/10 p-1.5 rounded active:scale-90 transition-all cursor-pointer" title="Экспорт в PDF"><FileText size={16} /></button>
+            {canEdit && (
+              <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(item); }} className="text-blue-400 hover:text-blue-300 bg-blue-500/10 p-1.5 rounded active:scale-90 transition-all cursor-pointer"><Pencil size={16} /></button>
+            )}
+            {canDelete && (
+              <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(item.id, item.title); }} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all cursor-pointer"><Trash2 size={16} /></button>
+            )}
+          </div>
         </div>
         <div className="text-[#c4b5a5] font-sans leading-relaxed flex-grow relative z-10 prose prose-invert prose-sm max-w-none">
           <ReactMarkdown>{item.description}</ReactMarkdown>
@@ -138,11 +132,15 @@ export default function TavernArchive() {
   const [autoUser, setAutoUser] = useState(false);
   const [autoPass, setAutoPass] = useState(false);
   const [bulkJson, setBulkJson] = useState(""); 
-  const [adminTab, setAdminTab] = useState<"archive" | "bulk" | "users" | "diag" | "logs" | "categories" | "roles">("archive");
+  
+  const [adminTab, setAdminTab] = useState<"dashboard" | "archive" | "bulk" | "users" | "diag" | "logs" | "categories" | "roles" | "media">("dashboard");
   
   const [usersList, setUsersList] = useState<DbUser[]>([]);
   const [logsList, setLogsList] = useState<LogItem[]>([]);
   const [diagResult, setDiagResult] = useState<{ status: string, latency?: number, message: string } | null>(null);
+  
+  const [stats, setStats] = useState({ archives: 0, users: 0, categories: 0 });
+  const [mediaList, setMediaList] = useState<{ id: number, title: string, image: string }[]>([]);
 
   const [newCatName, setNewCatName] = useState("");
   const [newRoleName, setNewRoleName] = useState("");
@@ -222,14 +220,14 @@ export default function TavernArchive() {
 
   const fetchArchive = async (page = 1, cat = selectedCategory, search = searchQuery) => {
     try {
-      const res = await fetch(`/api/archive?page=${page}&limit=${LIMIT}&category=${encodeURIComponent(cat)}&search=${encodeURIComponent(search)}`);
+      const res = await fetch(`/api/archive?page=${page}&limit=${LIMIT}&category=${encodeURIComponent(cat)}&search=${encodeURIComponent(search)}&role=${user?.role || 'guest'}`);
       const result = await res.json();
       const items = result.items || [];
       
       const formatted = (items as DbArchiveItem[]).map((item) => ({
         id: item.id, title: item.title, category: item.category, description: item.description,
         symbol: item.symbol || undefined, dangerLevel: item.danger_level || undefined,
-        image: item.image || undefined
+        image: item.image || undefined, is_draft: item.is_draft
       }));
       
       setData(formatted);
@@ -323,10 +321,7 @@ export default function TavernArchive() {
     const res = await fetch("/api/user/update", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
-        userId: user.id, 
-        oldPassword: oldPass, 
-        newPassword: newPass, 
-        avatar: user.avatar,
+        userId: user.id, oldPassword: oldPass, newPassword: newPass, avatar: user.avatar,
         newUsername: newUsername !== user.username ? newUsername : undefined,
         newAccountName: newAccountName !== user.account_name ? newAccountName : undefined
       })
@@ -336,7 +331,6 @@ export default function TavernArchive() {
     if (res.ok) {
       showToast("Профиль успешно обновлен!", "success");
       setOldPass(""); setNewPass("");
-      
       const updatedUser = { ...user, username: newUsername || user.username, account_name: newAccountName || user.account_name };
       setUser(updatedUser);
       const saved = JSON.parse(localStorage.getItem("tavern_session")!);
@@ -354,6 +348,27 @@ export default function TavernArchive() {
     }
     const reader = new FileReader();
     reader.onloadend = () => setUser(prev => prev ? { ...prev, avatar: reader.result as string } : null);
+    reader.readAsDataURL(file);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, index?: number) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      showToast("Картинка должна быть меньше 2МБ!", "warning");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      if (index !== undefined) {
+        const updated = [...newItems];
+        updated[index].image = base64;
+        setNewItems(updated);
+      } else if (editingItem) {
+        setEditingItem({ ...editingItem, image: base64 });
+      }
+    };
     reader.readAsDataURL(file);
   };
 
@@ -463,8 +478,7 @@ export default function TavernArchive() {
   const handleUpdateRole = async (id: string, name: string, level: number) => {
     playSound("save");
     const res = await fetch("/api/admin/roles", {
-      method: "PUT", headers: { "Content-Type": "application/json" }, 
-      body: JSON.stringify({ id, name, level, requesterRole: user?.role })
+      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name, level, requesterRole: user?.role })
     });
     if (res.ok) { fetchSettings(); showToast("Уровень обновлен", "success"); }
     else { const err = await res.json(); showToast(err.error, "error"); }
@@ -531,6 +545,49 @@ export default function TavernArchive() {
     if (res.ok) setLogsList(await res.json());
   };
 
+  const fetchStats = async () => {
+    const res = await fetch("/api/admin/stats");
+    if (res.ok) setStats(await res.json());
+  };
+
+  const fetchMedia = async () => {
+    const res = await fetch("/api/admin/images");
+    if (res.ok) setMediaList(await res.json());
+  };
+
+  const handleDeleteMedia = (id: number) => {
+    showConfirm("Удалить эту картинку из базы?", async () => {
+      const res = await fetch(`/api/admin/images?id=${id}`, { method: "DELETE" });
+      if (res.ok) {
+        fetchMedia();
+        showToast("Картинка удалена", "success");
+      } else {
+        showToast("Ошибка удаления", "error");
+      }
+    });
+  };
+
+  const handleExportPDF = (item: ArchiveItem) => {
+    const input = document.getElementById(`record-${item.id}`);
+    if (!input) return;
+    
+    const buttons = input.querySelectorAll('button');
+    buttons.forEach(b => (b as HTMLElement).style.display = 'none');
+
+    html2canvas(input, { scale: 2, useCORS: true, backgroundColor: "#2e1b13" }).then((canvas) => {
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "px",
+        format: [canvas.width, canvas.height]
+      });
+      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+      pdf.save(`${item.title}.pdf`);
+      
+      buttons.forEach(b => (b as HTMLElement).style.display = '');
+    });
+  };
+
   const handleExport = async () => {
     playSound("click");
     try {
@@ -570,8 +627,12 @@ export default function TavernArchive() {
   };
 
   useEffect(() => {
-    if (view === "admin" && adminTab === "users") fetchUsers();
-    if (view === "admin" && adminTab === "logs") fetchLogs();
+    if (view === "admin") {
+      if (adminTab === "users") fetchUsers();
+      if (adminTab === "logs") fetchLogs();
+      if (adminTab === "dashboard") fetchStats();
+      if (adminTab === "media") fetchMedia();
+    }
   }, [view, adminTab]);
 
   if (isCheckingAuth) return <main className="min-h-screen bg-[#160d08]"></main>;
@@ -579,7 +640,6 @@ export default function TavernArchive() {
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col">
       
-      {/* КУРСОР (С защитой pointer-events-none) */}
       <div ref={cursorDotRef} className="custom-cursor-dot hidden md:block pointer-events-none" />
 
       <div className="pixel-stars pointer-events-none"></div>
@@ -647,7 +707,6 @@ export default function TavernArchive() {
         </div>
       )}
 
-      {/* МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ */}
       {editingItem && (
         <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm" onClick={() => setEditingItem(null)}>
           <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl w-full max-w-2xl relative animate-smooth-pop" onClick={(e) => e.stopPropagation()}>
@@ -664,13 +723,18 @@ export default function TavernArchive() {
                 </select>
               </div>
               <textarea required placeholder="Описание (Markdown)" value={editingItem.description} onChange={e => setEditingItem({...editingItem, description: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white h-32 font-mono text-sm focus:border-[#a37c49] outline-none" />
+              
+              <label className="flex items-center gap-2 text-sm text-[#a37c49] font-pixeloid-mono cursor-pointer mt-4 mb-4">
+                <input type="checkbox" checked={editingItem.is_draft === 1} onChange={e => setEditingItem({...editingItem, is_draft: e.target.checked ? 1 : 0})} />
+                Сохранить как черновик (скрыто от пользователей)
+              </label>
+
               <button type="submit" className="px-6 py-2 bg-[#5c3a21] text-white font-bold rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Сохранить</button>
             </form>
           </div>
         </div>
       )}
 
-      {/* МОДАЛЬНОЕ ОКНО ПРОФИЛЯ */}
       {showProfile && user && (
         <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowProfile(false)}>
           <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl w-full max-w-md relative animate-smooth-pop" onClick={(e) => e.stopPropagation()}>
@@ -817,13 +881,9 @@ export default function TavernArchive() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full text-left">
                     {data.length > 0 ? data.map((item) => (
                       <ArchiveCard 
-                        key={item.id} 
-                        item={item} 
-                        canEdit={canEdit} 
-                        canDelete={canDelete} 
-                        onEdit={(item) => setEditingItem(item)} 
-                        onDelete={handleDeleteItem} 
-                        onViewImage={(img) => setSelectedImage(img)} 
+                        key={item.id} item={item} canEdit={canEdit} canDelete={canDelete} 
+                        onEdit={(item) => setEditingItem(item)} onDelete={handleDeleteItem} 
+                        onViewImage={(img) => setSelectedImage(img)} onExportPDF={handleExportPDF}
                       />
                     )) : <p className="text-center w-full col-span-2 text-[#8c6e52]">Ничего не найдено...</p>}
                   </div>
@@ -847,13 +907,9 @@ export default function TavernArchive() {
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {data.length > 0 ? data.map((item) => (
                       <ArchiveCard 
-                        key={item.id} 
-                        item={item} 
-                        canEdit={canEdit} 
-                        canDelete={canDelete} 
-                        onEdit={(item) => setEditingItem(item)} 
-                        onDelete={handleDeleteItem} 
-                        onViewImage={(img) => setSelectedImage(img)} 
+                        key={item.id} item={item} canEdit={canEdit} canDelete={canDelete} 
+                        onEdit={(item) => setEditingItem(item)} onDelete={handleDeleteItem} 
+                        onViewImage={(img) => setSelectedImage(img)} onExportPDF={handleExportPDF}
                       />
                     )) : <p className="text-center w-full col-span-2 text-[#8c6e52]">В этой категории пока нет записей...</p>}
                  </div>
@@ -875,9 +931,11 @@ export default function TavernArchive() {
                 </div>
 
                 <div className="flex flex-wrap gap-4 mb-8 font-pixeloid-mono text-sm">
+                  <button onClick={() => setAdminTab("dashboard")} className={`px-4 py-2 rounded transition-all active:scale-95 flex items-center gap-2 ${adminTab === 'dashboard' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}><LayoutDashboard size={16}/> Дашборд</button>
                   <button onClick={() => setAdminTab("archive")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'archive' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Добавить</button>
                   <button onClick={() => setAdminTab("bulk")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'bulk' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Импорт</button>
                   <button onClick={() => setAdminTab("users")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'users' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Аккаунты</button>
+                  <button onClick={() => setAdminTab("media")} className={`px-4 py-2 rounded transition-all active:scale-95 flex items-center gap-2 ${adminTab === 'media' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}><ImagePlus size={16}/> Медиа</button>
                   
                   {userRole.level >= 2 && (
                     <button onClick={() => setAdminTab("categories")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'categories' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Категории</button>
@@ -891,6 +949,26 @@ export default function TavernArchive() {
                   )}
                   <button onClick={() => setAdminTab("diag")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'diag' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Диагностика</button>
                 </div>
+
+                {adminTab === "dashboard" && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-smooth-fade-up">
+                    <div className="bg-[#1c110b] p-6 rounded-xl border border-[#5c3a21] text-center shadow-lg">
+                      <ScrollText size={40} className="mx-auto text-[#a37c49] mb-4" />
+                      <h3 className="text-3xl font-bold text-[#e6d5b8]">{stats.archives}</h3>
+                      <p className="text-[#8c6e52] font-pixeloid-mono mt-2">Записей в архиве</p>
+                    </div>
+                    <div className="bg-[#1c110b] p-6 rounded-xl border border-[#5c3a21] text-center shadow-lg">
+                      <Users size={40} className="mx-auto text-[#a37c49] mb-4" />
+                      <h3 className="text-3xl font-bold text-[#e6d5b8]">{stats.users}</h3>
+                      <p className="text-[#8c6e52] font-pixeloid-mono mt-2">Пользователей</p>
+                    </div>
+                    <div className="bg-[#1c110b] p-6 rounded-xl border border-[#5c3a21] text-center shadow-lg">
+                      <Tag size={40} className="mx-auto text-[#a37c49] mb-4" />
+                      <h3 className="text-3xl font-bold text-[#e6d5b8]">{stats.categories}</h3>
+                      <p className="text-[#8c6e52] font-pixeloid-mono mt-2">Категорий</p>
+                    </div>
+                  </div>
+                )}
 
                 {adminTab === "archive" && (
                   <div className="animate-smooth-fade-up">
@@ -910,6 +988,23 @@ export default function TavernArchive() {
                             </div>
                             
                             <textarea required placeholder="Описание (Markdown)" value={item.description} onChange={e => { const upd = [...newItems]; upd[index].description = e.target.value; setNewItems(upd); }} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white h-20 focus:border-[#a37c49] outline-none transition-colors" />
+                            
+                            <label className="flex items-center gap-2 text-sm text-[#a37c49] font-pixeloid-mono cursor-pointer">
+                              <input type="checkbox" checked={item.is_draft === 1} onChange={e => { const upd = [...newItems]; upd[index].is_draft = e.target.checked ? 1 : 0; setNewItems(upd); }} />
+                              Сохранить как черновик (скрыто от пользователей)
+                            </label>
+
+                            <div className="mt-2 border-t border-[#5c3a21] pt-3">
+                              <label className="block text-xs font-pixeloid-mono text-[#a37c49] mb-2 flex items-center gap-1"><ImageIcon size={14}/> Картинка (до 2МБ)</label>
+                              {!item.image ? (
+                                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, index)} className="w-full text-sm text-[#8c6e52] file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-[#3d2617] file:text-[#e6d5b8] hover:file:bg-[#5c3a21] file:cursor-pointer" />
+                              ) : (
+                                <div className="relative inline-block border-2 border-[#5c3a21] rounded-lg overflow-hidden" style={{ backgroundColor: '#d6c5b3' }}>
+                                  <img src={item.image} alt="Preview" className="h-32 object-contain p-2" />
+                                  <button type="button" onClick={() => { const upd = [...newItems]; upd[index].image = ""; setNewItems(upd); }} className="absolute top-1 right-1 bg-red-600/80 hover:bg-red-600 text-white p-1 rounded-full transition-colors"><X size={14} /></button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -931,6 +1026,24 @@ export default function TavernArchive() {
                   </div>
                 )}
 
+                {adminTab === "media" && (
+                  <div className="animate-smooth-fade-up w-full">
+                    <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4">Галерея картинок</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {mediaList.map(m => (
+                        <div key={m.id} className="bg-[#1c110b] border border-[#5c3a21] rounded-lg p-2 relative group">
+                          <img src={m.image} alt={m.title} className="w-full h-32 object-cover rounded" />
+                          <div className="mt-2 text-xs text-center truncate">{m.title}</div>
+                          <button onClick={() => handleDeleteMedia(m.id)} className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={14}/></button>
+                        </div>
+                      ))}
+                      {mediaList.length === 0 && <p className="col-span-full text-center text-[#8c6e52] py-8">Нет загруженных картинок</p>}
+                    </div>
+                  </div>
+                )}
+
+                {/* ... (остальные вкладки: categories, roles, bulk, users, logs, diag остаются как были) ... */}
+                
                 {adminTab === "categories" && userRole.level >= 2 && (
                   <div className="animate-smooth-fade-up max-w-xl">
                     <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Tag size={18}/> Управление категориями</h3>
