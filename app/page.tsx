@@ -152,6 +152,8 @@ export default function TavernArchive() {
   const [loginError, setLoginError] = useState("");
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isBookOpening, setIsBookOpening] = useState(false);
+  const [isBookClosing, setIsBookClosing] = useState(false);
+  const [startBookCloseAnim, setStartBookCloseAnim] = useState(false);
 
   const [newAccountName, setNewAccountName] = useState("");
   const [newUsername, setNewUsername] = useState("");
@@ -376,10 +378,29 @@ export default function TavernArchive() {
 
   const handleLogout = () => {
     playSound("click");
-    setUser(null);
-    setFavorites([]);
-    localStorage.removeItem("tavern_session");
-    setView("home");
+    
+    // Включаем анимацию закрытия книги
+    setIsBookClosing(true);
+    setStartBookCloseAnim(false); 
+    
+    setLoginUser(""); 
+    setLoginPass("");
+    setLoginError("");
+
+    // Даем React время отрендерить открытую книгу, затем запускаем закрытие
+    setTimeout(() => {
+      setStartBookCloseAnim(true);
+    }, 50);
+
+    // Ждем окончания CSS-анимации (1.5s), затем разлогиниваем
+    setTimeout(() => {
+      setUser(null);
+      setFavorites([]);
+      localStorage.removeItem("tavern_session");
+      setView("home");
+      setIsBookClosing(false);
+      setStartBookCloseAnim(false);
+    }, 1600);
   };
 
   const openProfile = () => {
@@ -834,8 +855,8 @@ export default function TavernArchive() {
         </div>
       )}
 
-      {!user && (
-        <div className={`fixed inset-0 z-[999] flex items-center justify-center overflow-hidden book-container ${isBookOpening ? 'book-open' : ''}`}>
+      {(!user || isBookClosing) && (
+        <div className={`fixed inset-0 z-[999] flex items-center justify-center overflow-hidden book-container ${(isBookOpening || (isBookClosing && !startBookCloseAnim)) ? 'book-open' : ''}`}>
           <div className="absolute inset-0 bg-[#0a0705]"></div>
 
           <div className="book-cover-left flex items-center justify-end pr-4">
