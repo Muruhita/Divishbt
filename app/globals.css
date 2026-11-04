@@ -197,3 +197,20 @@ body {
   animation: content-fade-in 1s ease-out forwards;
   opacity: 0;
 }
+
+/* --- СВЕЧЕНИЕ ОВНЕРА --- */
+@keyframes owner-glow {
+  0%, 100% { text-shadow: 0 0 10px rgba(168, 85, 247, 0.8), 0 0 20px rgba(168, 85, 247, 0.4); }
+  50% { text-shadow: 0 0 20px rgba(168, 85, 247, 1), 0 0 40px rgba(168, 85, 247, 0.6); }
+}
+
+.text-owner-glow {
+  color: #c084fc; /* Светло-фиолетовый */
+  animation: owner-glow 2s infinite;
+  font-weight: bold;
+}
+
+.owner-border {
+  border-color: #a855f7 !important;
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.3);
+}
