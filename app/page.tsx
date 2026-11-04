@@ -2,25 +2,18 @@
 
 import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
-import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, LockKeyhole, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, LockKeyhole, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle, Save, Tag } from "lucide-react";
 
 type ArchiveItem = { id: number; title: string; category: string; description: string; symbol?: string; dangerLevel?: string; image?: string; };
 type DbArchiveItem = { id: number; title: string; category: string; description: string; symbol: string | null; danger_level: string | null; image: string | null; };
-type User = { id: number; username: string; account_name: string; role: "owner" | "creator" | "guardian" | "high" | "low"; avatar?: string; };
+type User = { id: number; username: string; account_name: string; role: string; avatar?: string; };
 type DbUser = { id: number; username: string; account_name: string; role: string; plain_password: string | null; avatar: string | null; };
 type LogItem = { id: number; action: string; item_title: string; user_name: string; user_role: string; timestamp: string; };
 type NewArchiveItem = Omit<ArchiveItem, "id">;
+type RoleItem = { id: string; name: string; level: number };
+type CategoryItem = { id: number; name: string };
 
-const CATEGORIES = ["Все", "Комбинации Цифр", "Слова", "Термины", "Комбинации Букв", "Символика", "Картинки", "Другое"];
-
-const ROLES_MAP: Record<string, { name: string, level: number, color: string }> = {
-  owner: { name: "Овнер (Dev)", level: 4, color: "text-red-500 border-red-500" },
-  creator: { name: "Создатель Сервера", level: 3, color: "text-purple-500 border-purple-500" },
-  guardian: { name: "Хранитель", level: 2, color: "text-blue-500 border-blue-500" },
-  high: { name: "Хай Стафф", level: 1, color: "text-green-500 border-green-500" },
-  low: { name: "Лоу Стафф", level: 0, color: "text-gray-400 border-gray-400" },
-};
-
+const DANGER_LEVELS = ["Низкий", "Средний", "Высокий", "Смертельный"];
 const INITIAL_NEW_ITEM: NewArchiveItem = { title: "", category: "Комбинации Цифр", description: "", symbol: "", dangerLevel: "Низкий", image: "" };
 const RUNES = ["ᚠ", "ᚢ", "ᚦ", "ᚨ", "ᚱ", "ᚲ", "ᚷ", "ᚹ", "ᚺ", "ᚾ", "ᛁ", "ᛃ", "ᛈ", "ᛇ", "ᛉ", "ᛊ", "ᛏ", "ᛒ", "ᛖ", "ᛗ", "ᛚ", "ᛜ", "ᛞ", "ᛟ"];
 
@@ -34,6 +27,10 @@ export default function TavernArchive() {
   const [totalPages, setTotalPages] = useState(1);
   const LIMIT = 20;
 
+  // Динамические настройки
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
+  const [roles, setRoles] = useState<RoleItem[]>([]);
+  
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<ArchiveItem | null>(null);
   const [showProfile, setShowProfile] = useState(false);
@@ -44,22 +41,28 @@ export default function TavernArchive() {
   const [loginError, setLoginError] = useState("");
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
+  // Профиль
   const [newUsername, setNewUsername] = useState("");
   const [newPass, setNewPass] = useState("");
   const [oldPass, setOldPass] = useState("");
   const [profileMsg, setProfileMsg] = useState("");
 
+  // Админка
   const [newItems, setNewItems] = useState<NewArchiveItem[]>([{ ...INITIAL_NEW_ITEM }]);
   const [newAcc, setNewAcc] = useState({ account_name: "", username: "", password: "", role: "low" });
   const [autoUser, setAutoUser] = useState(false);
   const [autoPass, setAutoPass] = useState(false);
-  
   const [bulkJson, setBulkJson] = useState(""); 
-  const [adminTab, setAdminTab] = useState<"archive" | "bulk" | "users" | "diag" | "logs">("archive");
+  const [adminTab, setAdminTab] = useState<"archive" | "bulk" | "users" | "diag" | "logs" | "categories" | "roles">("archive");
   
   const [usersList, setUsersList] = useState<DbUser[]>([]);
   const [logsList, setLogsList] = useState<LogItem[]>([]);
   const [diagResult, setDiagResult] = useState<{ status: string, latency?: number, message: string } | null>(null);
+
+  // Формы настроек
+  const [newCatName, setNewCatName] = useState("");
+  const [newRoleName, setNewRoleName] = useState("");
+  const [newRoleLevel, setNewRoleLevel] = useState(1);
 
   const [soundEnabled, setSoundEnabled] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -83,7 +86,7 @@ export default function TavernArchive() {
     if (type === "click") {
       osc.type = "triangle"; osc.frequency.setValueAtTime(150, now); osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
       gain.gain.setValueAtTime(0.5, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-      osc.start(now); osc.stop(now + 0.1);
+      osc.start(now); osc.stop(now + 0.3);
     } else if (type === "save" || type === "success") {
       osc.type = "sine"; osc.frequency.setValueAtTime(440, now); osc.frequency.exponentialRampToValueAtTime(880, now + 0.2);
       gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
@@ -93,6 +96,15 @@ export default function TavernArchive() {
       gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
       osc.start(now); osc.stop(now + 0.3);
     }
+  };
+
+  const fetchSettings = async () => {
+    try {
+      const catRes = await fetch('/api/admin/categories');
+      if (catRes.ok) setCategories(await catRes.json());
+      const roleRes = await fetch('/api/admin/roles');
+      if (roleRes.ok) setRoles(await roleRes.json());
+    } catch (e) { console.error("Ошибка загрузки настроек", e); }
   };
 
   const fetchArchive = async (page = 1, cat = selectedCategory, search = searchQuery) => {
@@ -111,7 +123,6 @@ export default function TavernArchive() {
       setTotalPages(Math.ceil((result.total || 0) / LIMIT));
       setCurrentPage(page);
     } catch (error) {
-      console.error("Ошибка загрузки", error);
       setData([]);
     }
   };
@@ -129,11 +140,14 @@ export default function TavernArchive() {
       finally { setIsCheckingAuth(false); }
     };
     checkSession();
+    fetchSettings();
   }, []);
 
   useEffect(() => {
     if (user) fetchArchive(currentPage, selectedCategory, searchQuery);
   }, [user, currentPage, selectedCategory, searchQuery]);
+
+  const userRole = roles.find(r => r.id === user?.role);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,16 +196,12 @@ export default function TavernArchive() {
     const res = await fetch("/api/user/update", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
-        userId: user.id, 
-        oldPassword: oldPass, 
-        newPassword: newPass, 
-        avatar: user.avatar,
+        userId: user.id, oldPassword: oldPass, newPassword: newPass, avatar: user.avatar,
         newUsername: newUsername !== user.username ? newUsername : undefined
       })
     });
 
     const data = await res.json();
-
     if (res.ok) {
       setProfileMsg("Профиль обновлен!");
       setOldPass(""); setNewPass("");
@@ -272,6 +282,51 @@ export default function TavernArchive() {
     } else { alert("Ошибка при обновлении"); }
   };
 
+  // --- УПРАВЛЕНИЕ КАТЕГОРИЯМИ ---
+  const handleAddCategory = async () => {
+    if (!newCatName.trim()) return;
+    playSound("save");
+    const res = await fetch("/api/admin/categories", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: newCatName })
+    });
+    if (res.ok) { setNewCatName(""); fetchSettings(); }
+    else { alert("Ошибка при добавлении категории"); }
+  };
+
+  const handleDeleteCategory = async (id: number) => {
+    if (!confirm("Удалить категорию?")) return;
+    playSound("delete");
+    const res = await fetch(`/api/admin/categories?id=${id}`, { method: "DELETE" });
+    if (res.ok) fetchSettings();
+  };
+
+  // --- УПРАВЛЕНИЕ РОЛЯМИ ---
+  const handleAddRole = async () => {
+    if (!newRoleName.trim()) return;
+    playSound("save");
+    const res = await fetch("/api/admin/roles", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: newRoleName, level: newRoleLevel })
+    });
+    if (res.ok) { setNewRoleName(""); setNewRoleLevel(1); fetchSettings(); }
+    else { alert("Ошибка при добавлении роли"); }
+  };
+
+  const handleUpdateRole = async (id: string, name: string, level: number) => {
+    playSound("save");
+    const res = await fetch("/api/admin/roles", {
+      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name, level })
+    });
+    if (res.ok) fetchSettings();
+  };
+
+  const handleDeleteRole = async (id: string) => {
+    if (!confirm("Удалить уровень доступа?")) return;
+    playSound("delete");
+    const res = await fetch(`/api/admin/roles?id=${id}`, { method: "DELETE" });
+    if (res.ok) fetchSettings();
+    else { const err = await res.json(); alert(err.error); }
+  };
+
   const generateRandom = (length = 15) => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
     let result = "";
@@ -293,7 +348,7 @@ export default function TavernArchive() {
 
     if (res.ok) {
       alert(`Аккаунт создан!\nЛогин: ${finalUsername}\nПароль: ${finalPassword}`);
-      setNewAcc({ account_name: "", username: "", password: "", role: "low" });
+      setNewAcc({ account_name: "", username: "", password: "", role: roles[roles.length - 1]?.id || "low" });
       setAutoUser(false); setAutoPass(false); fetchUsers();
     } else { const err = await res.json(); alert(err.error); }
   };
@@ -340,15 +395,9 @@ export default function TavernArchive() {
       const parsed = JSON.parse(bulkJson);
       if (!Array.isArray(parsed)) throw new Error("JSON должен быть массивом");
       
-      const itemsWithAuthor = parsed.map((item: any) => ({ 
-        ...item, 
-        authorName: user.account_name, 
-        authorRole: user.role 
-      }));
-
+      const itemsWithAuthor = parsed.map((item: any) => ({ ...item, authorName: user.account_name, authorRole: user.role }));
       const res = await fetch("/api/archive", {
-        method: "POST", headers: { "Content-Type": "application/json" }, 
-        body: JSON.stringify(itemsWithAuthor)
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(itemsWithAuthor)
       });
       
       if (res.ok) {
@@ -356,7 +405,7 @@ export default function TavernArchive() {
         alert(`Успешно добавлено ${result.count} записей!`);
         setBulkJson(""); fetchArchive(1);
       } else { alert("Ошибка при импорте"); }
-    } catch (e) { alert("Ошибка формата JSON. Проверьте синтаксис."); }
+    } catch (e) { alert("Ошибка формата JSON."); }
   };
 
   useEffect(() => {
@@ -364,10 +413,8 @@ export default function TavernArchive() {
     if (view === "admin" && adminTab === "logs") fetchLogs();
   }, [view, adminTab]);
 
-  // Упрощенная карточка без проблемной анимации opacity
   const ArchiveCard = ({ item }: { item: ArchiveItem }) => {
-    if (!item || !item.title) return null; // Защита от пустых записей
-
+    if (!item || !item.title) return null;
     return (
       <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.6)] hover:border-[#a37c49] hover:shadow-[0_0_20px_rgba(163,124,73,0.15)] hover:-translate-y-1.5 transition-all duration-300 group flex flex-col relative z-10 overflow-hidden">
         {item.image && (
@@ -389,14 +436,13 @@ export default function TavernArchive() {
             <span className="inline-block px-3 py-1 text-xs font-bold font-pixeloid-mono bg-[#1c110b] text-[#a37c49] rounded border border-[#5c3a21] uppercase">{item.category}</span>
             {item.dangerLevel && <span className="inline-block px-2 py-1 text-xs font-bold font-pixeloid-mono rounded border border-red-900/50 bg-red-900/20 text-red-400 uppercase">{item.dangerLevel}</span>}
             
-            {user && (user.role === "owner" || user.role === "creator") && (
+            {userRole && userRole.level >= 1 && (
               <div className="ml-auto flex items-center gap-1">
-                <button onClick={() => setEditingItem(item)} className="text-blue-400 hover:text-blue-300 bg-blue-500/10 p-1.5 rounded active:scale-90 transition-all"><Pencil size={16} /></button>
+                {userRole.level >= 3 && (
+                  <button onClick={() => setEditingItem(item)} className="text-blue-400 hover:text-blue-300 bg-blue-500/10 p-1.5 rounded active:scale-90 transition-all"><Pencil size={16} /></button>
+                )}
                 <button onClick={() => handleDeleteItem(item.id, item.title)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all"><Trash2 size={16} /></button>
               </div>
-            )}
-            {user && user.role === "high" && (
-              <button onClick={() => handleDeleteItem(item.id, item.title)} className="ml-auto text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all"><Trash2 size={16} /></button>
             )}
           </div>
           <div className="text-[#c4b5a5] font-sans leading-relaxed flex-grow relative z-10 prose prose-invert prose-sm max-w-none">
@@ -411,7 +457,6 @@ export default function TavernArchive() {
 
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col">
-      
       <div className="pixel-stars"></div>
       <div className="fog-container"><div className="fog-layer"></div><div className="fog-layer"></div></div>
       
@@ -436,6 +481,7 @@ export default function TavernArchive() {
         </div>
       )}
 
+      {/* МОДАЛКА РЕДАКТИРОВАНИЯ */}
       {editingItem && (
         <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl w-full max-w-2xl relative animate-smooth-pop">
@@ -443,7 +489,17 @@ export default function TavernArchive() {
             <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49] mb-6">Редактировать</h2>
             <form onSubmit={handleUpdateItem} className="space-y-4">
               <input required placeholder="Название" value={editingItem.title} onChange={e => setEditingItem({...editingItem, title: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white" />
-              <textarea required placeholder="Описание (Markdown)" value={editingItem.description} onChange={e => setEditingItem({...editingItem, description: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white h-32 font-mono text-sm" />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <select value={editingItem.category} onChange={e => setEditingItem({...editingItem, category: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none">
+                  {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                </select>
+                <select value={editingItem.dangerLevel || "Низкий"} onChange={e => setEditingItem({...editingItem, dangerLevel: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none">
+                  {DANGER_LEVELS.map(l => <option key={l} value={l}>Уровень: {l}</option>)}
+                </select>
+              </div>
+
+              <textarea required placeholder="Описание (Markdown)" value={editingItem.description} onChange={e => setEditingItem({...editingItem, description: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white h-32 font-mono text-sm focus:border-[#a37c49] outline-none" />
               <button type="submit" className="px-6 py-2 bg-[#5c3a21] text-white font-bold rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Сохранить</button>
             </form>
           </div>
@@ -512,9 +568,9 @@ export default function TavernArchive() {
               </div>
               <div className="flex flex-col text-right pr-2">
                 <span className="text-sm font-bold font-pixeloid-mono">{user.account_name}</span>
-                <span className={`text-xs font-bold font-pixeloid-mono ${ROLES_MAP[user.role]?.color.split(' ')[0]}`}>{ROLES_MAP[user.role]?.name}</span>
+                <span className={`text-xs font-bold font-pixeloid-mono text-[#a37c49]`}>{userRole?.name || user.role}</span>
               </div>
-              {ROLES_MAP[user.role]?.level >= 1 && (
+              {userRole && userRole.level >= 1 && (
                 <button onClick={(e) => { e.stopPropagation(); setView("admin"); }} className="p-2 bg-[#1c110b] rounded hover:bg-[#a37c49] hover:text-[#160d08] active:scale-90 transition-all" title="Админ-панель"><Settings size={18} /></button>
               )}
               <button onClick={(e) => { e.stopPropagation(); handleLogout(); }} className="p-2 text-red-400 hover:bg-red-500/20 rounded active:scale-90 transition-all" title="Выйти"><LogOut size={18} /></button>
@@ -531,9 +587,7 @@ export default function TavernArchive() {
                 <h2 className="text-4xl font-bold font-pixeloid-mono text-[#a37c49] mb-6">Запретный Архив</h2>
                 <div className="relative w-full max-w-2xl mb-8 group">
                   <input 
-                    type="text" 
-                    placeholder="Поиск..." 
-                    value={searchQuery} 
+                    type="text" placeholder="Поиск..." value={searchQuery} 
                     onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} 
                     className="w-full p-4 pl-12 bg-[#2e1b13] border-2 border-[#5c3a21] rounded-lg text-[#e6d5b8] font-pixeloid-mono focus:border-[#a37c49] transition-colors shadow-lg" 
                   />
@@ -555,13 +609,18 @@ export default function TavernArchive() {
               <div className="animate-smooth-fade-up w-full text-left">
                  <button onClick={() => setView("home")} className="mb-6 flex items-center gap-2 text-[#8c6e52] hover:text-[#a37c49] transition-colors group"><ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform"/> На главную</button>
                  <div className="flex flex-wrap gap-2 mb-8">
-                    {CATEGORIES.map(c => (
+                    <button 
+                      onClick={() => { setSelectedCategory("Все"); setCurrentPage(1); }} 
+                      className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 ${selectedCategory === "Все" ? 'bg-[#a37c49] text-[#160d08] border-[#a37c49] shadow-[0_0_15px_rgba(163,124,73,0.3)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-[#a37c49] hover:text-[#e6d5b8]'}`}
+                    >
+                      Все
+                    </button>
+                    {categories.map(c => (
                       <button 
-                        key={c} 
-                        onClick={() => { setSelectedCategory(c); setCurrentPage(1); }} 
-                        className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 ${selectedCategory === c ? 'bg-[#a37c49] text-[#160d08] border-[#a37c49] shadow-[0_0_15px_rgba(163,124,73,0.3)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-[#a37c49] hover:text-[#e6d5b8]'}`}
+                        key={c.id} onClick={() => { setSelectedCategory(c.name); setCurrentPage(1); }} 
+                        className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 ${selectedCategory === c.name ? 'bg-[#a37c49] text-[#160d08] border-[#a37c49] shadow-[0_0_15px_rgba(163,124,73,0.3)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-[#a37c49] hover:text-[#e6d5b8]'}`}
                       >
-                        {c}
+                        {c.name}
                       </button>
                     ))}
                  </div>
@@ -579,23 +638,33 @@ export default function TavernArchive() {
               </div>
             )}
 
-            {view === "admin" && ROLES_MAP[user.role]?.level >= 1 && (
+            {view === "admin" && userRole && userRole.level >= 1 && (
               <div className="animate-smooth-fade-up w-full bg-[#2e1b13] p-8 rounded-xl border-double border-4 border-[#5c3a21]">
                 <div className="flex justify-between items-center mb-8 border-b border-[#5c3a21] pb-4">
                    <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49]">Панель Управления</h2>
                    <button onClick={() => setView("home")} className="text-sm font-pixeloid-mono text-[#8c6e52] hover:text-white active:scale-95 transition-all">На главную</button>
                 </div>
 
-                <div className="flex flex-wrap gap-4 mb-8 font-pixeloid-mono">
+                <div className="flex flex-wrap gap-4 mb-8 font-pixeloid-mono text-sm">
                   <button onClick={() => setAdminTab("archive")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'archive' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Добавить</button>
-                  <button onClick={() => setAdminTab("bulk")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'bulk' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Импорт/Экспорт</button>
+                  <button onClick={() => setAdminTab("bulk")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'bulk' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Импорт</button>
                   <button onClick={() => setAdminTab("users")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'users' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Аккаунты</button>
-                  {(user.role === "owner" || user.role === "creator") && (
+                  
+                  {/* Доступно только высоким рангам */}
+                  {userRole.level >= 2 && (
+                    <button onClick={() => setAdminTab("categories")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'categories' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Категории</button>
+                  )}
+                  {userRole.level >= 3 && (
+                    <button onClick={() => setAdminTab("roles")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'roles' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Уровни</button>
+                  )}
+                  
+                  {(userRole.id === "owner" || userRole.id === "creator") && (
                     <button onClick={() => setAdminTab("logs")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'logs' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Логи</button>
                   )}
                   <button onClick={() => setAdminTab("diag")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'diag' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Диагностика</button>
                 </div>
 
+                {/* ВКЛАДКА: ДОБАВИТЬ */}
                 {adminTab === "archive" && (
                   <div className="animate-smooth-fade-up">
                     <form onSubmit={handleAddMultipleItems} className="space-y-6 max-w-xl">
@@ -603,6 +672,16 @@ export default function TavernArchive() {
                         <div key={index} className="p-4 bg-[#1c110b] border border-[#5c3a21] rounded-lg">
                           <div className="space-y-3">
                             <input required placeholder="Название" value={item.title} onChange={e => { const upd = [...newItems]; upd[index].title = e.target.value; setNewItems(upd); }} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none transition-colors" />
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                              <select value={item.category} onChange={e => { const upd = [...newItems]; upd[index].category = e.target.value; setNewItems(upd); }} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none">
+                                {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                              </select>
+                              <select value={item.dangerLevel} onChange={e => { const upd = [...newItems]; upd[index].dangerLevel = e.target.value; setNewItems(upd); }} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none">
+                                {DANGER_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+                              </select>
+                            </div>
+                            
                             <textarea required placeholder="Описание (Markdown)" value={item.description} onChange={e => { const upd = [...newItems]; upd[index].description = e.target.value; setNewItems(upd); }} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white h-20 focus:border-[#a37c49] outline-none transition-colors" />
                           </div>
                         </div>
@@ -613,7 +692,7 @@ export default function TavernArchive() {
                       </div>
                     </form>
 
-                    {(user.role === "owner" || user.role === "creator") && (
+                    {(userRole.id === "owner" || userRole.id === "creator") && (
                       <div className="mt-12 pt-6 border-t border-red-900/50 max-w-xl animate-smooth-fade-up">
                         <h3 className="text-red-500 font-bold font-pixeloid-mono mb-2 flex items-center gap-2"><AlertTriangle size={18}/> Опасная зона</h3>
                         <p className="text-sm text-gray-500 mb-4">Эта кнопка безвозвратно удалит ВСЕ записи из архива.</p>
@@ -625,26 +704,72 @@ export default function TavernArchive() {
                   </div>
                 )}
 
+                {/* ВКЛАДКА: КАТЕГОРИИ */}
+                {adminTab === "categories" && userRole.level >= 2 && (
+                  <div className="animate-smooth-fade-up max-w-xl">
+                    <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Tag size={18}/> Управление категориями</h3>
+                    
+                    <div className="flex gap-2 mb-6">
+                      <input type="text" placeholder="Новая категория..." value={newCatName} onChange={e => setNewCatName(e.target.value)} className="flex-grow p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
+                      <button onClick={handleAddCategory} className="px-4 py-2 bg-[#5c3a21] border border-[#a37c49] text-white font-bold rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Добавить</button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {categories.map(c => (
+                        <div key={c.id} className="flex justify-between items-center p-3 bg-[#1c110b] border border-[#5c3a21] rounded">
+                          <span className="font-pixeloid-mono text-[#e6d5b8]">{c.name}</span>
+                          <button onClick={() => handleDeleteCategory(c.id)} className="text-red-500 hover:text-red-400 p-1.5 rounded active:scale-90 transition-all"><Trash2 size={16}/></button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ВКЛАДКА: УРОВНИ ДОСТУПА (РОЛИ) */}
+                {adminTab === "roles" && userRole.level >= 3 && (
+                  <div className="animate-smooth-fade-up max-w-2xl">
+                    <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><ShieldAlert size={18}/> Уровни доступа (Роли)</h3>
+                    
+                    <div className="flex flex-wrap gap-2 mb-6 p-4 bg-[#1c110b] border border-[#5c3a21] rounded-lg">
+                      <input type="text" placeholder="Название роли..." value={newRoleName} onChange={e => setNewRoleName(e.target.value)} className="flex-grow p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
+                      <input type="number" placeholder="Уровень (цифра)" value={newRoleLevel} onChange={e => setNewRoleLevel(parseInt(e.target.value))} className="w-32 p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
+                      <button onClick={handleAddRole} className="px-4 py-2 bg-[#5c3a21] border border-[#a37c49] text-white font-bold rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Создать</button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {roles.map(r => (
+                        <div key={r.id} className="flex flex-wrap items-center gap-2 p-3 bg-[#1c110b] border border-[#5c3a21] rounded">
+                          <input type="text" value={r.name} onChange={e => {
+                            const newRoles = roles.map(role => role.id === r.id ? { ...role, name: e.target.value } : role);
+                            setRoles(newRoles);
+                          }} className="flex-grow p-1 bg-transparent border-b border-transparent hover:border-[#5c3a21] focus:border-[#a37c49] outline-none text-white font-pixeloid-mono" />
+                          
+                          <input type="number" value={r.level} onChange={e => {
+                            const newRoles = roles.map(role => role.id === r.id ? { ...role, level: parseInt(e.target.value) } : role);
+                            setRoles(newRoles);
+                          }} className="w-20 p-1 bg-[#160d08] border border-[#5c3a21] rounded text-center text-white" title="Уровень доступа" />
+                          
+                          <button onClick={() => handleUpdateRole(r.id, r.name, r.level)} className="text-green-500 hover:text-green-400 p-1.5 rounded active:scale-90 transition-all" title="Сохранить изменения"><Save size={16}/></button>
+                          
+                          {r.id !== "owner" && (
+                            <button onClick={() => handleDeleteRole(r.id)} className="text-red-500 hover:text-red-400 p-1.5 rounded active:scale-90 transition-all" title="Удалить роль"><Trash2 size={16}/></button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ОСТАЛЬНЫЕ ВКЛАДКИ (bulk, users, logs, diag) остаются без изменений */}
                 {adminTab === "bulk" && (
                   <div className="space-y-8 max-w-2xl animate-smooth-fade-up">
                     <div className="bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
-                      <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Upload size={18}/> Массовый импорт (JSON)</h3>
-                      <p className="text-[#8c6e52] mb-4 text-sm font-sans">Вставьте JSON массив записей в формате:</p>
-                      <pre className="text-xs text-[#a37c49] bg-[#160d08] p-3 rounded mb-4 overflow-x-auto font-mono">
-{`[{"title": "Название", "category": "Символика", "description": "Описание", "symbol": "1/11", "dangerLevel": "Высокий", "image": "data:image..."}]`}
-                      </pre>
-                      <textarea 
-                        placeholder="Вставьте JSON сюда..." 
-                        value={bulkJson} 
-                        onChange={e => setBulkJson(e.target.value)} 
-                        className="w-full p-3 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] font-mono text-sm focus:border-[#a37c49] outline-none h-48" 
-                      />
-                      <button onClick={handleBulkImport} className="mt-4 px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#7a4f2e] active:scale-95 transition-all shadow-lg">Импортировать данные</button>
+                      <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Upload size={18}/> Массовый импорт</h3>
+                      <textarea placeholder="Вставьте JSON сюда..." value={bulkJson} onChange={e => setBulkJson(e.target.value)} className="w-full p-3 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] font-mono text-sm focus:border-[#a37c49] outline-none h-48" />
+                      <button onClick={handleBulkImport} className="mt-4 px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#7a4f2e] active:scale-95 transition-all shadow-lg">Импортировать</button>
                     </div>
-
                     <div className="bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
                       <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Download size={18}/> Экспорт</h3>
-                      <p className="text-[#8c6e52] mb-4 text-sm font-sans">Скачать весь текущий архив в формате JSON.</p>
                       <button onClick={handleExport} className="px-6 py-2 bg-[#3d2617] border border-[#5c3a21] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#5c3a21] active:scale-95 transition-all shadow-lg">Скачать файл</button>
                     </div>
                   </div>
@@ -654,11 +779,11 @@ export default function TavernArchive() {
                   <div className="space-y-10 font-sans animate-smooth-fade-up">
                     <form onSubmit={handleCreateUser} className="space-y-4 max-w-xl bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
                       <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] flex items-center gap-2"><Plus size={18}/> Создать аккаунт</h3>
-                      <input required placeholder="Название аккаунта (Никнейм)" value={newAcc.account_name} onChange={e => setNewAcc({...newAcc, account_name: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none" />
+                      <input required placeholder="Название аккаунта" value={newAcc.account_name} onChange={e => setNewAcc({...newAcc, account_name: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none" />
                       <div className="flex items-center gap-2"><input required={!autoUser} placeholder="Логин" value={newAcc.username} onChange={e => setNewAcc({...newAcc, username: e.target.value})} disabled={autoUser} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none disabled:opacity-50" /><label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer font-pixeloid-mono hover:text-white transition-colors"><input type="checkbox" checked={autoUser} onChange={e => setAutoUser(e.target.checked)} /> Рандом</label></div>
                       <div className="flex items-center gap-2"><input required={!autoPass} placeholder="Пароль" value={newAcc.password} onChange={e => setNewAcc({...newAcc, password: e.target.value})} disabled={autoPass} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none disabled:opacity-50" /><label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer font-pixeloid-mono hover:text-white transition-colors"><input type="checkbox" checked={autoPass} onChange={e => setAutoPass(e.target.checked)} /> Рандом</label></div>
                       <select value={newAcc.role} onChange={e => setNewAcc({...newAcc, role: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none">
-                         <option value="low">Лоу Стафф</option><option value="high">Хай Стафф</option><option value="guardian">Хранитель</option><option value="creator">Создатель Сервера</option>
+                         {roles.map(r => <option key={r.id} value={r.id}>{r.name} (Ур. {r.level})</option>)}
                       </select>
                       <button type="submit" className="px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Сгенерировать</button>
                     </form>
@@ -672,10 +797,10 @@ export default function TavernArchive() {
                             {usersList.map(u => (
                               <tr key={u.id} className="border-b border-[#3d2617] hover:bg-[#1c110b] transition-colors">
                                 <td className="p-3 font-medium">{u.account_name}</td>
-                                <td className={`p-3 text-sm font-bold font-pixeloid-mono ${ROLES_MAP[u.role]?.color.split(' ')[0] || "text-white"}`}>{ROLES_MAP[u.role]?.name || u.role}</td>
+                                <td className={`p-3 text-sm font-bold font-pixeloid-mono text-[#a37c49]`}>{roles.find(r => r.id === u.role)?.name || u.role}</td>
                                 <td className="p-3 font-mono text-[#c4b5a5]">{u.username}</td>
                                 <td className="p-3 font-mono text-red-400 bg-red-500/5">{u.plain_password || "********"}</td>
-                                <td className="p-3">{(user.role === "owner" || user.role === "creator") && u.id !== user.id && (<button onClick={() => handleDeleteUser(u.id, u.account_name)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all"><Trash2 size={16} /></button>)}</td>
+                                <td className="p-3">{(userRole.id === "owner" || userRole.id === "creator") && u.id !== user.id && (<button onClick={() => handleDeleteUser(u.id, u.account_name)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all"><Trash2 size={16} /></button>)}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -685,19 +810,19 @@ export default function TavernArchive() {
                   </div>
                 )}
 
-                {adminTab === "logs" && (user.role === "owner" || user.role === "creator") && (
+                {adminTab === "logs" && (userRole.id === "owner" || userRole.id === "creator") && (
                   <div className="animate-smooth-fade-up">
-                    <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><History size={18}/> История действий (Последние 100)</h3>
+                    <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><History size={18}/> История (100)</h3>
                     <div className="overflow-x-auto rounded-lg border border-[#5c3a21]">
                       <table className="w-full text-left border-collapse">
-                        <thead className="bg-[#1c110b]"><tr className="text-[#8c6e52] border-b border-[#5c3a21] font-pixeloid-mono text-sm"><th className="p-3">Время</th><th className="p-3">Действие</th><th className="p-3">Запись</th><th className="p-3">Кто сделал</th></tr></thead>
+                        <thead className="bg-[#1c110b]"><tr className="text-[#8c6e52] border-b border-[#5c3a21] font-pixeloid-mono text-sm"><th className="p-3">Время</th><th className="p-3">Действие</th><th className="p-3">Запись</th><th className="p-3">Кто</th></tr></thead>
                         <tbody>
                           {logsList.map(log => (
                             <tr key={log.id} className="border-b border-[#3d2617] hover:bg-[#1c110b] transition-colors">
                               <td className="p-3 text-xs text-[#8c6e52]">{new Date(log.timestamp).toLocaleString('ru-RU')}</td>
                               <td className={`p-3 font-bold font-pixeloid-mono ${log.action === 'УДАЛЕНИЕ' ? 'text-red-400' : log.action === 'СОЗДАНИЕ' ? 'text-green-400' : 'text-blue-400'}`}>{log.action}</td>
                               <td className="p-3 text-sm">{log.item_title}</td>
-                              <td className="p-3 text-sm">{log.user_name} <span className="text-xs text-[#8c6e52]">({log.user_role})</span></td>
+                              <td className="p-3 text-sm">{log.user_name}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -708,7 +833,7 @@ export default function TavernArchive() {
 
                 {adminTab === "diag" && (
                   <div className="max-w-xl font-sans animate-smooth-fade-up">
-                    <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Database size={18}/> Проверка системы</h3>
+                    <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Database size={18}/> Проверка</h3>
                     <button onClick={async () => {
                       setDiagResult(null);
                       const res = await fetch("/api/admin/diagnostics");
@@ -718,7 +843,7 @@ export default function TavernArchive() {
                     {diagResult && (
                       <div className={`p-6 rounded-xl border animate-smooth-pop ${diagResult.status === 'ok' ? 'bg-green-900/20 border-green-500/50' : 'bg-red-900/20 border-red-500/50'}`}>
                         <p className="text-[#e6d5b8] mb-2">{diagResult.message}</p>
-                        {diagResult.latency !== undefined && (<p className="text-sm text-[#8c6e52] font-mono">Пинг до базы: {diagResult.latency} мс</p>)}
+                        {diagResult.latency !== undefined && (<p className="text-sm text-[#8c6e52] font-mono">Пинг: {diagResult.latency} мс</p>)}
                       </div>
                     )}
                   </div>
