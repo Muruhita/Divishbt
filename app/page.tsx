@@ -110,6 +110,9 @@ export default function TavernArchive() {
   const cursorDotRef = useRef<HTMLDivElement>(null);
   const isHovering = useRef(false);
 
+  // Состояние для эффекта клика
+  const [clicks, setClicks] = useState<{ id: number; x: number; y: number }[]>([]);
+
   const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' | 'info' | 'warning' } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ msg: string, onConfirm: () => void } | null>(null);
   const [promptDialog, setPromptDialog] = useState<{ msg: string, val: string, onConfirm: (val: string) => void } | null>(null);
@@ -220,8 +223,21 @@ export default function TavernArchive() {
       }
     };
 
+    const onMouseDown = (e: MouseEvent) => {
+      const newClick = { id: Date.now(), x: e.clientX, y: e.clientY };
+      setClicks((prev) => [...prev, newClick]);
+      setTimeout(() => {
+        setClicks((prev) => prev.filter((c) => c.id !== newClick.id));
+      }, 500); // Удаляем через 500мс (длительность анимации)
+    };
+
     window.addEventListener("mousemove", onMouseMove);
-    return () => window.removeEventListener("mousemove", onMouseMove);
+    window.addEventListener("mousedown", onMouseDown);
+    
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mousedown", onMouseDown);
+    };
   }, []);
 
   useEffect(() => {
@@ -742,6 +758,11 @@ export default function TavernArchive() {
     <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col">
       
       <div ref={cursorDotRef} className="custom-cursor-dot hidden md:block pointer-events-none" />
+
+      {/* Рендер эффектов клика */}
+      {clicks.map(c => (
+        <div key={c.id} className="cursor-click-ripple" style={{ left: c.x, top: c.y }} />
+      ))}
 
       <div className="pixel-stars pointer-events-none"></div>
       <div className="fog-container pointer-events-none"><div className="fog-layer"></div><div className="fog-layer"></div></div>
