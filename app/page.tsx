@@ -63,7 +63,7 @@ const ArchiveCard = ({
         <div className="w-full h-56 overflow-hidden border-b-2 border-[#5c3a21] cursor-pointer relative group/img flex items-center justify-center"
           style={{ backgroundColor: '#d6c5b3', backgroundImage: 'radial-gradient(#b8a38a 1px, transparent 1px)', backgroundSize: '10px 10px' }}
           onClick={() => onViewImage(item.image!)}>
-          <img src={item.image} alt={item.title} className="max-w-full max-h-full object-contain p-2 transition-transform duration-500 group-hover/img:scale-110 drop-shadow-md" />
+          <img src={item.image} alt={item.title} draggable={false} className="max-w-full max-h-full object-contain p-2 transition-transform duration-500 group-hover/img:scale-110 drop-shadow-md select-none" />
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
             <Maximize2 size={32} className="text-[#e6d5b8]" />
           </div>
@@ -717,7 +717,7 @@ export default function TavernArchive() {
   if (isCheckingAuth) return <main className="min-h-screen bg-[#160d08]"></main>;
 
   return (
-    <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col">
+    <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col select-none">
       <div ref={trail3Ref} className="cursor-trail trail-3 hidden md:block" />
       <div ref={trail2Ref} className="cursor-trail trail-2 hidden md:block" />
       <div ref={trail1Ref} className="cursor-trail trail-1 hidden md:block" />
@@ -817,7 +817,7 @@ export default function TavernArchive() {
             <form onSubmit={handleUpdateProfile} className="space-y-4">
               <div className="flex flex-col items-center mb-4 group/avatar">
                 <div className="w-24 h-24 rounded-full border-4 border-[#5c3a21] group-hover/avatar:border-[#a37c49] overflow-hidden bg-[#1c110b] mb-2 flex items-center justify-center relative cursor-pointer transition-colors">
-                  {user.avatar ? <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover group-hover/avatar:scale-110 transition-transform duration-300" /> : <UserIcon size={40} className="text-[#5c3a21] group-hover/avatar:text-[#a37c49] transition-colors" />}
+                  {user.avatar ? <img src={user.avatar} alt="Avatar" draggable={false} className="w-full h-full object-cover group-hover/avatar:scale-110 transition-transform duration-300 select-none" /> : <UserIcon size={40} className="text-[#5c3a21] group-hover/avatar:text-[#a37c49] transition-colors" />}
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity"><span className="text-xs text-white font-bold">Сменить</span></div>
                   <input type="file" accept="image/*" onChange={handleAvatarUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
                 </div>
@@ -851,7 +851,7 @@ export default function TavernArchive() {
             <div className="bg-[#2e1b13]/95 border-4 border-[#a37c49] p-8 rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.9)] relative z-50">
               <div className="flex justify-center mb-6 relative">
                 <div className="absolute inset-0 bg-[#a37c49] blur-2xl opacity-20 rounded-full animate-pulse"></div>
-                <img src="/logo.png" alt="Сытый Лис" className="w-32 h-32 object-cover rounded-full border-4 border-[#5c3a21] relative z-10 animate-float bg-[#1c110b]" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                <img src="/logo.png" alt="Сытый Лис" draggable={false} className="w-32 h-32 object-cover rounded-full border-4 border-[#5c3a21] relative z-10 animate-float bg-[#1c110b] select-none" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
               </div>
               <h1 className="text-3xl font-bold font-pixeloid-mono text-center mb-2 text-[#E5B85C] uppercase flex justify-center items-center gap-2 drop-shadow-md"><Flame /> Сытый Лис</h1>
               <p className="text-center text-[#8c6e52] mb-8 font-pixeloid-mono">Открыть древний фолиант</p>
@@ -872,7 +872,7 @@ export default function TavernArchive() {
             <div className="flex flex-col items-end gap-2">
               <button type="button" className={`flex items-center gap-3 bg-[#2e1b13]/90 border ${userRole.id === 'owner' ? 'owner-border' : 'border-[#5c3a21]'} p-1.5 rounded-lg cursor-pointer hover:border-[#a37c49] transition-all group text-left`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); openProfile(); }}>
                 <div className="w-10 h-10 rounded bg-[#1c110b] overflow-hidden flex items-center justify-center border border-[#5c3a21] group-hover:border-[#a37c49] transition-colors">
-                  {user.avatar ? <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" /> : <UserIcon size={20} className="text-[#5c3a21] group-hover:text-[#a37c49] transition-colors" />}
+                  {user.avatar ? <img src={user.avatar} alt="Avatar" draggable={false} className="w-full h-full object-cover select-none" /> : <UserIcon size={20} className="text-[#5c3a21] group-hover:text-[#a37c49] transition-colors" />}
                 </div>
                 <div className="flex flex-col text-right pr-2">
                   <span className="text-sm font-bold font-pixeloid-mono select-text">{user.account_name}</span>
@@ -890,8 +890,16 @@ export default function TavernArchive() {
           </div>
 
           <div className="max-w-5xl mx-auto px-6 pb-12 w-full flex flex-col flex-grow -mt-16">
-            <header className="flex justify-center mb-8 cursor-pointer" onClick={() => setView("home")}>
-              <img src="/logo.png" alt="Сытый Лис" className="w-24 h-24 object-cover rounded-full border-4 border-[#5c3a21] animate-float bg-[#1c110b] hover:scale-105 transition-all" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            {/* Исправленный header: кликабелен только логотип */}
+            <header className="flex justify-center mb-8">
+              <img 
+                src="/logo.png" 
+                alt="Сытый Лис" 
+                onClick={() => setView("home")}
+                draggable={false}
+                className="w-24 h-24 object-cover rounded-full border-4 border-[#5c3a21] animate-float bg-[#1c110b] hover:scale-105 transition-all cursor-pointer select-none" 
+                onError={(e) => { e.currentTarget.style.display = 'none'; }} 
+              />
             </header>
 
             {view === "home" && (
@@ -982,7 +990,7 @@ export default function TavernArchive() {
                               <label className="block text-xs font-pixeloid-mono text-[#a37c49] mb-2 flex items-center gap-1"><ImageIcon size={14}/> Картинка (до 2МБ)</label>
                               {!item.image ? <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, index)} className="w-full text-sm text-[#8c6e52] file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-[#3d2617] file:text-[#e6d5b8] hover:file:bg-[#5c3a21] file:cursor-pointer" /> : (
                                 <div className="relative inline-block border-2 border-[#5c3a21] rounded-lg overflow-hidden" style={{ backgroundColor: '#d6c5b3' }}>
-                                  <img src={item.image} alt="Preview" className="h-32 object-contain p-2" />
+                                  <img src={item.image} alt="Preview" draggable={false} className="h-32 object-contain p-2 select-none" />
                                   <button type="button" onClick={() => { const upd = [...newItems]; upd[index].image = ""; setNewItems(upd); }} className="absolute top-1 right-1 bg-red-600/80 hover:bg-red-600 text-white p-1 rounded-full transition-colors"><X size={14} /></button>
                                 </div>
                               )}
@@ -1011,7 +1019,7 @@ export default function TavernArchive() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {mediaList.map(m => (
                         <div key={m.id} className="bg-[#1c110b] border border-[#5c3a21] rounded-lg p-2 relative group">
-                          <img src={m.image} alt={m.title} className="w-full h-32 object-cover rounded" />
+                          <img src={m.image} alt={m.title} draggable={false} className="w-full h-32 object-cover rounded select-none" />
                           <div className="mt-2 text-xs text-center truncate select-text">{m.title}</div>
                           <button onClick={() => handleDeleteMedia(m.id)} className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={14}/></button>
                         </div>
