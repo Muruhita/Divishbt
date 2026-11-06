@@ -38,7 +38,6 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    // Больше не сохраняем plain_password
     await db.execute({
       sql: "INSERT INTO users (username, password, account_name, role) VALUES (?, ?, ?, ?)",
       args: [username, hashedPassword, account_name, role],
@@ -50,7 +49,8 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Ошибка базы данных" }, { status: 400 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Ошибка базы данных";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }
