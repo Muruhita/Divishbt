@@ -23,8 +23,8 @@ export async function GET(req: Request) {
     const category = searchParams.get("category") || "Все";
     const search = searchParams.get("search") || "";
 
-    let whereConditions = [];
-    let args: any[] = [];
+    const whereConditions: string[] = [];
+    const args: (string | number)[] = [];
 
     if (category !== "Все") { whereConditions.push("category = ?"); args.push(category); }
     if (search) {
@@ -49,7 +49,7 @@ export async function GET(req: Request) {
     });
     
     return NextResponse.json({ items: result.rows, total, page, limit });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Ошибка получения данных" }, { status: 500 });
   }
 }
@@ -83,8 +83,9 @@ export async function POST(req: Request) {
       });
     }
     return NextResponse.json({ success: true, count: items.length });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Ошибка при добавлении" }, { status: 500 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Ошибка при добавлении";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -114,7 +115,7 @@ export async function PUT(req: Request) {
     });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Ошибка при обновлении" }, { status: 500 });
   }
 }
@@ -148,7 +149,7 @@ export async function DELETE(req: Request) {
     await db.execute({ sql: "INSERT INTO logs (action, item_title, user_name, user_role) VALUES (?, ?, ?, ?)", args: ["УДАЛЕНИЕ", `ID: ${id}`, user.account_name, user.role] });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Ошибка удаления" }, { status: 500 });
   }
 }
