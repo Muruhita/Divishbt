@@ -5,19 +5,19 @@ import { signToken } from "@/lib/auth";
 
 export const dynamic = 'force-dynamic';
 
-// Простой In-Memory Rate Limiter (защита от брутфорса)
-const loginAttempts = new Map<string, { count: number, lockUntil: number }>();
-
 export async function POST(req: Request) {
   try {
-    const ip = req.headers.get('x-forwarded-for') || 'unknown';
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
     const now = Date.now();
+    const windowMs = 60000; // 1 минута
 
-    // Проверка блокировки
-    const attempt = loginAttempts.get(ip);
-    if (attempt && attempt.lockUntil > now) {
-      const waitSec = Math.ceil((attempt.lockUntil - now) / 1000);
-      return NextResponse.json({ error: `Слишком много попыток. Подождите ${waitSec} сек.` }, { status: 429 });
+    // Очищаем старые попытки
+    await db.execute({ sql: "DELETE FROM login_attempts WHERE timestamp < ?", args: [now - windowMs] });
+
+    // Проверяем блокировку
+    const attemptsRes = await db.execute({ sql: "SELECT COUNT(*) as count FROM login_attempts WHERE ip = ?", args: [ip] });
+    if (Number(attemptsRes.rows[0].count) >= 5) {
+      return NextResponse.json({ error: "Слишком много попыток. Подождите минуту." }, { status: 429 });
     }
 
     const { username, password } = await req.json();
@@ -25,20 +25,19 @@ export async function POST(req: Request) {
     const user = result.rows[0];
 
     if (!user) {
-      registerFailedAttempt(ip);
+      await db.execute({ sql: "INSERT INTO login_attempts (ip, timestamp) VALUES (?, ?)", args: [ip, now] });
       return NextResponse.json({ error: "Неверный логин или пароль" }, { status: 401 });
     }
 
     const isValid = await bcrypt.compare(password, user.password as string);
     if (!isValid) {
-      registerFailedAttempt(ip);
+      await db.execute({ sql: "INSERT INTO login_attempts (ip, timestamp) VALUES (?, ?)", args: [ip, now] });
       return NextResponse.json({ error: "Неверный логин или пароль" }, { status: 401 });
     }
 
-    // Успешный вход - сбрасываем счетчик
-    loginAttempts.delete(ip);
+    // Успех — сбрасываем счетчик
+    await db.execute({ sql: "DELETE FROM login_attempts WHERE ip = ?", args: [ip] });
 
-    // Генерируем JWT
     const token = await signToken({
       id: user.id as number,
       username: user.username as string,
@@ -46,34 +45,18 @@ export async function POST(req: Request) {
       role: user.role as string
     });
 
-    // Возвращаем данные пользователя (без пароля) и ставим httpOnly куку
     const response = NextResponse.json({
       id: user.id, username: user.username, account_name: user.account_name,
       role: user.role, avatar: user.avatar
     });
 
     response.cookies.set('tavern_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 5 * 60 * 60, // 5 часов
-      path: '/'
+      httpOnly: true, secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict', maxAge: 5 * 60 * 60, path: '/'
     });
 
     return response;
   } catch (error) {
     return NextResponse.json({ error: "Ошибка сервера" }, { status: 500 });
   }
-}
-
-function registerFailedAttempt(ip: string) {
-  const now = Date.now();
-  const attempt = loginAttempts.get(ip) || { count: 0, lockUntil: 0 };
-  attempt.count += 1;
-  
-  if (attempt.count >= 5) {
-    attempt.lockUntil = now + 60000; // Блокировка на 1 минуту после 5 попыток
-    attempt.count = 0;
-  }
-  loginAttempts.set(ip, attempt);
 }
