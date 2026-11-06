@@ -71,15 +71,16 @@ const ArchiveCard = ({
       )}
       <div className="p-6 flex flex-col flex-grow">
         <div className="flex justify-between items-start mb-3 relative z-10">
-          <h3 className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8]">{item.title}</h3>
+          {/* Разрешаем выделять заголовок */}
+          <h3 className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8] select-text">{item.title}</h3>
           <div className="flex gap-2 items-center">
              {item.is_draft === 1 && <span className="text-xs bg-yellow-600 text-white px-2 py-1 rounded font-bold">Черновик</span>}
-             {item.symbol && <span className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8] bg-[#1c110b] px-3 py-1 rounded border border-[#5c3a21]">{item.symbol}</span>}
+             {item.symbol && <span className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8] bg-[#1c110b] px-3 py-1 rounded border border-[#5c3a21] select-text">{item.symbol}</span>}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 mb-4 relative z-10">
-          <span className="inline-block px-3 py-1 text-xs font-bold font-pixeloid-mono bg-[#1c110b] text-[#a37c49] rounded border border-[#5c3a21] uppercase">{item.category}</span>
-          {item.dangerLevel && <span className="inline-block px-2 py-1 text-xs font-bold font-pixeloid-mono rounded border border-red-900/50 bg-red-900/20 text-red-400 uppercase">{item.dangerLevel}</span>}
+          <span className="inline-block px-3 py-1 text-xs font-bold font-pixeloid-mono bg-[#1c110b] text-[#a37c49] rounded border border-[#5c3a21] uppercase select-text">{item.category}</span>
+          {item.dangerLevel && <span className="inline-block px-2 py-1 text-xs font-bold font-pixeloid-mono rounded border border-red-900/50 bg-red-900/20 text-red-400 uppercase select-text">{item.dangerLevel}</span>}
           
           <div className="ml-auto flex items-center gap-1 relative z-[60]">
             <button 
@@ -98,7 +99,8 @@ const ArchiveCard = ({
             )}
           </div>
         </div>
-        <div className="text-[#c4b5a5] font-sans leading-relaxed flex-grow relative z-10 prose prose-invert prose-sm max-w-none">
+        {/* Разрешаем выделять описание */}
+        <div className="text-[#c4b5a5] font-sans leading-relaxed flex-grow relative z-10 prose prose-invert prose-sm max-w-none select-text">
           <ReactMarkdown>{item.description}</ReactMarkdown>
         </div>
       </div>
@@ -108,6 +110,10 @@ const ArchiveCard = ({
 
 export default function TavernArchive() {
   const cursorDotRef = useRef<HTMLDivElement>(null);
+  const trail1Ref = useRef<HTMLDivElement>(null);
+  const trail2Ref = useRef<HTMLDivElement>(null);
+  const trail3Ref = useRef<HTMLDivElement>(null);
+  
   const isHovering = useRef(false);
 
   // Состояние для эффекта клика
@@ -207,9 +213,19 @@ export default function TavernArchive() {
   useEffect(() => {
     if (window.matchMedia("(pointer: coarse)").matches) return;
 
+    let mouseX = window.innerWidth / 2;
+    let mouseY = window.innerHeight / 2;
+    
+    let trail1X = mouseX, trail1Y = mouseY;
+    let trail2X = mouseX, trail2Y = mouseY;
+    let trail3X = mouseX, trail3Y = mouseY;
+
     const onMouseMove = (e: MouseEvent) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      
       if (cursorDotRef.current) {
-        cursorDotRef.current.style.transform = `translate(${e.clientX}px, ${e.clientY}px) translate(-50%, -50%)`;
+        cursorDotRef.current.style.transform = `translate(${mouseX}px, ${mouseY}px) translate(-50%, -50%)`;
       }
       const target = e.target as HTMLElement;
       const isClickable = target.closest('a, button, input, select, textarea, [role="button"]');
@@ -228,15 +244,37 @@ export default function TavernArchive() {
       setClicks((prev) => [...prev, newClick]);
       setTimeout(() => {
         setClicks((prev) => prev.filter((c) => c.id !== newClick.id));
-      }, 500); // Удаляем через 500мс (длительность анимации)
+      }, 500);
+    };
+
+    // Анимация плавного шлейфа (Lerp)
+    let animationFrameId: number;
+    const animateTrail = () => {
+      // Коэффициент задержки (чем меньше, тем сильнее отставание)
+      trail1X += (mouseX - trail1X) * 0.3;
+      trail1Y += (mouseY - trail1Y) * 0.3;
+      
+      trail2X += (trail1X - trail2X) * 0.3;
+      trail2Y += (trail1Y - trail2Y) * 0.3;
+      
+      trail3X += (trail2X - trail3X) * 0.3;
+      trail3Y += (trail2Y - trail3Y) * 0.3;
+
+      if (trail1Ref.current) trail1Ref.current.style.transform = `translate(${trail1X}px, ${trail1Y}px) translate(-50%, -50%)`;
+      if (trail2Ref.current) trail2Ref.current.style.transform = `translate(${trail2X}px, ${trail2Y}px) translate(-50%, -50%)`;
+      if (trail3Ref.current) trail3Ref.current.style.transform = `translate(${trail3X}px, ${trail3Y}px) translate(-50%, -50%)`;
+
+      animationFrameId = requestAnimationFrame(animateTrail);
     };
 
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mousedown", onMouseDown);
+    animateTrail();
     
     return () => {
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mousedown", onMouseDown);
+      cancelAnimationFrame(animationFrameId);
     };
   }, []);
 
@@ -757,6 +795,12 @@ export default function TavernArchive() {
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col">
       
+      {/* Шлейф курсора */}
+      <div ref={trail3Ref} className="cursor-trail trail-3 hidden md:block" />
+      <div ref={trail2Ref} className="cursor-trail trail-2 hidden md:block" />
+      <div ref={trail1Ref} className="cursor-trail trail-1 hidden md:block" />
+      
+      {/* Главная точка курсора */}
       <div ref={cursorDotRef} className="custom-cursor-dot hidden md:block pointer-events-none" />
 
       {/* Рендер эффектов клика */}
@@ -801,7 +845,7 @@ export default function TavernArchive() {
           <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-8 rounded-xl max-w-md w-full animate-smooth-pop text-center shadow-2xl relative overflow-hidden">
             <AlertTriangle size={56} className="mx-auto text-orange-500 mb-6 drop-shadow-lg relative z-10" />
             <h3 className="text-2xl font-bold font-pixeloid-mono text-[#e6d5b8] mb-4 relative z-10">Подтверждение</h3>
-            <p className="text-[#c4b5a5] font-sans text-lg mb-8 relative z-10">{confirmDialog.msg}</p>
+            <p className="text-[#c4b5a5] font-sans text-lg mb-8 relative z-10 select-text">{confirmDialog.msg}</p>
             <div className="flex justify-center gap-4 relative z-10">
               <button onClick={() => { playSound("click"); setConfirmDialog(null); }} className="px-6 py-3 bg-[#3d2617] border border-[#5c3a21] text-[#a37c49] font-bold rounded-lg hover:bg-[#5c3a21] active:scale-95 transition-all w-32">Отмена</button>
               <button onClick={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }} className="px-6 py-3 bg-red-900/40 border border-red-500 text-red-400 font-bold rounded-lg hover:bg-red-900/60 active:scale-95 transition-all w-32">Да</button>
@@ -815,10 +859,10 @@ export default function TavernArchive() {
           <div className="bg-[#2e1b13] border-double border-4 border-red-900/50 p-8 rounded-xl max-w-md w-full animate-smooth-pop text-center shadow-2xl relative overflow-hidden">
             <Skull size={56} className="mx-auto text-red-500 mb-6 animate-pulse drop-shadow-lg" />
             <h3 className="text-2xl font-bold font-pixeloid-mono text-red-500 mb-4">Опасная зона</h3>
-            <p className="text-[#c4b5a5] font-sans text-sm mb-6">{promptDialog.msg}</p>
+            <p className="text-[#c4b5a5] font-sans text-sm mb-6 select-text">{promptDialog.msg}</p>
             <input 
               type="text" value={promptDialog.val} onChange={e => setPromptDialog({ ...promptDialog, val: e.target.value })}
-              className="w-full p-3 bg-[#1c110b] border-2 border-[#5c3a21] rounded text-white text-center font-bold tracking-widest focus:border-red-500 outline-none mb-6"
+              className="w-full p-3 bg-[#1c110b] border-2 border-[#5c3a21] rounded text-white text-center font-bold tracking-widest focus:border-red-500 outline-none mb-6 select-text"
               placeholder="УДАЛИТЬ" autoFocus
             />
             <div className="flex justify-center gap-4">
@@ -835,7 +879,7 @@ export default function TavernArchive() {
             <button onClick={() => setEditingItem(null)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 active:scale-90 transition-all"><X size={24}/></button>
             <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49] mb-6">Редактировать</h2>
             <form onSubmit={handleUpdateItem} className="space-y-4">
-              <input required placeholder="Название" value={editingItem.title} onChange={e => setEditingItem({...editingItem, title: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
+              <input required placeholder="Название" value={editingItem.title} onChange={e => setEditingItem({...editingItem, title: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none select-text" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <select value={editingItem.category} onChange={e => setEditingItem({...editingItem, category: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none">
                   {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
@@ -844,7 +888,7 @@ export default function TavernArchive() {
                   {DANGER_LEVELS.map(l => <option key={l} value={l}>Уровень: {l}</option>)}
                 </select>
               </div>
-              <textarea required placeholder="Описание (Markdown)" value={editingItem.description} onChange={e => setEditingItem({...editingItem, description: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white h-32 font-mono text-sm focus:border-[#a37c49] outline-none" />
+              <textarea required placeholder="Описание (Markdown)" value={editingItem.description} onChange={e => setEditingItem({...editingItem, description: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white h-32 font-mono text-sm focus:border-[#a37c49] outline-none select-text" />
               
               <label className="flex items-center gap-2 text-sm text-[#a37c49] font-pixeloid-mono cursor-pointer mt-4 mb-4">
                 <input type="checkbox" checked={editingItem.is_draft === 1} onChange={e => setEditingItem({...editingItem, is_draft: e.target.checked ? 1 : 0})} />
@@ -875,18 +919,18 @@ export default function TavernArchive() {
 
               <div className="space-y-2 border-t border-[#5c3a21] pt-4">
                 <label className="text-sm font-pixeloid-mono text-[#a37c49]">Изменить имя</label>
-                <input type="text" placeholder="Новое имя" value={newAccountName} onChange={e => setNewAccountName(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
+                <input type="text" placeholder="Новое имя" value={newAccountName} onChange={e => setNewAccountName(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none select-text" />
               </div>
 
               <div className="space-y-2 border-t border-[#5c3a21] pt-4">
                 <label className="text-sm font-pixeloid-mono text-[#a37c49]">Изменить логин</label>
-                <input type="text" placeholder="Новый логин" value={newUsername} onChange={e => setNewUsername(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
+                <input type="text" placeholder="Новый логин" value={newUsername} onChange={e => setNewUsername(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none select-text" />
               </div>
 
               <div className="space-y-2 border-t border-[#5c3a21] pt-4">
                 <label className="text-sm font-pixeloid-mono text-[#a37c49]">Смена пароля</label>
-                <input type="password" placeholder="Старый пароль" value={oldPass} onChange={e => setOldPass(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
-                <input type="password" placeholder="Новый пароль" value={newPass} onChange={e => setNewPass(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
+                <input type="password" placeholder="Старый пароль" value={oldPass} onChange={e => setOldPass(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none select-text" />
+                <input type="password" placeholder="Новый пароль" value={newPass} onChange={e => setNewPass(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none select-text" />
               </div>
               
               <button type="submit" className="w-full py-2 bg-[#5c3a21] text-white font-bold rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Сохранить изменения</button>
@@ -928,11 +972,11 @@ export default function TavernArchive() {
               <form onSubmit={handleLogin} className="space-y-5">
                 <div>
                   <label className="block text-sm font-pixeloid-mono text-[#a37c49] mb-1">Логин</label>
-                  <input type="text" required value={loginUser} onChange={(e) => setLoginUser(e.target.value)} className="w-full p-3 bg-[#1c110b] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none transition-colors" />
+                  <input type="text" required value={loginUser} onChange={(e) => setLoginUser(e.target.value)} className="w-full p-3 bg-[#1c110b] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none transition-colors select-text" />
                 </div>
                 <div>
                   <label className="block text-sm font-pixeloid-mono text-[#a37c49] mb-1">Пароль</label>
-                  <input type="password" required value={loginPass} onChange={(e) => setLoginPass(e.target.value)} className="w-full p-3 bg-[#1c110b] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none transition-colors" />
+                  <input type="password" required value={loginPass} onChange={(e) => setLoginPass(e.target.value)} className="w-full p-3 bg-[#1c110b] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none transition-colors select-text" />
                 </div>
                 
                 {loginError && <p className="text-red-400 text-sm text-center animate-shake">{loginError}</p>}
@@ -960,8 +1004,8 @@ export default function TavernArchive() {
                   {user.avatar ? <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" /> : <UserIcon size={20} className="text-[#5c3a21] group-hover:text-[#a37c49] transition-colors" />}
                 </div>
                 <div className="flex flex-col text-right pr-2">
-                  <span className="text-sm font-bold font-pixeloid-mono">{user.account_name}</span>
-                  <span className={`text-xs font-bold font-pixeloid-mono ${getRoleColor(userRole.level)}`}>{userRole.name}</span>
+                  <span className="text-sm font-bold font-pixeloid-mono select-text">{user.account_name}</span>
+                  <span className={`text-xs font-bold font-pixeloid-mono ${getRoleColor(userRole.level)} select-text`}>{userRole.name}</span>
                 </div>
                 <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleLogout(); }} className="p-2 text-red-400 hover:bg-red-500/20 rounded active:scale-90 transition-all" title="Выйти"><LogOut size={18} /></button>
               </button>
@@ -995,7 +1039,7 @@ export default function TavernArchive() {
               <div className="flex-grow flex flex-col items-center animate-smooth-fade-up text-center pb-20">
                 <h2 className="text-4xl font-bold font-pixeloid-mono text-[#a37c49] mb-6">Запретный Архив</h2>
                 <div className="relative w-full max-w-2xl mb-8 group">
-                  <input type="text" placeholder="Поиск..." value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} className="w-full p-4 pl-12 bg-[#2e1b13] border-2 border-[#5c3a21] rounded-lg text-[#e6d5b8] font-pixeloid-mono focus:border-[#a37c49] transition-colors shadow-lg" />
+                  <input type="text" placeholder="Поиск..." value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} className="w-full p-4 pl-12 bg-[#2e1b13] border-2 border-[#5c3a21] rounded-lg text-[#e6d5b8] font-pixeloid-mono focus:border-[#a37c49] transition-colors shadow-lg select-text" />
                   <Search className="absolute left-4 top-4 text-[#6b513b] group-focus-within:text-[#a37c49] transition-colors" size={24} />
                 </div>
                 
@@ -1048,7 +1092,7 @@ export default function TavernArchive() {
                  {totalPages > 1 && !showOnlyFavorites && (
                    <div className="flex justify-center items-center gap-4 mt-12 pb-8">
                      <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => prev - 1)} className="p-3 bg-[#2e1b13] border border-[#5c3a21] rounded text-[#a37c49] disabled:opacity-30 hover:bg-[#5c3a21] hover:text-white active:scale-90 transition-all"><ChevronLeft size={24}/></button>
-                     <span className="font-pixeloid-mono text-lg text-[#a37c49]">Стр. {currentPage} из {totalPages}</span>
+                     <span className="font-pixeloid-mono text-lg text-[#a37c49] select-text">Стр. {currentPage} из {totalPages}</span>
                      <button disabled={currentPage === totalPages || totalPages === 0} onClick={() => setCurrentPage(prev => prev + 1)} className="p-3 bg-[#2e1b13] border border-[#5c3a21] rounded text-[#a37c49] disabled:opacity-30 hover:bg-[#5c3a21] hover:text-white active:scale-90 transition-all"><ChevronRight size={24}/></button>
                    </div>
                  )}
@@ -1065,7 +1109,6 @@ export default function TavernArchive() {
                   <button onClick={() => setAdminTab("dashboard")} className={`px-4 py-2 rounded transition-all active:scale-95 flex items-center gap-2 ${adminTab === 'dashboard' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}><LayoutDashboard size={16}/> Дашборд</button>
                   <button onClick={() => setAdminTab("archive")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'archive' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Добавить</button>
                   
-                  {/* ДОСТУП К ИМПОРТУ ТОЛЬКО С ХРАНИТЕЛЯ (level >= 2) */}
                   {userRole.level >= 2 && (
                     <button onClick={() => setAdminTab("bulk")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'bulk' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Импорт</button>
                   )}
@@ -1112,7 +1155,7 @@ export default function TavernArchive() {
                       {newItems.map((item, index) => (
                         <div key={index} className="p-4 bg-[#1c110b] border border-[#5c3a21] rounded-lg">
                           <div className="space-y-3">
-                            <input required placeholder="Название" value={item.title} onChange={e => { const upd = [...newItems]; upd[index].title = e.target.value; setNewItems(upd); }} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none transition-colors" />
+                            <input required placeholder="Название" value={item.title} onChange={e => { const upd = [...newItems]; upd[index].title = e.target.value; setNewItems(upd); }} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none transition-colors select-text" />
                             
                             <div className="grid grid-cols-2 gap-4">
                               <select value={item.category} onChange={e => { const upd = [...newItems]; upd[index].category = e.target.value; setNewItems(upd); }} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none">
@@ -1123,7 +1166,7 @@ export default function TavernArchive() {
                               </select>
                             </div>
                             
-                            <textarea required placeholder="Описание (Markdown)" value={item.description} onChange={e => { const upd = [...newItems]; upd[index].description = e.target.value; setNewItems(upd); }} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white h-20 focus:border-[#a37c49] outline-none transition-colors" />
+                            <textarea required placeholder="Описание (Markdown)" value={item.description} onChange={e => { const upd = [...newItems]; upd[index].description = e.target.value; setNewItems(upd); }} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white h-20 focus:border-[#a37c49] outline-none transition-colors select-text" />
                             
                             <label className="flex items-center gap-2 text-sm text-[#a37c49] font-pixeloid-mono cursor-pointer">
                               <input type="checkbox" checked={item.is_draft === 1} onChange={e => { const upd = [...newItems]; upd[index].is_draft = e.target.checked ? 1 : 0; setNewItems(upd); }} />
@@ -1153,7 +1196,7 @@ export default function TavernArchive() {
                     {userRole.id === "owner" && (
                       <div className="mt-12 pt-6 border-t border-red-900/50 max-w-xl animate-smooth-fade-up">
                         <h3 className="text-red-500 font-bold font-pixeloid-mono mb-2 flex items-center gap-2"><AlertTriangle size={18}/> Опасная зона</h3>
-                        <p className="text-sm text-gray-500 mb-4">Эта кнопка безвозвратно удалит ВСЕ записи из архива.</p>
+                        <p className="text-sm text-gray-500 mb-4 select-text">Эта кнопка безвозвратно удалит ВСЕ записи из архива.</p>
                         <button onClick={handleClearDatabase} className="px-6 py-2 bg-red-900/20 border border-red-500 text-red-400 font-bold rounded hover:bg-red-900/40 active:scale-95 transition-all">
                           Очистить базу данных
                         </button>
@@ -1169,7 +1212,7 @@ export default function TavernArchive() {
                       {mediaList.map(m => (
                         <div key={m.id} className="bg-[#1c110b] border border-[#5c3a21] rounded-lg p-2 relative group">
                           <img src={m.image} alt={m.title} className="w-full h-32 object-cover rounded" />
-                          <div className="mt-2 text-xs text-center truncate">{m.title}</div>
+                          <div className="mt-2 text-xs text-center truncate select-text">{m.title}</div>
                           <button onClick={() => handleDeleteMedia(m.id)} className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={14}/></button>
                         </div>
                       ))}
@@ -1182,13 +1225,13 @@ export default function TavernArchive() {
                   <div className="animate-smooth-fade-up max-w-xl">
                     <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Tag size={18}/> Управление категориями</h3>
                     <div className="flex gap-2 mb-6">
-                      <input type="text" placeholder="Новая категория..." value={newCatName} onChange={e => setNewCatName(e.target.value)} className="flex-grow p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
+                      <input type="text" placeholder="Новая категория..." value={newCatName} onChange={e => setNewCatName(e.target.value)} className="flex-grow p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none select-text" />
                       <button onClick={handleAddCategory} className="px-4 py-2 bg-[#5c3a21] border border-[#a37c49] text-white font-bold rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Добавить</button>
                     </div>
                     <div className="space-y-2">
                       {categories.map(c => (
                         <div key={c.id} className="flex justify-between items-center p-3 bg-[#1c110b] border border-[#5c3a21] rounded">
-                          <span className="font-pixeloid-mono text-[#e6d5b8]">{c.name}</span>
+                          <span className="font-pixeloid-mono text-[#e6d5b8] select-text">{c.name}</span>
                           <button onClick={() => handleDeleteCategory(c.id)} className="text-red-500 hover:text-red-400 p-1.5 rounded active:scale-90 transition-all"><Trash2 size={16}/></button>
                         </div>
                       ))}
@@ -1200,8 +1243,8 @@ export default function TavernArchive() {
                   <div className="animate-smooth-fade-up max-w-2xl">
                     <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><ShieldAlert size={18}/> Уровни доступа (Роли)</h3>
                     <div className="flex flex-wrap gap-2 mb-6 p-4 bg-[#1c110b] border border-[#5c3a21] rounded-lg">
-                      <input type="text" placeholder="Название роли..." value={newRoleName} onChange={e => setNewRoleName(e.target.value)} className="flex-grow p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
-                      <input type="number" placeholder="Уровень (цифра)" value={newRoleLevel} onChange={e => setNewRoleLevel(parseInt(e.target.value))} className="w-32 p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
+                      <input type="text" placeholder="Название роли..." value={newRoleName} onChange={e => setNewRoleName(e.target.value)} className="flex-grow p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none select-text" />
+                      <input type="number" placeholder="Уровень (цифра)" value={newRoleLevel} onChange={e => setNewRoleLevel(parseInt(e.target.value))} className="w-32 p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none select-text" />
                       <button onClick={handleAddRole} className="px-4 py-2 bg-[#5c3a21] border border-[#a37c49] text-white font-bold rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Создать</button>
                     </div>
                     <div className="space-y-2">
@@ -1210,11 +1253,11 @@ export default function TavernArchive() {
                           <input type="text" value={r.name} onChange={e => {
                             const newRoles = roles.map(role => role.id === r.id ? { ...role, name: e.target.value } : role);
                             setRoles(newRoles);
-                          }} className="flex-grow p-1 bg-transparent border-b border-transparent hover:border-[#5c3a21] focus:border-[#a37c49] outline-none text-white font-pixeloid-mono" />
+                          }} className="flex-grow p-1 bg-transparent border-b border-transparent hover:border-[#5c3a21] focus:border-[#a37c49] outline-none text-white font-pixeloid-mono select-text" />
                           <input type="number" value={r.level} onChange={e => {
                             const newRoles = roles.map(role => role.id === r.id ? { ...role, level: parseInt(e.target.value) } : role);
                             setRoles(newRoles);
-                          }} className="w-20 p-1 bg-[#160d08] border border-[#5c3a21] rounded text-center text-white" title="Уровень доступа" />
+                          }} className="w-20 p-1 bg-[#160d08] border border-[#5c3a21] rounded text-center text-white select-text" title="Уровень доступа" />
                           
                           {(userRole.id === "owner" || userRole.level > r.level) && (
                             <button onClick={() => handleUpdateRole(r.id, r.name, r.level)} className="text-green-500 hover:text-green-400 p-1.5 rounded active:scale-90 transition-all" title="Сохранить изменения"><Save size={16}/></button>
@@ -1229,12 +1272,11 @@ export default function TavernArchive() {
                   </div>
                 )}
 
-                {/* ДОСТУП К САМОЙ ВКЛАДКЕ ИМПОРТА ТОЛЬКО С ХРАНИТЕЛЯ (level >= 2) */}
                 {adminTab === "bulk" && userRole.level >= 2 && (
                   <div className="space-y-8 max-w-2xl animate-smooth-fade-up">
                     <div className="bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
                       <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Upload size={18}/> Массовый импорт</h3>
-                      <textarea placeholder="Вставьте JSON сюда..." value={bulkJson} onChange={e => setBulkJson(e.target.value)} className="w-full p-3 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] font-mono text-sm focus:border-[#a37c49] outline-none h-48" />
+                      <textarea placeholder="Вставьте JSON сюда..." value={bulkJson} onChange={e => setBulkJson(e.target.value)} className="w-full p-3 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] font-mono text-sm focus:border-[#a37c49] outline-none h-48 select-text" />
                       <button onClick={handleBulkImport} className="mt-4 px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#7a4f2e] active:scale-95 transition-all shadow-lg">Импортировать</button>
                     </div>
                     <div className="bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
@@ -1248,9 +1290,9 @@ export default function TavernArchive() {
                   <div className="space-y-10 font-sans animate-smooth-fade-up">
                     <form onSubmit={handleCreateUser} className="space-y-4 max-w-xl bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
                       <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] flex items-center gap-2"><Plus size={18}/> Создать аккаунт</h3>
-                      <input required placeholder="Название аккаунта" value={newAcc.account_name} onChange={e => setNewAcc({...newAcc, account_name: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none" />
-                      <div className="flex items-center gap-2"><input required={!autoUser} placeholder="Логин" value={newAcc.username} onChange={e => setNewAcc({...newAcc, username: e.target.value})} disabled={autoUser} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none disabled:opacity-50" /><label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer font-pixeloid-mono hover:text-white transition-colors"><input type="checkbox" checked={autoUser} onChange={e => setAutoUser(e.target.checked)} /> Рандом</label></div>
-                      <div className="flex items-center gap-2"><input required={!autoPass} placeholder="Пароль" value={newAcc.password} onChange={e => setNewAcc({...newAcc, password: e.target.value})} disabled={autoPass} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none disabled:opacity-50" /><label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer font-pixeloid-mono hover:text-white transition-colors"><input type="checkbox" checked={autoPass} onChange={e => setAutoPass(e.target.checked)} /> Рандом</label></div>
+                      <input required placeholder="Название аккаунта" value={newAcc.account_name} onChange={e => setNewAcc({...newAcc, account_name: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none select-text" />
+                      <div className="flex items-center gap-2"><input required={!autoUser} placeholder="Логин" value={newAcc.username} onChange={e => setNewAcc({...newAcc, username: e.target.value})} disabled={autoUser} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none disabled:opacity-50 select-text" /><label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer font-pixeloid-mono hover:text-white transition-colors"><input type="checkbox" checked={autoUser} onChange={e => setAutoUser(e.target.checked)} /> Рандом</label></div>
+                      <div className="flex items-center gap-2"><input required={!autoPass} placeholder="Пароль" value={newAcc.password} onChange={e => setNewAcc({...newAcc, password: e.target.value})} disabled={autoPass} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none disabled:opacity-50 select-text" /><label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer font-pixeloid-mono hover:text-white transition-colors"><input type="checkbox" checked={autoPass} onChange={e => setAutoPass(e.target.checked)} /> Рандом</label></div>
                       
                       <select value={newAcc.role} onChange={e => setNewAcc({...newAcc, role: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none">
                          {roles
@@ -1282,11 +1324,11 @@ export default function TavernArchive() {
                               
                               return (
                                 <tr key={u.id} className="border-b border-[#3d2617] hover:bg-[#1c110b] transition-colors">
-                                  <td className="p-3 font-medium">{u.account_name}</td>
-                                  <td className={`p-3 text-sm font-bold font-pixeloid-mono ${getRoleColor(roleLevel)}`}>{roleObj?.name || u.role}</td>
-                                  <td className="p-3 font-mono text-[#c4b5a5]">{u.username}</td>
+                                  <td className="p-3 font-medium select-text">{u.account_name}</td>
+                                  <td className={`p-3 text-sm font-bold font-pixeloid-mono ${getRoleColor(roleLevel)} select-text`}>{roleObj?.name || u.role}</td>
+                                  <td className="p-3 font-mono text-[#c4b5a5] select-text">{u.username}</td>
                                   
-                                  <td className="p-3 font-mono text-red-400 bg-red-500/5">
+                                  <td className="p-3 font-mono text-red-400 bg-red-500/5 select-text">
                                     <div className="flex items-center gap-2">
                                       <span className="w-24 truncate" title={isRevealed ? (u.plain_password || "") : "********"}>
                                         {isRevealed ? (u.plain_password || "Нет данных") : "********"}
@@ -1330,10 +1372,10 @@ export default function TavernArchive() {
                         <tbody>
                           {logsList.map(log => (
                             <tr key={log.id} className="border-b border-[#3d2617] hover:bg-[#1c110b] transition-colors">
-                              <td className="p-3 text-xs text-[#8c6e52]">{new Date(log.timestamp).toLocaleString('ru-RU')}</td>
-                              <td className={`p-3 font-bold font-pixeloid-mono ${log.action === 'УДАЛЕНИЕ' ? 'text-red-400' : log.action === 'СОЗДАНИЕ' ? 'text-green-400' : 'text-blue-400'}`}>{log.action}</td>
-                              <td className="p-3 text-sm">{log.item_title}</td>
-                              <td className="p-3 text-sm">{log.user_name}</td>
+                              <td className="p-3 text-xs text-[#8c6e52] select-text">{new Date(log.timestamp).toLocaleString('ru-RU')}</td>
+                              <td className={`p-3 font-bold font-pixeloid-mono ${log.action === 'УДАЛЕНИЕ' ? 'text-red-400' : log.action === 'СОЗДАНИЕ' ? 'text-green-400' : 'text-blue-400'} select-text`}>{log.action}</td>
+                              <td className="p-3 text-sm select-text">{log.item_title}</td>
+                              <td className="p-3 text-sm select-text">{log.user_name}</td>
                             </tr>
                           ))}
                           {logsList.length === 0 && (
@@ -1356,8 +1398,8 @@ export default function TavernArchive() {
                     
                     {diagResult && (
                       <div className={`p-6 rounded-xl border animate-smooth-pop ${diagResult.status === 'ok' ? 'bg-green-900/20 border-green-500/50' : 'bg-red-900/20 border-red-500/50'}`}>
-                        <p className="text-[#e6d5b8] mb-2">{diagResult.message}</p>
-                        {diagResult.latency !== undefined && (<p className="text-sm text-[#8c6e52] font-mono">Пинг: {diagResult.latency} мс</p>)}
+                        <p className="text-[#e6d5b8] mb-2 select-text">{diagResult.message}</p>
+                        {diagResult.latency !== undefined && (<p className="text-sm text-[#8c6e52] font-mono select-text">Пинг: {diagResult.latency} мс</p>)}
                       </div>
                     )}
                   </div>
