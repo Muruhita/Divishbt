@@ -87,7 +87,7 @@ body {
 }
 @keyframes fog-drift { 0% { transform: translateX(0); } 100% { transform: translateX(-50vw); } }
 
-/* --- МЯГКИЙ КУРСОР --- */
+/* --- МЯГКИЙ КУРСОР И ЭФФЕКТ КЛИКА --- */
 @media (pointer: fine) {
   body, a, button, input, textarea, select, [role="button"] {
     cursor: none !important;
@@ -102,6 +102,22 @@ body {
   .custom-cursor-dot.hovering {
     width: 10px; height: 10px; background-color: #fff;
     box-shadow: 0 0 10px #fff, 0 0 20px #E5B85C;
+  }
+
+  /* Анимация волны при клике */
+  @keyframes click-ripple {
+    0% { width: 0px; height: 0px; opacity: 1; border-width: 4px; }
+    100% { width: 80px; height: 80px; opacity: 0; border-width: 1px; }
+  }
+  .cursor-click-ripple {
+    position: fixed;
+    border: solid #E5B85C;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 99998;
+    transform: translate(-50%, -50%);
+    animation: click-ripple 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    box-shadow: 0 0 15px rgba(229, 184, 92, 0.5), inset 0 0 10px rgba(229, 184, 92, 0.5);
   }
 }
 
