@@ -1161,7 +1161,7 @@ export default function TavernArchive() {
         <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="fixed bottom-20 right-6 z-[100] p-3 bg-[#5c3a21] border-2 border-[#a37c49] text-[#e6d5b8] rounded-full shadow-[0_4px_15px_rgba(0,0,0,0.6)] hover:bg-[#a37c49] hover:text-[#1a1512] hover:-translate-y-1 transition-all duration-300 animate-smooth-pop" title="Наверх"><ArrowUp size={24} /></button>
       )}
 
-      <div className="fixed bottom-4 right-4 z-[100] bg-[#1c110b]/70 border border-[#5c3a21]/40 px-3 py-1.5 rounded-md text-[11px] text-[#8c6e52]/70 font-pixeloid-mono hover:text-[#a37c49] transition-colors cursor-default select-none">muruh1ta</div>
+      <a href="https://murane.gt.tc" target="_blank" rel="noopener noreferrer" className="fixed bottom-4 right-4 z-[100] bg-[#1c110b]/70 border border-[#5c3a21]/40 px-3 py-1.5 rounded-md text-[11px] text-[#8c6e52]/70 font-pixeloid-mono hover:text-[#a37c49] hover:border-[#a37c49] hover:bg-[#1c110b]/90 transition-all cursor-pointer select-none">muruh1ta</a>
     </main>
   );
 }
