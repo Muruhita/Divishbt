@@ -17,7 +17,7 @@ export async function GET() {
     const rolesMap = new Map(rolesRes.rows.map(r => [r.id, Number(r.level)]));
     const reqLevel = rolesMap.get(requester.role) || 0;
 
-    // Не отдаем plain_password клиенту вообще
+    // Убран plain_password
     const result = await db.execute("SELECT id, username, account_name, role, avatar FROM users");
     
     const filtered = result.rows.filter(u => {
