@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
-import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, LockKeyhole, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle, Save, Tag, CheckCircle2, Info, Home, BookOpen, LayoutDashboard, ImagePlus, Star, ArrowUp } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle, Save, Tag, CheckCircle2, Info, Home, BookOpen, LayoutDashboard, ImagePlus, Star, ArrowUp } from "lucide-react";
 
 type ArchiveItem = { id: number; title: string; category: string; description: string; symbol?: string; dangerLevel?: string; image?: string; is_draft?: number; };
 type DbArchiveItem = { id: number; title: string; category: string; description: string; symbol: string | null; danger_level: string | null; image: string | null; is_draft: number; };
@@ -129,7 +129,7 @@ export default function TavernArchive() {
   const [data, setData] = useState<ArchiveItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState(""); // Для Debounce
+  const [debouncedSearch, setDebouncedSearch] = useState(""); 
   const [selectedCategory, setSelectedCategory] = useState("Все");
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
   const [favorites, setFavorites] = useState<number[]>([]);
@@ -189,7 +189,6 @@ export default function TavernArchive() {
     }
   };
 
-  // DEBOUNCE ДЛЯ ПОИСКА (Оптимизация нагрузки на БД)
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(searchQuery);
@@ -262,7 +261,10 @@ export default function TavernArchive() {
 
   useEffect(() => {
     const initAudio = () => {
-      if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (!audioCtxRef.current) {
+        const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        audioCtxRef.current = new AudioContextClass();
+      }
     };
     window.addEventListener('click', initAudio, { once: true });
     return () => window.removeEventListener('click', initAudio);
@@ -303,7 +305,7 @@ export default function TavernArchive() {
         const roleData = await roleRes.json();
         if (roleData && roleData.length > 0) setRoles(roleData);
       }
-    } catch (e) { console.error("Ошибка загрузки настроек", e); }
+    } catch { console.error("Ошибка загрузки настроек"); }
   };
 
   const fetchFavorites = async () => {
@@ -311,7 +313,7 @@ export default function TavernArchive() {
       const res = await fetch(`/api/favorites`);
       if (res.ok) setFavorites(await res.json());
       else handleApiError(res.status);
-    } catch (e) { console.error("Ошибка загрузки избранного"); }
+    } catch { console.error("Ошибка загрузки избранного"); }
   };
 
   const handleToggleFavorite = async (archiveId: number) => {
@@ -329,7 +331,7 @@ export default function TavernArchive() {
         body: JSON.stringify({ archiveId, action })
       });
       if (!res.ok) throw new Error();
-    } catch (error) {
+    } catch {
       if (isCurrentlyFavorite) setFavorites([...favorites, archiveId]);
       else setFavorites(favorites.filter(id => id !== archiveId));
       showToast("Не удалось сохранить избранное", "error");
@@ -350,7 +352,7 @@ export default function TavernArchive() {
       setData(formatted);
       setTotalPages(Math.ceil((result.total || 0) / LIMIT));
       setCurrentPage(page);
-    } catch (error) { setData([]); }
+    } catch { setData([]); }
     finally { setIsLoading(false); }
   };
 
@@ -365,7 +367,7 @@ export default function TavernArchive() {
             fetchFavorites();
           } else localStorage.removeItem("tavern_session"); 
         }
-      } catch (e) { localStorage.removeItem("tavern_session"); } 
+      } catch { localStorage.removeItem("tavern_session"); } 
       finally { setIsCheckingAuth(false); }
     };
     checkSession();
@@ -698,7 +700,7 @@ export default function TavernArchive() {
         showToast(`Успешно добавлено ${result.count} записей!`, "success");
         setBulkJson(""); fetchArchive(1);
       } else { showToast("Ошибка при импорте", "error"); }
-    } catch (e) { showToast("Ошибка формата JSON.", "error"); }
+    } catch { showToast("Ошибка формата JSON.", "error"); }
   };
 
   useEffect(() => {
