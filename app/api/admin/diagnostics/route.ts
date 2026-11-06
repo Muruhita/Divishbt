@@ -8,7 +8,8 @@ export async function GET() {
     const start = Date.now();
     await db.execute("SELECT 1");
     return NextResponse.json({ status: "ok", latency: Date.now() - start, message: "База данных в норме" });
-  } catch (error: any) {
-    return NextResponse.json({ status: "error", message: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Ошибка";
+    return NextResponse.json({ status: "error", message }, { status: 500 });
   }
 }
