@@ -797,7 +797,6 @@ export default function TavernArchive() {
     if (res.ok) {
       showToast("Текст успешно сохранен!", "success");
       setIsEditingPage(false);
-      // Обновляем локальный стейт
       const updatedPages = infoPages.map(p => p.id === activePage.id ? { ...p, content: editPageContent } : p);
       setInfoPages(updatedPages);
       setActivePage({ ...activePage, content: editPageContent });
@@ -1022,7 +1021,30 @@ export default function TavernArchive() {
                 <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleLogout(); }} className="p-2 text-red-400 hover:bg-red-500/20 rounded active:scale-90 transition-all" title="Выйти"><LogOut size={18} /></button>
               </button>
 
+              {/* ВЕРХНЕЕ ПРАВОЕ МЕНЮ (Кнопки правил + Навигация) */}
               <div className="flex flex-col gap-1 items-end">
+                
+                {/* 3 Кнопки правил */}
+                {infoPages.map(page => {
+                  let Icon = Info;
+                  let shortName = "";
+                  if (page.id === 'pharma') { Icon = Pill; shortName = "Фарма"; }
+                  if (page.id === 'offensive') { Icon = AlertOctagon; shortName = "Контент"; }
+                  if (page.id === 'dangerous') { Icon = PackageX; shortName = "Товары"; }
+
+                  return (
+                    <button 
+                      key={page.id}
+                      onClick={() => setActivePage(page)} 
+                      className="flex items-center gap-2 px-3 py-1.5 bg-red-900/20 border border-red-500/50 text-red-400 text-xs font-pixeloid-mono rounded hover:bg-red-900/40 hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start"
+                      title={page.title}
+                    >
+                      <Icon size={14} /> {shortName}
+                    </button>
+                  );
+                })}
+
+                {/* Навигация */}
                 {view !== "home" && <button onClick={() => setView("home")} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/90 border border-[#5c3a21] text-[#a37c49] text-xs font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start"><Home size={14} /> На главную</button>}
                 {view !== "archive" && <button onClick={() => setView("archive")} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/90 border border-[#5c3a21] text-[#a37c49] text-xs font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start"><ScrollText size={14} /> Открыть свитки</button>}
                 {view !== "admin" && userRole.level >= 1 && <button onClick={() => setView("admin")} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/90 border border-[#5c3a21] text-[#a37c49] text-xs font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start"><Settings size={14} /> Админка</button>}
@@ -1072,27 +1094,7 @@ export default function TavernArchive() {
                       <button key={c.id} onClick={() => { setSelectedCategory(c.name); setCurrentPage(1); setShowOnlyFavorites(false); }} className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 ${selectedCategory === c.name && !showOnlyFavorites ? 'bg-[#a37c49] text-[#160d08] border-[#a37c49] shadow-[0_0_15px_rgba(163,124,73,0.3)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-[#a37c49] hover:text-[#e6d5b8]'}`}>{c.name}</button>
                     ))}
                     
-                    <div className="flex flex-wrap items-center gap-2 ml-auto border-l-2 border-[#5c3a21] pl-4">
-                      {infoPages.map(page => {
-                        let Icon = Info;
-                        if (page.id === 'pharma') Icon = Pill;
-                        if (page.id === 'offensive') Icon = AlertOctagon;
-                        if (page.id === 'dangerous') Icon = PackageX;
-                        
-                        return (
-                          <button 
-                            key={page.id}
-                            onClick={() => setActivePage(page)} 
-                            className="px-3 py-2 rounded border font-pixeloid-mono text-sm transition-all duration-300 active:scale-95 bg-[#2e1b13] border-red-900 text-red-400 hover:border-red-500 hover:text-red-300 flex items-center gap-2"
-                          >
-                            <Icon size={16} />
-                            {page.id === 'pharma' ? 'Фарма' : page.id === 'offensive' ? 'Контент' : 'Товары'}
-                          </button>
-                        );
-                      })}
-                      
-                      <button onClick={() => setShowOnlyFavorites(!showOnlyFavorites)} className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 flex items-center gap-2 ${showOnlyFavorites ? 'bg-yellow-600 text-white border-yellow-500 shadow-[0_0_15px_rgba(202,138,4,0.4)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-yellow-500 hover:text-yellow-400'}`}><Star size={16} fill={showOnlyFavorites ? "currentColor" : "none"} /> Избранное</button>
-                    </div>
+                    <button onClick={() => setShowOnlyFavorites(!showOnlyFavorites)} className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 flex items-center gap-2 ml-auto ${showOnlyFavorites ? 'bg-yellow-600 text-white border-yellow-500 shadow-[0_0_15px_rgba(202,138,4,0.4)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-yellow-500 hover:text-yellow-400'}`}><Star size={16} fill={showOnlyFavorites ? "currentColor" : "none"} /> Избранное</button>
                  </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {isLoading ? (
