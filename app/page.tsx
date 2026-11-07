@@ -17,7 +17,7 @@ const DANGER_LEVELS = ["Низкий", "Средний", "Высокий", "См
 const INITIAL_NEW_ITEM: NewArchiveItem = { title: "", category: "Комбинации Цифр", description: "", symbol: "", dangerLevel: "Низкий", image: "", is_draft: 0 };
 const RUNES = ["ᚠ", "ᚢ", "ᚦ", "ᚨ", "ᚱ", "ᚲ", "ᚷ", "ᚹ", "ᚺ", "ᚾ", "ᛁ", "ᛃ", "ᛈ", "ᛇ", "ᛉ", "ᛊ", "ᛏ", "ᛒ", "ᛖ", "ᛗ", "ᛚ", "ᛜ", "ᛞ", "ᛟ"];
 
-const DEFAULT_CATEGORIES = ["Комбинации Цифр", "Слова", "Термины", "Комбинации Букв", "Символика", "Картинки", "Другое"].map((name, i) => ({ id: i+1, name }));
+const DEFAULT_CATEGORIES = ["Комбинации Цифр", "Слова", "Термины", "Аббревиатура", "Символика", "Картинки", "Другое"].map((name, i) => ({ id: i+1, name }));
 const DEFAULT_ROLES = [
   { id: "owner", name: "Овнер (Dev)", level: 4 },
   { id: "creator", name: "Создатель Сервера", level: 3 },
@@ -705,7 +705,7 @@ export default function TavernArchive() {
     } catch { showToast("Ошибка формата JSON.", "error"); }
   };
 
-  // ИСПРАВЛЕННЫЙ ПАРСЕР: Теперь ищет совпадения по вхождению (Термин -> Термины)
+  // ИСПРАВЛЕННЫЙ ПАРСЕР: Теперь ищет совпадения по вхождению
   const handleTextImport = async () => {
     if (!user || !bulkText.trim()) return;
     playSound("save");
@@ -727,7 +727,7 @@ export default function TavernArchive() {
             title = line.substring(9).trim();
           } else if (lowerLine.startsWith("категория:")) {
             const cat = line.substring(10).trim().toLowerCase();
-            // Ищем точное совпадение или частичное (в базе "термины", в тексте "термин")
+            // Ищем точное совпадение или частичное
             const foundCat = categories.find(c => {
               const dbCat = c.name.toLowerCase();
               return dbCat === cat || dbCat.includes(cat) || cat.includes(dbCat);
@@ -1144,7 +1144,6 @@ export default function TavernArchive() {
 
                 {adminTab === "bulk" && userRole.level >= 2 && (
                   <div className="space-y-8 max-w-3xl animate-smooth-fade-up">
-                    {/* НОВЫЙ УМНЫЙ ИМПОРТ ИЗ ТЕКСТА */}
                     <div className="bg-[#1c110b] p-6 rounded-lg border-2 border-[#a37c49] shadow-[0_0_20px_rgba(163,124,73,0.1)]">
                       <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-2 flex items-center gap-2"><BookOpen size={18}/> Умный импорт из текста (Google Docs)</h3>
                       <p className="text-xs text-[#8c6e52] mb-4">
