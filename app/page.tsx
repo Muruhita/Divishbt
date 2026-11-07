@@ -166,7 +166,6 @@ export default function TavernArchive() {
   const [autoUser, setAutoUser] = useState(false);
   const [autoPass, setAutoPass] = useState(false);
   
-  // Стейты для импорта
   const [bulkJson, setBulkJson] = useState(""); 
   const [bulkText, setBulkText] = useState("");
   
@@ -706,13 +705,12 @@ export default function TavernArchive() {
     } catch { showToast("Ошибка формата JSON.", "error"); }
   };
 
-  // НОВАЯ ФУНКЦИЯ: Парсер текста из Google Docs
+  // ИСПРАВЛЕННЫЙ ПАРСЕР: Теперь ищет совпадения по вхождению (Термин -> Термины)
   const handleTextImport = async () => {
     if (!user || !bulkText.trim()) return;
     playSound("save");
 
     try {
-      // Разделяем текст по трем дефисам
       const blocks = bulkText.split('---').filter(b => b.trim() !== "");
       
       const parsedItems = blocks.map(block => {
@@ -728,14 +726,16 @@ export default function TavernArchive() {
           if (lowerLine.startsWith("название:")) {
             title = line.substring(9).trim();
           } else if (lowerLine.startsWith("категория:")) {
-            const cat = line.substring(10).trim();
-            // Проверяем, существует ли такая категория
-            const foundCat = categories.find(c => c.name.toLowerCase() === cat.toLowerCase());
+            const cat = line.substring(10).trim().toLowerCase();
+            // Ищем точное совпадение или частичное (в базе "термины", в тексте "термин")
+            const foundCat = categories.find(c => {
+              const dbCat = c.name.toLowerCase();
+              return dbCat === cat || dbCat.includes(cat) || cat.includes(dbCat);
+            });
             category = foundCat ? foundCat.name : "Другое";
           } else if (lowerLine.startsWith("уровень:")) {
-            const lvl = line.substring(8).trim();
-            // Проверяем уровень
-            const foundLvl = DANGER_LEVELS.find(l => l.toLowerCase() === lvl.toLowerCase());
+            const lvl = line.substring(8).trim().toLowerCase();
+            const foundLvl = DANGER_LEVELS.find(l => l.toLowerCase() === lvl);
             dangerLevel = foundLvl || "Низкий";
           } else if (lowerLine.startsWith("описание:")) {
             descriptionLines.push(line.substring(9).trim());
@@ -754,7 +754,7 @@ export default function TavernArchive() {
           symbol: "",
           image: ""
         };
-      }).filter(item => item.title && item.description); // Отсеиваем пустые
+      }).filter(item => item.title && item.description); 
 
       if (parsedItems.length === 0) {
         return showToast("Не найдено ни одной корректной записи. Проверьте формат.", "warning");
