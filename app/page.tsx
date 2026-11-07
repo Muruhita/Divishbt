@@ -27,6 +27,13 @@ const DEFAULT_ROLES = [
   { id: "low", name: "Лоу Стафф", level: 0 }
 ];
 
+// СТРАХОВКА: Если БД пустая, кнопки всё равно появятся
+const DEFAULT_INFO_PAGES: InfoPage[] = [
+  { id: 'pharma', title: 'ЗАПРЕЩЕННЫЕ ФАРМАЦЕВТИЧЕСКИЕ ПРЕПАРАТЫ И ПИЩЕВЫЕ ДОБАВКИ', content: 'Текст правил от Хранителя/Овнера будет здесь...' },
+  { id: 'offensive', title: 'НЕПРИЕМЛЕМЫЙ/ОСКОРБИТЕЛЬНЫЙ КОНТЕНТ', content: 'Текст правил от Хранителя/Овнера будет здесь...' },
+  { id: 'dangerous', title: 'ОПАСНЫЕ ТОВАРЫ', content: 'Текст правил от Хранителя/Овнера будет здесь...' }
+];
+
 const SkeletonCard = () => (
   <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] rounded-lg p-6 flex flex-col h-64 animate-pulse">
     <div className="flex justify-between items-start mb-4">
@@ -149,7 +156,7 @@ export default function TavernArchive() {
   const [showProfile, setShowProfile] = useState(false);
 
   // Стейты для текстовых страниц (Правила)
-  const [infoPages, setInfoPages] = useState<InfoPage[]>([]);
+  const [infoPages, setInfoPages] = useState<InfoPage[]>(DEFAULT_INFO_PAGES);
   const [activePage, setActivePage] = useState<InfoPage | null>(null);
   const [isEditingPage, setIsEditingPage] = useState(false);
   const [editPageContent, setEditPageContent] = useState("");
@@ -315,7 +322,10 @@ export default function TavernArchive() {
         if (roleData && roleData.length > 0) setRoles(roleData);
       }
       const infoRes = await fetch('/api/info-pages');
-      if (infoRes.ok) setInfoPages(await infoRes.json());
+      if (infoRes.ok) {
+        const pagesData = await infoRes.json();
+        if (pagesData && pagesData.length > 0) setInfoPages(pagesData);
+      }
     } catch { console.error("Ошибка загрузки настроек"); }
   };
 
@@ -1021,10 +1031,9 @@ export default function TavernArchive() {
                 <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleLogout(); }} className="p-2 text-red-400 hover:bg-red-500/20 rounded active:scale-90 transition-all" title="Выйти"><LogOut size={18} /></button>
               </button>
 
-              {/* ВЕРХНЕЕ ПРАВОЕ МЕНЮ (Кнопки правил + Навигация) */}
               <div className="flex flex-col gap-1 items-end">
                 
-                {/* 3 Кнопки правил */}
+                {/* 3 Кнопки правил (теперь они отрисовываются всегда) */}
                 {infoPages.map(page => {
                   let Icon = Info;
                   let shortName = "";
