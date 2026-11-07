@@ -165,7 +165,10 @@ export default function TavernArchive() {
   const [newAcc, setNewAcc] = useState({ account_name: "", username: "", password: "", role: "low" });
   const [autoUser, setAutoUser] = useState(false);
   const [autoPass, setAutoPass] = useState(false);
+  
+  // Стейты для импорта
   const [bulkJson, setBulkJson] = useState(""); 
+  const [bulkText, setBulkText] = useState("");
   
   const [adminTab, setAdminTab] = useState<"dashboard" | "archive" | "bulk" | "users" | "diag" | "logs" | "categories" | "roles" | "media">("dashboard");
   
@@ -703,6 +706,78 @@ export default function TavernArchive() {
     } catch { showToast("Ошибка формата JSON.", "error"); }
   };
 
+  // НОВАЯ ФУНКЦИЯ: Парсер текста из Google Docs
+  const handleTextImport = async () => {
+    if (!user || !bulkText.trim()) return;
+    playSound("save");
+
+    try {
+      // Разделяем текст по трем дефисам
+      const blocks = bulkText.split('---').filter(b => b.trim() !== "");
+      
+      const parsedItems = blocks.map(block => {
+        const lines = block.split('\n');
+        let title = "";
+        let category = "Другое";
+        let dangerLevel = "Низкий";
+        let descriptionLines: string[] = [];
+        let parsingDescription = false;
+
+        lines.forEach(line => {
+          const lowerLine = line.toLowerCase();
+          if (lowerLine.startsWith("название:")) {
+            title = line.substring(9).trim();
+          } else if (lowerLine.startsWith("категория:")) {
+            const cat = line.substring(10).trim();
+            // Проверяем, существует ли такая категория
+            const foundCat = categories.find(c => c.name.toLowerCase() === cat.toLowerCase());
+            category = foundCat ? foundCat.name : "Другое";
+          } else if (lowerLine.startsWith("уровень:")) {
+            const lvl = line.substring(8).trim();
+            // Проверяем уровень
+            const foundLvl = DANGER_LEVELS.find(l => l.toLowerCase() === lvl.toLowerCase());
+            dangerLevel = foundLvl || "Низкий";
+          } else if (lowerLine.startsWith("описание:")) {
+            descriptionLines.push(line.substring(9).trim());
+            parsingDescription = true;
+          } else if (parsingDescription) {
+             descriptionLines.push(line);
+          }
+        });
+
+        return {
+          title: title,
+          category: category,
+          description: descriptionLines.join('\n').trim(),
+          dangerLevel: dangerLevel,
+          is_draft: 0,
+          symbol: "",
+          image: ""
+        };
+      }).filter(item => item.title && item.description); // Отсеиваем пустые
+
+      if (parsedItems.length === 0) {
+        return showToast("Не найдено ни одной корректной записи. Проверьте формат.", "warning");
+      }
+
+      const res = await fetch("/api/archive", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(parsedItems)
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        showToast(`Успешно добавлено ${result.count} записей!`, "success");
+        setBulkText(""); 
+        fetchArchive(1);
+      } else { 
+        showToast("Ошибка при сохранении", "error"); 
+      }
+
+    } catch (error) {
+      showToast("Ошибка при обработке текста", "error");
+    }
+  };
+
   useEffect(() => {
     if (view === "admin") {
       if (adminTab === "users") fetchUsers();
@@ -890,7 +965,6 @@ export default function TavernArchive() {
           </div>
 
           <div className="max-w-5xl mx-auto px-6 pb-12 w-full flex flex-col flex-grow -mt-16">
-            {/* Исправленный header: кликабелен только логотип */}
             <header className="flex justify-center mb-8">
               <img 
                 src="/logo.png" 
@@ -1069,12 +1143,33 @@ export default function TavernArchive() {
                 )}
 
                 {adminTab === "bulk" && userRole.level >= 2 && (
-                  <div className="space-y-8 max-w-2xl animate-smooth-fade-up">
-                    <div className="bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
-                      <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Upload size={18}/> Массовый импорт</h3>
-                      <textarea placeholder="Вставьте JSON сюда..." value={bulkJson} onChange={e => setBulkJson(e.target.value)} className="w-full p-3 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] font-mono text-sm focus:border-[#a37c49] outline-none h-48 select-text" />
-                      <button onClick={handleBulkImport} className="mt-4 px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#7a4f2e] active:scale-95 transition-all shadow-lg">Импортировать</button>
+                  <div className="space-y-8 max-w-3xl animate-smooth-fade-up">
+                    {/* НОВЫЙ УМНЫЙ ИМПОРТ ИЗ ТЕКСТА */}
+                    <div className="bg-[#1c110b] p-6 rounded-lg border-2 border-[#a37c49] shadow-[0_0_20px_rgba(163,124,73,0.1)]">
+                      <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-2 flex items-center gap-2"><BookOpen size={18}/> Умный импорт из текста (Google Docs)</h3>
+                      <p className="text-xs text-[#8c6e52] mb-4">
+                        Вставьте текст в формате:<br/>
+                        <code className="text-[#e6d5b8] bg-black/30 p-1 rounded">Название: Слово</code><br/>
+                        <code className="text-[#e6d5b8] bg-black/30 p-1 rounded">Категория: Слова</code><br/>
+                        <code className="text-[#e6d5b8] bg-black/30 p-1 rounded">Уровень: Низкий</code><br/>
+                        <code className="text-[#e6d5b8] bg-black/30 p-1 rounded">Описание: Само описание...</code><br/>
+                        <span className="text-[#a37c49] font-bold">---</span> (три дефиса для разделения записей)
+                      </p>
+                      <textarea 
+                        placeholder="Вставьте сюда текст из документа..." 
+                        value={bulkText} 
+                        onChange={e => setBulkText(e.target.value)} 
+                        className="w-full p-3 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] font-mono text-sm focus:border-[#a37c49] outline-none h-64 select-text" 
+                      />
+                      <button onClick={handleTextImport} className="mt-4 px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#7a4f2e] active:scale-95 transition-all shadow-lg">Импортировать текст</button>
                     </div>
+
+                    <div className="bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
+                      <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Upload size={18}/> Импорт JSON (для профи)</h3>
+                      <textarea placeholder="Вставьте JSON сюда..." value={bulkJson} onChange={e => setBulkJson(e.target.value)} className="w-full p-3 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] font-mono text-sm focus:border-[#a37c49] outline-none h-32 select-text" />
+                      <button onClick={handleBulkImport} className="mt-4 px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#7a4f2e] active:scale-95 transition-all shadow-lg">Импортировать JSON</button>
+                    </div>
+
                     <div className="bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
                       <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Download size={18}/> Экспорт</h3>
                       <button onClick={handleExport} className="px-6 py-2 bg-[#3d2617] border border-[#5c3a21] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#5c3a21] active:scale-95 transition-all shadow-lg">Скачать файл</button>
