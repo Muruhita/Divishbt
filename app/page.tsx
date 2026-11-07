@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
-import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle, Save, Tag, CheckCircle2, Info, Home, BookOpen, LayoutDashboard, ImagePlus, Star, ArrowUp } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle, Save, Tag, CheckCircle2, Info, Home, BookOpen, LayoutDashboard, ImagePlus, Star, ArrowUp, Pill, AlertOctagon, PackageX, FileEdit } from "lucide-react";
 
 type ArchiveItem = { id: number; title: string; category: string; description: string; symbol?: string; dangerLevel?: string; image?: string; is_draft?: number; };
 type DbArchiveItem = { id: number; title: string; category: string; description: string; symbol: string | null; danger_level: string | null; image: string | null; is_draft: number; };
@@ -12,6 +12,7 @@ type LogItem = { id: number; action: string; item_title: string; user_name: stri
 type NewArchiveItem = Omit<ArchiveItem, "id">;
 type RoleItem = { id: string; name: string; level: number };
 type CategoryItem = { id: number; name: string };
+type InfoPage = { id: string; title: string; content: string; };
 
 const DANGER_LEVELS = ["Низкий", "Средний", "Высокий", "Смертельный"];
 const INITIAL_NEW_ITEM: NewArchiveItem = { title: "", category: "Комбинации Цифр", description: "", symbol: "", dangerLevel: "Низкий", image: "", is_draft: 0 };
@@ -146,6 +147,12 @@ export default function TavernArchive() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<ArchiveItem | null>(null);
   const [showProfile, setShowProfile] = useState(false);
+
+  // Стейты для текстовых страниц (Правила)
+  const [infoPages, setInfoPages] = useState<InfoPage[]>([]);
+  const [activePage, setActivePage] = useState<InfoPage | null>(null);
+  const [isEditingPage, setIsEditingPage] = useState(false);
+  const [editPageContent, setEditPageContent] = useState("");
 
   const [user, setUser] = useState<User | null>(null);
   const [loginUser, setLoginUser] = useState("");
@@ -307,6 +314,8 @@ export default function TavernArchive() {
         const roleData = await roleRes.json();
         if (roleData && roleData.length > 0) setRoles(roleData);
       }
+      const infoRes = await fetch('/api/info-pages');
+      if (infoRes.ok) setInfoPages(await infoRes.json());
     } catch { console.error("Ошибка загрузки настроек"); }
   };
 
@@ -705,7 +714,6 @@ export default function TavernArchive() {
     } catch { showToast("Ошибка формата JSON.", "error"); }
   };
 
-  // ИСПРАВЛЕННЫЙ ПАРСЕР: Теперь ищет совпадения по вхождению
   const handleTextImport = async () => {
     if (!user || !bulkText.trim()) return;
     playSound("save");
@@ -727,7 +735,6 @@ export default function TavernArchive() {
             title = line.substring(9).trim();
           } else if (lowerLine.startsWith("категория:")) {
             const cat = line.substring(10).trim().toLowerCase();
-            // Ищем точное совпадение или частичное
             const foundCat = categories.find(c => {
               const dbCat = c.name.toLowerCase();
               return dbCat === cat || dbCat.includes(cat) || cat.includes(dbCat);
@@ -775,6 +782,27 @@ export default function TavernArchive() {
 
     } catch (error) {
       showToast("Ошибка при обработке текста", "error");
+    }
+  };
+
+  const handleSaveInfoPage = async () => {
+    if (!activePage) return;
+    playSound("save");
+    const res = await fetch("/api/info-pages", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: activePage.id, content: editPageContent })
+    });
+
+    if (res.ok) {
+      showToast("Текст успешно сохранен!", "success");
+      setIsEditingPage(false);
+      // Обновляем локальный стейт
+      const updatedPages = infoPages.map(p => p.id === activePage.id ? { ...p, content: editPageContent } : p);
+      setInfoPages(updatedPages);
+      setActivePage({ ...activePage, content: editPageContent });
+    } else {
+      showToast("Ошибка при сохранении текста", "error");
     }
   };
 
@@ -880,6 +908,44 @@ export default function TavernArchive() {
               </label>
               <button type="submit" className="px-6 py-2 bg-[#5c3a21] text-white font-bold rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Сохранить</button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* МОДАЛЬНОЕ ОКНО ДЛЯ ПРАВИЛ */}
+      {activePage && (
+        <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm" onClick={() => { setActivePage(null); setIsEditingPage(false); }}>
+          <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl w-full max-w-3xl relative animate-smooth-pop max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => { setActivePage(null); setIsEditingPage(false); }} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 active:scale-90 transition-all"><X size={24}/></button>
+            
+            <h2 className="text-xl md:text-2xl font-bold font-pixeloid-mono text-[#a37c49] mb-4 pr-8">{activePage.title}</h2>
+            
+            <div className="flex-grow overflow-y-auto pr-2 custom-scrollbar">
+              {isEditingPage ? (
+                <textarea 
+                  value={editPageContent} 
+                  onChange={e => setEditPageContent(e.target.value)} 
+                  className="w-full h-64 p-4 bg-[#160d08] border-2 border-[#5c3a21] rounded-lg text-[#e6d5b8] font-mono text-sm focus:border-[#a37c49] outline-none select-text" 
+                />
+              ) : (
+                <div className="text-[#c4b5a5] font-sans leading-relaxed prose prose-invert max-w-none select-text">
+                  <ReactMarkdown>{activePage.content}</ReactMarkdown>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-[#5c3a21] flex justify-end gap-3">
+              {isEditingPage ? (
+                <>
+                  <button onClick={() => setIsEditingPage(false)} className="px-4 py-2 bg-[#3d2617] text-[#a37c49] font-bold rounded-lg hover:bg-[#5c3a21] transition-all">Отмена</button>
+                  <button onClick={handleSaveInfoPage} className="px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-white font-bold rounded-lg hover:bg-[#7a4f2e] transition-all flex items-center gap-2"><Save size={18}/> Сохранить</button>
+                </>
+              ) : (
+                userRole.level >= 2 && (
+                  <button onClick={() => { setEditPageContent(activePage.content); setIsEditingPage(true); }} className="px-6 py-2 bg-blue-600/20 border border-blue-500 text-blue-400 font-bold rounded-lg hover:bg-blue-600/40 transition-all flex items-center gap-2"><FileEdit size={18}/> Редактировать текст</button>
+                )
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -1005,7 +1071,28 @@ export default function TavernArchive() {
                     {categories.map(c => (
                       <button key={c.id} onClick={() => { setSelectedCategory(c.name); setCurrentPage(1); setShowOnlyFavorites(false); }} className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 ${selectedCategory === c.name && !showOnlyFavorites ? 'bg-[#a37c49] text-[#160d08] border-[#a37c49] shadow-[0_0_15px_rgba(163,124,73,0.3)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-[#a37c49] hover:text-[#e6d5b8]'}`}>{c.name}</button>
                     ))}
-                    <button onClick={() => setShowOnlyFavorites(!showOnlyFavorites)} className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 flex items-center gap-2 ml-auto ${showOnlyFavorites ? 'bg-yellow-600 text-white border-yellow-500 shadow-[0_0_15px_rgba(202,138,4,0.4)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-yellow-500 hover:text-yellow-400'}`}><Star size={16} fill={showOnlyFavorites ? "currentColor" : "none"} /> Избранное</button>
+                    
+                    <div className="flex flex-wrap items-center gap-2 ml-auto border-l-2 border-[#5c3a21] pl-4">
+                      {infoPages.map(page => {
+                        let Icon = Info;
+                        if (page.id === 'pharma') Icon = Pill;
+                        if (page.id === 'offensive') Icon = AlertOctagon;
+                        if (page.id === 'dangerous') Icon = PackageX;
+                        
+                        return (
+                          <button 
+                            key={page.id}
+                            onClick={() => setActivePage(page)} 
+                            className="px-3 py-2 rounded border font-pixeloid-mono text-sm transition-all duration-300 active:scale-95 bg-[#2e1b13] border-red-900 text-red-400 hover:border-red-500 hover:text-red-300 flex items-center gap-2"
+                          >
+                            <Icon size={16} />
+                            {page.id === 'pharma' ? 'Фарма' : page.id === 'offensive' ? 'Контент' : 'Товары'}
+                          </button>
+                        );
+                      })}
+                      
+                      <button onClick={() => setShowOnlyFavorites(!showOnlyFavorites)} className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 flex items-center gap-2 ${showOnlyFavorites ? 'bg-yellow-600 text-white border-yellow-500 shadow-[0_0_15px_rgba(202,138,4,0.4)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-yellow-500 hover:text-yellow-400'}`}><Star size={16} fill={showOnlyFavorites ? "currentColor" : "none"} /> Избранное</button>
+                    </div>
                  </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {isLoading ? (
