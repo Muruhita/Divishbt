@@ -27,7 +27,6 @@ const DEFAULT_ROLES = [
   { id: "low", name: "Лоу Стафф", level: 0 }
 ];
 
-// СТРАХОВКА: Если БД пустая, кнопки всё равно появятся
 const DEFAULT_INFO_PAGES: InfoPage[] = [
   { id: 'pharma', title: 'ЗАПРЕЩЕННЫЕ ФАРМАЦЕВТИЧЕСКИЕ ПРЕПАРАТЫ И ПИЩЕВЫЕ ДОБАВКИ', content: 'Текст правил от Хранителя/Овнера будет здесь...' },
   { id: 'offensive', title: 'НЕПРИЕМЛЕМЫЙ/ОСКОРБИТЕЛЬНЫЙ КОНТЕНТ', content: 'Текст правил от Хранителя/Овнера будет здесь...' },
@@ -934,11 +933,12 @@ export default function TavernArchive() {
                 <textarea 
                   value={editPageContent} 
                   onChange={e => setEditPageContent(e.target.value)} 
-                  className="w-full h-64 p-4 bg-[#160d08] border-2 border-[#5c3a21] rounded-lg text-[#e6d5b8] font-mono text-sm focus:border-[#a37c49] outline-none select-text" 
+                  className="w-full h-64 p-4 bg-[#160d08] border-2 border-[#5c3a21] rounded-lg text-[#e6d5b8] font-mono text-sm focus:border-[#a37c49] outline-none select-text whitespace-pre-wrap" 
                 />
               ) : (
-                <div className="text-[#c4b5a5] font-sans leading-relaxed prose prose-invert max-w-none select-text">
-                  <ReactMarkdown>{activePage.content}</ReactMarkdown>
+                // ИСПОЛЬЗУЕМ whitespace-pre-wrap для сохранения абзацев
+                <div className="text-[#c4b5a5] font-sans leading-relaxed max-w-none select-text whitespace-pre-wrap break-words">
+                  {activePage.content}
                 </div>
               )}
             </div>
@@ -1033,7 +1033,6 @@ export default function TavernArchive() {
 
               <div className="flex flex-col gap-1 items-end">
                 
-                {/* 3 Кнопки правил (теперь они отрисовываются всегда) */}
                 {infoPages.map(page => {
                   let Icon = Info;
                   let shortName = "";
@@ -1053,7 +1052,6 @@ export default function TavernArchive() {
                   );
                 })}
 
-                {/* Навигация */}
                 {view !== "home" && <button onClick={() => setView("home")} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/90 border border-[#5c3a21] text-[#a37c49] text-xs font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start"><Home size={14} /> На главную</button>}
                 {view !== "archive" && <button onClick={() => setView("archive")} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/90 border border-[#5c3a21] text-[#a37c49] text-xs font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start"><ScrollText size={14} /> Открыть свитки</button>}
                 {view !== "admin" && userRole.level >= 1 && <button onClick={() => setView("admin")} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/90 border border-[#5c3a21] text-[#a37c49] text-xs font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start"><Settings size={14} /> Админка</button>}
