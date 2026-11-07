@@ -920,6 +920,16 @@ export default function TavernArchive() {
         </div>
       )}
 
+      {/* ВОССТАНОВЛЕННОЕ МОДАЛЬНОЕ ОКНО ДЛЯ КАРТИНКИ */}
+      {selectedImage && (
+        <div className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm cursor-zoom-out" onClick={() => setSelectedImage(null)}>
+          <img src={selectedImage} alt="Fullscreen" draggable={false} className="max-w-full max-h-[90vh] object-contain drop-shadow-2xl select-none" />
+          <button className="absolute top-4 right-4 text-gray-400 hover:text-red-500 active:scale-90 transition-all bg-black/50 p-2 rounded-full" onClick={() => setSelectedImage(null)}>
+            <X size={32} />
+          </button>
+        </div>
+      )}
+
       {/* МОДАЛЬНОЕ ОКНО ДЛЯ ПРАВИЛ */}
       {activePage && (
         <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm" onClick={() => { setActivePage(null); setIsEditingPage(false); }}>
@@ -936,7 +946,6 @@ export default function TavernArchive() {
                   className="w-full h-64 p-4 bg-[#160d08] border-2 border-[#5c3a21] rounded-lg text-[#e6d5b8] font-mono text-sm focus:border-[#a37c49] outline-none select-text whitespace-pre-wrap" 
                 />
               ) : (
-                // ИСПОЛЬЗУЕМ whitespace-pre-wrap для сохранения абзацев
                 <div className="text-[#c4b5a5] font-sans leading-relaxed max-w-none select-text whitespace-pre-wrap break-words">
                   {activePage.content}
                 </div>
