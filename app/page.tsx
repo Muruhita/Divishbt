@@ -816,12 +816,12 @@ export default function TavernArchive() {
 
   useEffect(() => {
     if (view === "admin") {
-      if (adminTab === "users") fetchUsers();
+      if (adminTab === "users" && userRole.level >= 2) fetchUsers();
       if (adminTab === "logs") fetchLogs();
       if (adminTab === "dashboard") fetchStats();
       if (adminTab === "media") fetchMedia();
     }
-  }, [view, adminTab]);
+  }, [view, adminTab, userRole.level]);
 
   const displayedData = showOnlyFavorites ? data.filter(item => favorites.includes(item.id)) : data;
 
@@ -920,7 +920,6 @@ export default function TavernArchive() {
         </div>
       )}
 
-      {/* ВОССТАНОВЛЕННОЕ МОДАЛЬНОЕ ОКНО ДЛЯ КАРТИНКИ */}
       {selectedImage && (
         <div className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm cursor-zoom-out" onClick={() => setSelectedImage(null)}>
           <img src={selectedImage} alt="Fullscreen" draggable={false} className="max-w-full max-h-[90vh] object-contain drop-shadow-2xl select-none" />
@@ -930,7 +929,6 @@ export default function TavernArchive() {
         </div>
       )}
 
-      {/* МОДАЛЬНОЕ ОКНО ДЛЯ ПРАВИЛ */}
       {activePage && (
         <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm" onClick={() => { setActivePage(null); setIsEditingPage(false); }}>
           <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl w-full max-w-3xl relative animate-smooth-pop max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -1136,7 +1134,10 @@ export default function TavernArchive() {
                   <button onClick={() => setAdminTab("dashboard")} className={`px-4 py-2 rounded transition-all active:scale-95 flex items-center gap-2 ${adminTab === 'dashboard' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}><LayoutDashboard size={16}/> Дашборд</button>
                   <button onClick={() => setAdminTab("archive")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'archive' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Добавить</button>
                   {userRole.level >= 2 && <button onClick={() => setAdminTab("bulk")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'bulk' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Импорт</button>}
-                  <button onClick={() => setAdminTab("users")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'users' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Аккаунты</button>
+                  
+                  {/* ВКЛАДКА АККАУНТЫ ТОЛЬКО С ХРАНИТЕЛЯ (2) */}
+                  {userRole.level >= 2 && <button onClick={() => setAdminTab("users")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'users' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Аккаунты</button>}
+                  
                   <button onClick={() => setAdminTab("media")} className={`px-4 py-2 rounded transition-all active:scale-95 flex items-center gap-2 ${adminTab === 'media' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}><ImagePlus size={16}/> Медиа</button>
                   {userRole.level >= 2 && <button onClick={() => setAdminTab("categories")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'categories' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Категории</button>}
                   {userRole.level >= 3 && <button onClick={() => setAdminTab("roles")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'roles' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Уровни</button>}
@@ -1281,7 +1282,8 @@ export default function TavernArchive() {
                   </div>
                 )}
 
-                {adminTab === "users" && (
+                {/* ФОРМА СОЗДАНИЯ АККАУНТА ТОЛЬКО С ХРАНИТЕЛЯ (2) */}
+                {adminTab === "users" && userRole.level >= 2 && (
                   <div className="space-y-10 font-sans animate-smooth-fade-up">
                     <form onSubmit={handleCreateUser} className="space-y-4 max-w-xl bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
                       <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] flex items-center gap-2"><Plus size={18}/> Создать аккаунт</h3>
