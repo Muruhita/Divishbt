@@ -22,6 +22,12 @@ export async function POST(req: Request) {
     const reqLevel = rolesMap.get(requester.role) || 0;
     const newLevel = rolesMap.get(role) || 0;
 
+    // ЖЕСТКАЯ ПРОВЕРКА: Создавать аккаунты может только Хранитель (2), Создатель (3) и Овнер (4)
+    if (requester.role !== 'owner' && reqLevel < 2) {
+      return NextResponse.json({ error: "Недостаточно прав для создания аккаунтов" }, { status: 403 });
+    }
+
+    // Проверка на то, что нельзя создать ранг выше или равный своему
     if (requester.role !== 'owner' && reqLevel <= newLevel) {
       return NextResponse.json({ error: "Недостаточно прав для создания этого ранга" }, { status: 403 });
     }
