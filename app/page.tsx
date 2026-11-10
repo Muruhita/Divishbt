@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle, Save, Tag, CheckCircle2, Info, Home, BookOpen, LayoutDashboard, ImagePlus, Star, ArrowUp, Pill, AlertOctagon, PackageX, FileEdit } from "lucide-react";
 
@@ -33,7 +33,7 @@ const DEFAULT_INFO_PAGES: InfoPage[] = [
   { id: 'dangerous', title: 'ОПАСНЫЕ ТОВАРЫ', content: 'Текст правил от Хранителя/Овнера будет здесь...' }
 ];
 
-const SkeletonCard = () => (
+const SkeletonCard = React.memo(() => (
   <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] rounded-lg p-6 flex flex-col h-64 animate-pulse">
     <div className="flex justify-between items-start mb-4">
       <div className="h-6 bg-[#5c3a21]/50 rounded w-1/2"></div>
@@ -49,9 +49,10 @@ const SkeletonCard = () => (
       <div className="h-4 bg-[#5c3a21]/50 rounded w-4/6"></div>
     </div>
   </div>
-);
+));
+SkeletonCard.displayName = 'SkeletonCard';
 
-const ArchiveCard = ({ 
+const ArchiveCard = React.memo(({ 
   item, canEdit, canDelete, onEdit, onDelete, onViewImage, isFavorite, onToggleFavorite
 }: { 
   item: ArchiveItem; 
@@ -70,39 +71,35 @@ const ArchiveCard = ({
   return (
     <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.6)] hover:border-[#a37c49] hover:shadow-[0_0_20px_rgba(163,124,73,0.15)] hover:-translate-y-1.5 transition-all duration-300 group flex flex-col relative z-10 overflow-hidden animate-smooth-fade-up">
       
-      {/* БЛОК С КАРТИНКАМИ */}
       {imgCount > 0 && (
         <div className={`w-full border-b-2 border-[#5c3a21] relative group/img bg-[#d6c5b3] flex items-center justify-center overflow-hidden`} style={{ backgroundImage: 'radial-gradient(#b8a38a 1px, transparent 1px)', backgroundSize: '10px 10px' }}>
           
-          {/* 1 Картинка */}
           {imgCount === 1 && (
             <div className="w-full h-56 cursor-pointer" onClick={() => onViewImage(item.images![0])}>
-              <img src={item.images![0]} alt={item.title} draggable={false} className="w-full h-full object-contain p-2 transition-transform duration-500 group-hover/img:scale-110 drop-shadow-md select-none" />
+              <img src={item.images![0]} loading="lazy" alt={item.title} draggable={false} className="w-full h-full object-contain p-2 transition-transform duration-500 group-hover/img:scale-110 drop-shadow-md select-none" />
             </div>
           )}
 
-          {/* 2 Картинки */}
           {imgCount === 2 && (
             <div className="grid grid-cols-2 gap-1 w-full h-56 p-1">
               {item.images!.map((img, i) => (
                 <div key={i} className="relative cursor-pointer overflow-hidden rounded-sm" onClick={() => onViewImage(img)}>
-                  <img src={img} alt={`${item.title} ${i+1}`} draggable={false} className="w-full h-full object-cover transition-transform duration-500 hover:scale-110 select-none" />
+                  <img src={img} loading="lazy" alt={`${item.title} ${i+1}`} draggable={false} className="w-full h-full object-cover transition-transform duration-500 hover:scale-110 select-none" />
                 </div>
               ))}
             </div>
           )}
 
-          {/* 3+ Картинок */}
           {imgCount >= 3 && (
             <div className="grid grid-cols-2 grid-rows-2 gap-1 w-full h-56 p-1">
               <div className="row-span-2 relative cursor-pointer overflow-hidden rounded-sm" onClick={() => onViewImage(item.images![0])}>
-                <img src={item.images![0]} alt={`${item.title} 1`} draggable={false} className="w-full h-full object-cover transition-transform duration-500 hover:scale-110 select-none" />
+                <img src={item.images![0]} loading="lazy" alt={`${item.title} 1`} draggable={false} className="w-full h-full object-cover transition-transform duration-500 hover:scale-110 select-none" />
               </div>
               <div className="relative cursor-pointer overflow-hidden rounded-sm" onClick={() => onViewImage(item.images![1])}>
-                <img src={item.images![1]} alt={`${item.title} 2`} draggable={false} className="w-full h-full object-cover transition-transform duration-500 hover:scale-110 select-none" />
+                <img src={item.images![1]} loading="lazy" alt={`${item.title} 2`} draggable={false} className="w-full h-full object-cover transition-transform duration-500 hover:scale-110 select-none" />
               </div>
               <div className="relative cursor-pointer overflow-hidden rounded-sm" onClick={() => onViewImage(item.images![2])}>
-                <img src={item.images![2]} alt={`${item.title} 3`} draggable={false} className="w-full h-full object-cover transition-transform duration-500 hover:scale-110 select-none" />
+                <img src={item.images![2]} loading="lazy" alt={`${item.title} 3`} draggable={false} className="w-full h-full object-cover transition-transform duration-500 hover:scale-110 select-none" />
                 {imgCount > 3 && (
                   <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm">
                     <span className="text-white font-bold text-xl font-pixeloid-mono">+{imgCount - 3}</span>
@@ -153,13 +150,20 @@ const ArchiveCard = ({
       </div>
     </div>
   );
-};
+});
+ArchiveCard.displayName = 'ArchiveCard';
 
 export default function TavernArchive() {
   const cursorDotRef = useRef<HTMLDivElement>(null);
+  
+  // 6 точек для красивого шлейфа
   const trail1Ref = useRef<HTMLDivElement>(null);
   const trail2Ref = useRef<HTMLDivElement>(null);
   const trail3Ref = useRef<HTMLDivElement>(null);
+  const trail4Ref = useRef<HTMLDivElement>(null);
+  const trail5Ref = useRef<HTMLDivElement>(null);
+  const trail6Ref = useRef<HTMLDivElement>(null);
+  
   const isHovering = useRef(false);
 
   const [clicks, setClicks] = useState<{ id: number; x: number; y: number }[]>([]);
@@ -167,13 +171,13 @@ export default function TavernArchive() {
   const [confirmDialog, setConfirmDialog] = useState<{ msg: string, onConfirm: () => void } | null>(null);
   const [promptDialog, setPromptDialog] = useState<{ msg: string, val: string, onConfirm: (val: string) => void } | null>(null);
 
-  const showToast = (msg: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
+  const showToast = useCallback((msg: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
-  };
+  }, []);
 
-  const showConfirm = (msg: string, onConfirm: () => void) => setConfirmDialog({ msg, onConfirm });
-  const showPrompt = (msg: string, onConfirm: (val: string) => void) => setPromptDialog({ msg, val: "", onConfirm });
+  const showConfirm = useCallback((msg: string, onConfirm: () => void) => setConfirmDialog({ msg, onConfirm }), []);
+  const showPrompt = useCallback((msg: string, onConfirm: (val: string) => void) => setPromptDialog({ msg, val: "", onConfirm }), []);
 
   const [data, setData] = useState<ArchiveItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -238,12 +242,17 @@ export default function TavernArchive() {
   const [soundEnabled, setSoundEnabled] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
-  const handleApiError = (status: number) => {
+  const handleApiError = useCallback((status: number) => {
     if (status === 401) {
-      handleLogout();
+      setTimeout(() => {
+        setUser(null);
+        setFavorites([]);
+        localStorage.removeItem("tavern_session");
+        setView("home"); 
+      }, 0);
       showToast("Сессия истекла, войдите снова", "warning");
     }
-  };
+  }, [showToast]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -261,12 +270,19 @@ export default function TavernArchive() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // ЛОГИКА КУРСОРА И ШЛЕЙФА (6 точек)
   useEffect(() => {
     if (window.matchMedia("(pointer: coarse)").matches) return;
 
     let mouseX = window.innerWidth / 2;
     let mouseY = window.innerHeight / 2;
-    let trail1X = mouseX, trail1Y = mouseY, trail2X = mouseX, trail2Y = mouseY, trail3X = mouseX, trail3Y = mouseY;
+    
+    let trail1X = mouseX, trail1Y = mouseY;
+    let trail2X = mouseX, trail2Y = mouseY;
+    let trail3X = mouseX, trail3Y = mouseY;
+    let trail4X = mouseX, trail4Y = mouseY;
+    let trail5X = mouseX, trail5Y = mouseY;
+    let trail6X = mouseX, trail6Y = mouseY;
 
     const onMouseMove = (e: MouseEvent) => {
       mouseX = e.clientX;
@@ -293,13 +309,19 @@ export default function TavernArchive() {
 
     let animationFrameId: number;
     const animateTrail = () => {
-      trail1X += (mouseX - trail1X) * 0.3; trail1Y += (mouseY - trail1Y) * 0.3;
-      trail2X += (trail1X - trail2X) * 0.3; trail2Y += (trail1Y - trail2Y) * 0.3;
-      trail3X += (trail2X - trail3X) * 0.3; trail3Y += (trail2Y - trail3Y) * 0.3;
+      trail1X += (mouseX - trail1X) * 0.4;  trail1Y += (mouseY - trail1Y) * 0.4;
+      trail2X += (trail1X - trail2X) * 0.35; trail2Y += (trail1Y - trail2Y) * 0.35;
+      trail3X += (trail2X - trail3X) * 0.3;  trail3Y += (trail2Y - trail3Y) * 0.3;
+      trail4X += (trail3X - trail4X) * 0.25; trail4Y += (trail3Y - trail4Y) * 0.25;
+      trail5X += (trail4X - trail5X) * 0.2;  trail5Y += (trail4Y - trail5Y) * 0.2;
+      trail6X += (trail5X - trail6X) * 0.15; trail6Y += (trail5Y - trail6Y) * 0.15;
 
       if (trail1Ref.current) trail1Ref.current.style.transform = `translate(${trail1X}px, ${trail1Y}px) translate(-50%, -50%)`;
       if (trail2Ref.current) trail2Ref.current.style.transform = `translate(${trail2X}px, ${trail2Y}px) translate(-50%, -50%)`;
       if (trail3Ref.current) trail3Ref.current.style.transform = `translate(${trail3X}px, ${trail3Y}px) translate(-50%, -50%)`;
+      if (trail4Ref.current) trail4Ref.current.style.transform = `translate(${trail4X}px, ${trail4Y}px) translate(-50%, -50%)`;
+      if (trail5Ref.current) trail5Ref.current.style.transform = `translate(${trail5X}px, ${trail5Y}px) translate(-50%, -50%)`;
+      if (trail6Ref.current) trail6Ref.current.style.transform = `translate(${trail6X}px, ${trail6Y}px) translate(-50%, -50%)`;
 
       animationFrameId = requestAnimationFrame(animateTrail);
     };
@@ -326,7 +348,7 @@ export default function TavernArchive() {
     return () => window.removeEventListener('click', initAudio);
   }, []);
 
-  const playSound = (type: "click" | "save" | "delete" | "success") => {
+  const playSound = useCallback((type: "click" | "save" | "delete" | "success") => {
     if (!soundEnabled || !audioCtxRef.current) return;
     const ctx = audioCtxRef.current;
     const osc = ctx.createOscillator();
@@ -347,9 +369,9 @@ export default function TavernArchive() {
       gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
       osc.start(now); osc.stop(now + 0.3);
     }
-  };
+  }, [soundEnabled]);
 
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
     try {
       const catRes = await fetch('/api/admin/categories');
       if (catRes.ok) {
@@ -367,23 +389,23 @@ export default function TavernArchive() {
         if (pagesData && pagesData.length > 0) setInfoPages(pagesData);
       }
     } catch { console.error("Ошибка загрузки настроек"); }
-  };
+  }, []);
 
-  const fetchFavorites = async () => {
+  const fetchFavorites = useCallback(async () => {
     try {
       const res = await fetch(`/api/favorites`);
       if (res.ok) setFavorites(await res.json());
       else handleApiError(res.status);
     } catch { console.error("Ошибка загрузки избранного"); }
-  };
+  }, [handleApiError]);
 
-  const handleToggleFavorite = async (archiveId: number) => {
+  const handleToggleFavorite = useCallback(async (archiveId: number) => {
     if (!user) return showToast("Войдите, чтобы добавлять в избранное", "warning");
     const isCurrentlyFavorite = favorites.includes(archiveId);
     const action = isCurrentlyFavorite ? "remove" : "add";
 
-    if (isCurrentlyFavorite) setFavorites(favorites.filter(id => id !== archiveId));
-    else setFavorites([...favorites, archiveId]);
+    if (isCurrentlyFavorite) setFavorites(prev => prev.filter(id => id !== archiveId));
+    else setFavorites(prev => [...prev, archiveId]);
     playSound("click");
 
     try {
@@ -393,20 +415,19 @@ export default function TavernArchive() {
       });
       if (!res.ok) throw new Error();
     } catch {
-      if (isCurrentlyFavorite) setFavorites([...favorites, archiveId]);
-      else setFavorites(favorites.filter(id => id !== archiveId));
+      if (isCurrentlyFavorite) setFavorites(prev => [...prev, archiveId]);
+      else setFavorites(prev => prev.filter(id => id !== archiveId));
       showToast("Не удалось сохранить избранное", "error");
     }
-  };
+  }, [user, favorites, showToast, playSound]);
 
-  const fetchArchive = async (page = 1, cat = selectedCategory, search = debouncedSearch) => {
+  const fetchArchive = useCallback(async (page = 1, cat = selectedCategory, search = debouncedSearch) => {
     setIsLoading(true);
     try {
       const res = await fetch(`/api/archive?page=${page}&limit=${LIMIT}&category=${encodeURIComponent(cat)}&search=${encodeURIComponent(search)}`);
       const result = await res.json();
       const items = result.items || [];
       const formatted = (items as DbArchiveItem[]).map((item) => {
-        // Парсим картинки (могут быть JSON-массивом или одной строкой из старых записей)
         let parsedImages: string[] = [];
         if (item.image) {
           if (item.image.trim().startsWith('[')) {
@@ -415,7 +436,6 @@ export default function TavernArchive() {
             parsedImages = [item.image];
           }
         }
-
         return {
           id: item.id, title: item.title, category: item.category, description: item.description,
           symbol: item.symbol || undefined, dangerLevel: item.danger_level || undefined,
@@ -427,7 +447,7 @@ export default function TavernArchive() {
       setCurrentPage(page);
     } catch { setData([]); }
     finally { setIsLoading(false); }
-  };
+  }, [selectedCategory, debouncedSearch]);
 
   useEffect(() => {
     const checkSession = () => {
@@ -445,11 +465,11 @@ export default function TavernArchive() {
     };
     checkSession();
     fetchSettings();
-  }, []);
+  }, [fetchFavorites, fetchSettings]);
 
   useEffect(() => {
     if (user) fetchArchive(currentPage, selectedCategory, debouncedSearch);
-  }, [user, currentPage, selectedCategory, debouncedSearch]);
+  }, [user, currentPage, selectedCategory, debouncedSearch, fetchArchive]);
 
   const userRole = roles.find(r => r.id === user?.role) || DEFAULT_ROLES.find(r => r.id === user?.role) || { level: 0, id: "guest", name: "Гость" };
   const canEdit = user?.role === 'owner' || user?.role === 'creator' || userRole.level >= 3;
@@ -489,7 +509,7 @@ export default function TavernArchive() {
     } catch { setLoginError("Ошибка соединения"); }
   };
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     playSound("click");
     setIsBookClosing(true);
     setStartBookCloseAnim(false); 
@@ -501,7 +521,7 @@ export default function TavernArchive() {
       localStorage.removeItem("tavern_session");
       setView("home"); setIsBookClosing(false); setStartBookCloseAnim(false);
     }, 1600);
-  };
+  }, [playSound]);
 
   const openProfile = () => {
     if (user) {
@@ -558,7 +578,6 @@ export default function TavernArchive() {
     const isEditing = index === undefined;
     const currentImages = isEditing ? (editingItem?.images || []) : (newItems[index!].images || []);
     
-    // Лимит: максимум 3 картинки на запись (чтобы не сломать Vercel лимитом 4.5MB)
     if (currentImages.length + files.length > 3) {
       showToast("Можно прикрепить не более 3 картинок!", "warning");
       return;
@@ -576,29 +595,32 @@ export default function TavernArchive() {
         if (isEditing) {
           setEditingItem(prev => prev ? { ...prev, images: [...(prev.images || []), base64] } : null);
         } else {
-          const updated = [...newItems];
-          updated[index!].images = [...(updated[index!].images || []), base64];
-          setNewItems(updated);
+          setNewItems(prev => {
+            const updated = [...prev];
+            updated[index!].images = [...(updated[index!].images || []), base64];
+            return updated;
+          });
         }
       };
       reader.readAsDataURL(file);
     });
     
-    // Сбрасываем input, чтобы можно было выбрать тот же файл снова
     e.target.value = '';
   };
 
   const handleRemoveImage = (imgIndex: number, formIndex?: number) => {
     if (formIndex !== undefined) {
-      const updated = [...newItems];
-      updated[formIndex].images = updated[formIndex].images?.filter((_, i) => i !== imgIndex);
-      setNewItems(updated);
+      setNewItems(prev => {
+        const updated = [...prev];
+        updated[formIndex].images = updated[formIndex].images?.filter((_, i) => i !== imgIndex);
+        return updated;
+      });
     } else if (editingItem) {
       setEditingItem({ ...editingItem, images: editingItem.images?.filter((_, i) => i !== imgIndex) });
     }
   };
 
-  const handleDeleteItem = (id: number, title: string) => {
+  const handleDeleteItem = useCallback((id: number, title: string) => {
     if (!user) return;
     showConfirm(`Вы уверены, что хотите удалить запись "${title}"?`, async () => {
       playSound("delete");
@@ -607,7 +629,7 @@ export default function TavernArchive() {
       fetchArchive(currentPage);
       showToast("Запись удалена", "info");
     });
-  };
+  }, [user, showConfirm, playSound, fetchArchive, currentPage, showToast, handleApiError]);
 
   const handleClearDatabase = () => {
     if (!user || userRole.id !== "owner") return;
@@ -641,7 +663,6 @@ export default function TavernArchive() {
     if (validItems.length === 0) return showToast("Заполните хотя бы одну запись", "warning");
     playSound("save");
 
-    // Преобразуем массив картинок обратно в JSON-строку для БД
     const payload = validItems.map(item => ({
       ...item,
       image: item.images && item.images.length > 0 ? JSON.stringify(item.images) : null
@@ -937,9 +958,16 @@ export default function TavernArchive() {
 
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col select-none">
-      <div ref={trail3Ref} className="cursor-trail trail-3 hidden md:block" />
-      <div ref={trail2Ref} className="cursor-trail trail-2 hidden md:block" />
-      <div ref={trail1Ref} className="cursor-trail trail-1 hidden md:block" />
+      
+      {/* УЛУЧШЕННЫЙ ШЛЕЙФ ИЗ 6 ТОЧЕК */}
+      <div ref={trail6Ref} className="cursor-trail w-[2px] h-[2px] opacity-10 shadow-[0_0_1px_#E5B85C] hidden md:block" />
+      <div ref={trail5Ref} className="cursor-trail w-[3px] h-[3px] opacity-20 shadow-[0_0_2px_#E5B85C] hidden md:block" />
+      <div ref={trail4Ref} className="cursor-trail w-[4px] h-[4px] opacity-30 shadow-[0_0_4px_#E5B85C] hidden md:block" />
+      <div ref={trail3Ref} className="cursor-trail w-[5px] h-[5px] opacity-40 shadow-[0_0_6px_#E5B85C] hidden md:block" />
+      <div ref={trail2Ref} className="cursor-trail w-[6px] h-[6px] opacity-60 shadow-[0_0_8px_#E5B85C] hidden md:block" />
+      <div ref={trail1Ref} className="cursor-trail w-[8px] h-[8px] opacity-80 shadow-[0_0_10px_#E5B85C] hidden md:block" />
+      
+      {/* ОСНОВНАЯ ТОЧКА КУРСОРА */}
       <div ref={cursorDotRef} className="custom-cursor-dot hidden md:block pointer-events-none" />
 
       {clicks.map(c => <div key={c.id} className="cursor-click-ripple" style={{ left: c.x, top: c.y }} />)}
@@ -1026,7 +1054,7 @@ export default function TavernArchive() {
                 <div className="flex flex-wrap gap-2">
                   {editingItem.images?.map((img, i) => (
                     <div key={i} className="relative inline-block border-2 border-[#5c3a21] rounded-lg overflow-hidden" style={{ backgroundColor: '#d6c5b3' }}>
-                      <img src={img} alt="Preview" draggable={false} className="h-20 object-contain p-1 select-none" />
+                      <img src={img} alt="Preview" loading="lazy" draggable={false} className="h-20 object-contain p-1 select-none" />
                       <button type="button" onClick={() => handleRemoveImage(i)} className="absolute top-0 right-0 bg-red-600/80 hover:bg-red-600 text-white p-0.5 rounded-bl-lg transition-colors"><X size={12} /></button>
                     </div>
                   ))}
@@ -1044,7 +1072,7 @@ export default function TavernArchive() {
 
       {selectedImage && (
         <div className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm cursor-zoom-out" onClick={() => setSelectedImage(null)}>
-          <img src={selectedImage} alt="Fullscreen" draggable={false} className="max-w-full max-h-[90vh] object-contain drop-shadow-2xl select-none" />
+          <img src={selectedImage} alt="Fullscreen" loading="lazy" draggable={false} className="max-w-full max-h-[90vh] object-contain drop-shadow-2xl select-none" />
           <button className="absolute top-4 right-4 text-gray-400 hover:text-red-500 active:scale-90 transition-all bg-black/50 p-2 rounded-full" onClick={() => setSelectedImage(null)}>
             <X size={32} />
           </button>
@@ -1096,7 +1124,7 @@ export default function TavernArchive() {
             <form onSubmit={handleUpdateProfile} className="space-y-4">
               <div className="flex flex-col items-center mb-4 group/avatar">
                 <div className="w-24 h-24 rounded-full border-4 border-[#5c3a21] group-hover/avatar:border-[#a37c49] overflow-hidden bg-[#1c110b] mb-2 flex items-center justify-center relative cursor-pointer transition-colors">
-                  {user.avatar ? <img src={user.avatar} alt="Avatar" draggable={false} className="w-full h-full object-cover group-hover/avatar:scale-110 transition-transform duration-300 select-none" /> : <UserIcon size={40} className="text-[#5c3a21] group-hover/avatar:text-[#a37c49] transition-colors" />}
+                  {user.avatar ? <img src={user.avatar} alt="Avatar" loading="lazy" draggable={false} className="w-full h-full object-cover group-hover/avatar:scale-110 transition-transform duration-300 select-none" /> : <UserIcon size={40} className="text-[#5c3a21] group-hover/avatar:text-[#a37c49] transition-colors" />}
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity"><span className="text-xs text-white font-bold">Сменить</span></div>
                   <input type="file" accept="image/*" onChange={handleAvatarUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
                 </div>
@@ -1130,7 +1158,7 @@ export default function TavernArchive() {
             <div className="bg-[#2e1b13]/95 border-4 border-[#a37c49] p-8 rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.9)] relative z-50">
               <div className="flex justify-center mb-6 relative">
                 <div className="absolute inset-0 bg-[#a37c49] blur-2xl opacity-20 rounded-full animate-pulse"></div>
-                <img src="/logo.png" alt="Сытый Лис" draggable={false} className="w-32 h-32 object-cover rounded-full border-4 border-[#5c3a21] relative z-10 animate-float bg-[#1c110b] select-none" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                <img src="/logo.png" alt="Сытый Лис" loading="lazy" draggable={false} className="w-32 h-32 object-cover rounded-full border-4 border-[#5c3a21] relative z-10 animate-float bg-[#1c110b] select-none" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
               </div>
               <h1 className="text-3xl font-bold font-pixeloid-mono text-center mb-2 text-[#E5B85C] uppercase flex justify-center items-center gap-2 drop-shadow-md"><Flame /> Сытый Лис</h1>
               <p className="text-center text-[#8c6e52] mb-8 font-pixeloid-mono">Открыть древний фолиант</p>
@@ -1151,7 +1179,7 @@ export default function TavernArchive() {
             <div className="flex flex-col items-end gap-2">
               <button type="button" className={`flex items-center gap-3 bg-[#2e1b13]/90 border ${userRole.id === 'owner' ? 'owner-border' : 'border-[#5c3a21]'} p-1.5 rounded-lg cursor-pointer hover:border-[#a37c49] transition-all group text-left`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); openProfile(); }}>
                 <div className="w-10 h-10 rounded bg-[#1c110b] overflow-hidden flex items-center justify-center border border-[#5c3a21] group-hover:border-[#a37c49] transition-colors">
-                  {user.avatar ? <img src={user.avatar} alt="Avatar" draggable={false} className="w-full h-full object-cover select-none" /> : <UserIcon size={20} className="text-[#5c3a21] group-hover:text-[#a37c49] transition-colors" />}
+                  {user.avatar ? <img src={user.avatar} alt="Avatar" loading="lazy" draggable={false} className="w-full h-full object-cover select-none" /> : <UserIcon size={20} className="text-[#5c3a21] group-hover:text-[#a37c49] transition-colors" />}
                 </div>
                 <div className="flex flex-col text-right pr-2">
                   <span className="text-sm font-bold font-pixeloid-mono select-text">{user.account_name}</span>
@@ -1194,6 +1222,7 @@ export default function TavernArchive() {
                 src="/logo.png" 
                 alt="Сытый Лис" 
                 onClick={() => setView("home")}
+                loading="lazy"
                 draggable={false}
                 className="w-24 h-24 object-cover rounded-full border-4 border-[#5c3a21] animate-float bg-[#1c110b] hover:scale-105 transition-all cursor-pointer select-none" 
                 onError={(e) => { e.currentTarget.style.display = 'none'; }} 
@@ -1306,7 +1335,7 @@ export default function TavernArchive() {
                               <div className="flex flex-wrap gap-2">
                                 {item.images?.map((img, i) => (
                                   <div key={i} className="relative inline-block border-2 border-[#5c3a21] rounded-lg overflow-hidden" style={{ backgroundColor: '#d6c5b3' }}>
-                                    <img src={img} alt="Preview" draggable={false} className="h-20 object-contain p-1 select-none" />
+                                    <img src={img} alt="Preview" loading="lazy" draggable={false} className="h-20 object-contain p-1 select-none" />
                                     <button type="button" onClick={() => handleRemoveImage(i, index)} className="absolute top-0 right-0 bg-red-600/80 hover:bg-red-600 text-white p-0.5 rounded-bl-lg transition-colors"><X size={12} /></button>
                                   </div>
                                 ))}
@@ -1336,7 +1365,7 @@ export default function TavernArchive() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {mediaList.map(m => (
                         <div key={m.id} className="bg-[#1c110b] border border-[#5c3a21] rounded-lg p-2 relative group">
-                          <img src={m.image} alt={m.title} draggable={false} className="w-full h-32 object-cover rounded select-none" />
+                          <img src={m.image} alt={m.title} loading="lazy" draggable={false} className="w-full h-32 object-cover rounded select-none" />
                           <div className="mt-2 text-xs text-center truncate select-text">{m.title}</div>
                           <button onClick={() => handleDeleteMedia(m.id)} className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={14}/></button>
                         </div>
