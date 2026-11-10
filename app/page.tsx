@@ -267,12 +267,9 @@ export default function TavernArchive() {
   useEffect(() => {
     if (window.matchMedia("(pointer: coarse)").matches) return;
 
-    let mouseX = window.innerWidth / 2;
-    let mouseY = window.innerHeight / 2;
-
     const onMouseMove = (e: MouseEvent) => {
-      mouseX = e.clientX;
-      mouseY = e.clientY;
+      const mouseX = e.clientX;
+      const mouseY = e.clientY;
       
       if (cursorDotRef.current) {
         cursorDotRef.current.style.transform = `translate(${mouseX}px, ${mouseY}px) translate(-50%, -50%)`;
@@ -289,27 +286,27 @@ export default function TavernArchive() {
         cursorDotRef.current?.classList.remove("hovering");
       }
 
-      // Создаем искры при движении (не чаще чем раз в 30мс)
       const now = Date.now();
-      if (now - lastSparkTime.current > 30) {
+      // Создаем искру не чаще, чем раз в 25мс
+      if (now - lastSparkTime.current > 25) {
         lastSparkTime.current = now;
         
-        const colors = ['#E5B85C', '#ffd700', '#ff8c00'];
+        const colors = ['#E5B85C', '#ffd700', '#ff8c00', '#ff4500'];
         const newSpark = {
           id: now + Math.random(),
           x: mouseX,
           y: mouseY,
-          size: Math.random() * 4 + 2, // от 2 до 6 пикселей
+          size: Math.random() * 3 + 1.5, // Размер от 1.5 до 4.5px
           color: isHovering.current ? '#ffffff' : colors[Math.floor(Math.random() * colors.length)],
-          tx: (Math.random() - 0.5) * 60, // разлет в стороны
-          ty: (Math.random() - 0.5) * 60 + 20 // чуть-чуть вниз
+          tx: (Math.random() - 0.5) * 80, // Разлет в стороны
+          ty: (Math.random() - 0.5) * 80 + 30 // Чуть больше вниз
         };
 
         setSparks(prev => [...prev, newSpark]);
 
         setTimeout(() => {
           setSparks(prev => prev.filter(s => s.id !== newSpark.id));
-        }, 800);
+        }, 600); // Удаляем через 0.6 сек
       }
     };
 
@@ -950,7 +947,7 @@ export default function TavernArchive() {
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col select-none">
       
-      {/* МАГИЧЕСКИЕ ИСКРЫ КУРСОРА */}
+      {/* МАГИЧЕСКИЕ ИСКРЫ */}
       {sparks.map(s => (
         <div 
           key={s.id} 
