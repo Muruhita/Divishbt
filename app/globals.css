@@ -8,12 +8,10 @@ body {
   background-color: #160d08;
   color: #e6d5b8;
   overflow-x: hidden;
-  /* Запрет на выделение текста везде */
   user-select: none;
   -webkit-user-select: none;
 }
 
-/* Разрешаем выделение только там, где нужно */
 .select-text, input, textarea {
   user-select: text !important;
   -webkit-user-select: text !important;
@@ -23,13 +21,13 @@ body {
   font-family: var(--font-pixeloid-mono), monospace;
 }
 
-/* Кастомный скроллбар */
+/* --- КАСТОМНЫЙ СКРОЛЛБАР --- */
 ::-webkit-scrollbar { width: 10px; }
 ::-webkit-scrollbar-track { background: #160d08; }
 ::-webkit-scrollbar-thumb { background: #5c3a21; border-radius: 5px; }
 ::-webkit-scrollbar-thumb:hover { background: #a37c49; }
 
-/* --- АНИМАЦИИ --- */
+/* --- БАЗОВЫЕ АНИМАЦИИ --- */
 @keyframes smooth-fade-up {
   0% { opacity: 0; transform: translateY(20px); }
   100% { opacity: 1; transform: translateY(0); }
@@ -96,53 +94,67 @@ body {
 }
 @keyframes fog-drift { 0% { transform: translateX(0); } 100% { transform: translateX(-50vw); } }
 
-/* --- МЯГКИЙ КУРСОР, ШЛЕЙФ И ЭФФЕКТ КЛИКА --- */
+/* --- КУРСОР-СТРЕЛКА, ИСКРЫ И КЛИК --- */
 @media (pointer: fine) {
   body, a, button, input, textarea, select, [role="button"] {
     cursor: none !important;
   }
+  
   .custom-cursor-dot {
-    width: 6px; height: 6px; background-color: #E5B85C; border-radius: 50%;
     position: fixed; top: 0; left: 0; pointer-events: none; z-index: 99999;
     transform: translate(-50%, -50%);
-    box-shadow: 0 0 8px #E5B85C, 0 0 15px #E5B85C;
-    transition: width 0.2s, height 0.2s, background-color 0.2s;
     will-change: transform;
   }
-  .custom-cursor-dot.hovering {
-    width: 10px; height: 10px; background-color: #fff;
-    box-shadow: 0 0 10px #fff, 0 0 20px #E5B85C;
+
+  .custom-cursor-dot svg {
+    width: 24px; height: 24px;
+    filter: drop-shadow(0 0 5px rgba(229, 184, 92, 0.8));
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   }
 
-  /* Шлейф курсора */
-  .cursor-trail {
-    position: fixed; top: 0; left: 0; pointer-events: none;
-    border-radius: 50%; background-color: #E5B85C;
-    transform: translate(-50%, -50%);
-    will-change: transform;
+  /* Эффект при наведении на кнопки */
+  .custom-cursor-dot.hovering svg {
+    transform: scale(1.3) rotate(-15deg);
+    filter: drop-shadow(0 0 10px #fff);
+    fill: #fff;
+    stroke: #1c110b;
   }
-  .trail-1 { width: 4px; height: 4px; opacity: 0.6; box-shadow: 0 0 6px #E5B85C; z-index: 99998; }
-  .trail-2 { width: 3px; height: 3px; opacity: 0.4; box-shadow: 0 0 4px #E5B85C; z-index: 99997; }
-  .trail-3 { width: 2px; height: 2px; opacity: 0.2; box-shadow: 0 0 2px #E5B85C; z-index: 99996; }
 
-  /* Анимация волны при клике */
+  /* Магические искры */
+  @keyframes spark-fade {
+    0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) scale(0); }
+  }
+  
+  .cursor-spark {
+    position: fixed;
+    pointer-events: none;
+    z-index: 99998;
+    border-radius: 50%;
+    animation: spark-fade 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    box-shadow: 0 0 6px currentColor, 0 0 12px currentColor;
+    will-change: transform, opacity;
+  }
+
+  /* Анимация клика (волна) */
   @keyframes click-ripple {
-    0% { width: 0px; height: 0px; opacity: 1; border-width: 4px; }
-    100% { width: 80px; height: 80px; opacity: 0; border-width: 1px; }
+    0% { width: 0px; height: 0px; opacity: 1; border-width: 3px; }
+    100% { width: 60px; height: 60px; opacity: 0; border-width: 1px; }
   }
+  
   .cursor-click-ripple {
     position: fixed;
     border: solid #E5B85C;
     border-radius: 50%;
     pointer-events: none;
-    z-index: 99995;
+    z-index: 99997;
     transform: translate(-50%, -50%);
     animation: click-ripple 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
     box-shadow: 0 0 15px rgba(229, 184, 92, 0.5), inset 0 0 10px rgba(229, 184, 92, 0.5);
   }
 }
 
-/* --- 3D КНИГА --- */
+/* --- 3D КНИГА (ЭКРАН ВХОДА) --- */
 .book-container {
   perspective: 2500px;
   perspective-origin: 50% 50%;
@@ -214,12 +226,11 @@ body {
 .book-corner-bl { bottom: 20px; left: 20px; border-right: none; border-top: none; }
 .book-corner-br { bottom: 20px; right: 20px; border-left: none; border-top: none; }
 
-/* --- ПЛАВНОЕ ПОЯВЛЕНИЕ МЕНЮ --- */
+/* --- ПЛАВНОЕ ПОЯВЛЕНИЕ МЕНЮ И КОНТЕНТА --- */
 @keyframes menu-drop {
   0% { opacity: 0; transform: translateY(-30px) scale(0.95); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
-
 .animate-menu-drop {
   animation: menu-drop 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   opacity: 0;
@@ -229,7 +240,6 @@ body {
   0% { opacity: 0; }
   100% { opacity: 1; }
 }
-
 .animate-content-fade {
   animation: content-fade-in 1s ease-out forwards;
   opacity: 0;
@@ -250,26 +260,4 @@ body {
 .owner-border {
   border-color: #a855f7 !important;
   box-shadow: 0 0 15px rgba(168, 85, 247, 0.3);
-}
-
-/* --- МАГИЧЕСКИЕ ИСКРЫ КУРСОРА --- */
-@keyframes spark-fade {
-  0% { 
-    opacity: 1; 
-    transform: translate(-50%, -50%) scale(1); 
-  }
-  100% { 
-    opacity: 0; 
-    transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) scale(0); 
-  }
-}
-
-.cursor-spark {
-  position: fixed;
-  pointer-events: none;
-  z-index: 99998;
-  border-radius: 50%;
-  animation: spark-fade 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-  box-shadow: 0 0 6px currentColor, 0 0 12px currentColor;
-  will-change: transform, opacity;
 }
