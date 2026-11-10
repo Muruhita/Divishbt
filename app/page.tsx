@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
-import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle, Save, Tag, CheckCircle2, Info, Home, BookOpen, LayoutDashboard, ImagePlus, Star, ArrowUp, Pill, AlertOctagon, PackageX, FileEdit } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle, Save, Tag, CheckCircle2, Info, Home, BookOpen, LayoutDashboard, ImagePlus, Star, ArrowUp, Pill, AlertOctagon, PackageX, FileEdit, Wind, FileSpreadsheet } from "lucide-react";
 
 type ArchiveItem = { id: number; title: string; category: string; description: string; symbol?: string; dangerLevel?: string; images?: string[]; is_draft?: number; };
 type DbArchiveItem = { id: number; title: string; category: string; description: string; symbol: string | null; danger_level: string | null; image: string | null; is_draft: number; };
@@ -232,8 +232,11 @@ export default function TavernArchive() {
   const [newRoleName, setNewRoleName] = useState("");
   const [newRoleLevel, setNewRoleLevel] = useState(1);
 
+  // Стейты для звуков
   const [soundEnabled, setSoundEnabled] = useState(false);
+  const [ambientEnabled, setAmbientEnabled] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const ambientSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
   const handleApiError = useCallback((status: number) => {
     if (status === 401) {
@@ -296,17 +299,17 @@ export default function TavernArchive() {
           id: now + Math.random(),
           x: mouseX,
           y: mouseY,
-          size: Math.random() * 3 + 1.5, // Размер от 1.5 до 4.5px
+          size: Math.random() * 3 + 1.5, 
           color: isHovering.current ? '#ffffff' : colors[Math.floor(Math.random() * colors.length)],
-          tx: (Math.random() - 0.5) * 80, // Разлет в стороны
-          ty: (Math.random() - 0.5) * 80 + 30 // Чуть больше вниз
+          tx: (Math.random() - 0.5) * 80, 
+          ty: (Math.random() - 0.5) * 80 + 30 
         };
 
         setSparks(prev => [...prev, newSpark]);
 
         setTimeout(() => {
           setSparks(prev => prev.filter(s => s.id !== newSpark.id));
-        }, 600); // Удаляем через 0.6 сек
+        }, 600);
       }
     };
 
@@ -336,7 +339,7 @@ export default function TavernArchive() {
     return () => window.removeEventListener('click', initAudio);
   }, []);
 
-  const playSound = useCallback((type: "click" | "save" | "delete" | "success") => {
+  const playSound = useCallback((type: "click" | "save" | "delete" | "success" | "modalOpen" | "modalClose") => {
     if (!soundEnabled || !audioCtxRef.current) return;
     const ctx = audioCtxRef.current;
     const osc = ctx.createOscillator();
@@ -356,8 +359,64 @@ export default function TavernArchive() {
       osc.type = "sawtooth"; osc.frequency.setValueAtTime(100, now); osc.frequency.exponentialRampToValueAtTime(30, now + 0.3);
       gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
       osc.start(now); osc.stop(now + 0.3);
+    } else if (type === "modalOpen") {
+      osc.type = "sine"; osc.frequency.setValueAtTime(300, now); osc.frequency.exponentialRampToValueAtTime(600, now + 0.15);
+      gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+      osc.start(now); osc.stop(now + 0.2);
+    } else if (type === "modalClose") {
+      osc.type = "sine"; osc.frequency.setValueAtTime(600, now); osc.frequency.exponentialRampToValueAtTime(300, now + 0.15);
+      gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+      osc.start(now); osc.stop(now + 0.2);
     }
   }, [soundEnabled]);
+
+  const toggleAmbient = () => {
+    if (!audioCtxRef.current) {
+       const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+       audioCtxRef.current = new AudioContextClass();
+    }
+    const ctx = audioCtxRef.current;
+
+    if (ambientEnabled) {
+       if (ambientSourceRef.current) {
+          ambientSourceRef.current.stop();
+          ambientSourceRef.current.disconnect();
+          ambientSourceRef.current = null;
+       }
+       setAmbientEnabled(false);
+    } else {
+       const bufferSize = ctx.sampleRate * 2;
+       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+       const data = buffer.getChannelData(0);
+       // Генерируем "коричневый шум" для эффекта огня/ветра
+       let lastOut = 0;
+       for (let i = 0; i < bufferSize; i++) {
+         const white = Math.random() * 2 - 1;
+         data[i] = (lastOut + (0.02 * white)) / 1.02;
+         lastOut = data[i];
+         data[i] *= 3.5;
+       }
+
+       const noiseSource = ctx.createBufferSource();
+       noiseSource.buffer = buffer;
+       noiseSource.loop = true;
+
+       const filter = ctx.createBiquadFilter();
+       filter.type = "lowpass";
+       filter.frequency.value = 400; // Низкий гул
+
+       const gainNode = ctx.createGain();
+       gainNode.gain.value = 0.04; // Очень тихо, на фоне
+
+       noiseSource.connect(filter);
+       filter.connect(gainNode);
+       gainNode.connect(ctx.destination);
+
+       noiseSource.start();
+       ambientSourceRef.current = noiseSource;
+       setAmbientEnabled(true);
+    }
+  };
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -517,6 +576,7 @@ export default function TavernArchive() {
       setNewUsername(user.username);
       setNewPass(""); setOldPass("");
       setShowProfile(true);
+      playSound("modalOpen");
     }
   };
 
@@ -817,6 +877,43 @@ export default function TavernArchive() {
     } catch { showToast("Ошибка при экспорте", "error"); }
   };
 
+  const handleExportCSV = async () => {
+    playSound("click");
+    try {
+      const res = await fetch("/api/archive?limit=9999");
+      const result = await res.json();
+      const items = result.items || [];
+
+      const headers = ["Название", "Категория", "Описание", "Символ", "Уровень опасности", "Картинки (JSON)"];
+      const csvRows = [headers.join(",")];
+
+      for (const item of items) {
+        const row = [
+          `"${(item.title || '').replace(/"/g, '""')}"`,
+          `"${(item.category || '').replace(/"/g, '""')}"`,
+          `"${(item.description || '').replace(/"/g, '""')}"`,
+          `"${(item.symbol || '').replace(/"/g, '""')}"`,
+          `"${(item.danger_level || '').replace(/"/g, '""')}"`,
+          `"${(item.image || '').replace(/"/g, '""')}"` // Оставляем сырой JSON картинок на случай бэкапа
+        ];
+        csvRows.push(row.join(","));
+      }
+
+      // Добавляем BOM (\uFEFF) для корректного отображения кириллицы в Excel
+      const csvString = "\uFEFF" + csvRows.join("\n");
+      const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "tavern_archive_export.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("CSV Экспорт начат", "success");
+    } catch { 
+      showToast("Ошибка при экспорте CSV", "error"); 
+    }
+  };
+
   const handleBulkImport = async () => {
     if (!user) return;
     playSound("save");
@@ -980,10 +1077,17 @@ export default function TavernArchive() {
 
       <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 50% 0%, #a37c49 0%, transparent 70%)" }}></div>
 
-      <button onClick={() => { setSoundEnabled(!soundEnabled); if (!soundEnabled) playSound("success"); }}
-        className="absolute top-4 left-4 z-[100] p-2 bg-[#1c110b]/80 border border-[#5c3a21] rounded hover:bg-[#a37c49] text-[#8c6e52] active:scale-95 transition-all">
-        {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
-      </button>
+      {/* КНОПКИ ЗВУКА */}
+      <div className="absolute top-4 left-4 z-[100] flex gap-2">
+        <button onClick={() => { setSoundEnabled(!soundEnabled); if (!soundEnabled) playSound("success"); }}
+          className="p-2 bg-[#1c110b]/80 border border-[#5c3a21] rounded hover:bg-[#a37c49] text-[#8c6e52] active:scale-95 transition-all" title="Звуки интерфейса">
+          {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+        </button>
+        <button onClick={toggleAmbient}
+          className={`p-2 bg-[#1c110b]/80 border border-[#5c3a21] rounded hover:bg-[#a37c49] active:scale-95 transition-all ${ambientEnabled ? 'text-[#a37c49]' : 'text-[#8c6e52]'}`} title="Фоновый звук таверны">
+          <Wind size={20} />
+        </button>
+      </div>
 
       {toast && (
         <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[9999] animate-smooth-pop pointer-events-none">
@@ -1009,7 +1113,7 @@ export default function TavernArchive() {
             <p className="text-[#c4b5a5] font-sans text-lg mb-8 relative z-10 select-text">{confirmDialog.msg}</p>
             <div className="flex justify-center gap-4 relative z-10">
               <button onClick={() => { playSound("click"); setConfirmDialog(null); }} className="px-6 py-3 bg-[#3d2617] border border-[#5c3a21] text-[#a37c49] font-bold rounded-lg hover:bg-[#5c3a21] active:scale-95 transition-all w-32">Отмена</button>
-              <button onClick={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }} className="px-6 py-3 bg-red-900/40 border border-red-500 text-red-400 font-bold rounded-lg hover:bg-red-900/60 active:scale-95 transition-all w-32">Да</button>
+              <button onClick={() => { confirmDialog.onConfirm(); setConfirmDialog(null); playSound("click"); }} className="px-6 py-3 bg-red-900/40 border border-red-500 text-red-400 font-bold rounded-lg hover:bg-red-900/60 active:scale-95 transition-all w-32">Да</button>
             </div>
           </div>
         </div>
@@ -1023,17 +1127,17 @@ export default function TavernArchive() {
             <p className="text-[#c4b5a5] font-sans text-sm mb-6 select-text">{promptDialog.msg}</p>
             <input type="text" value={promptDialog.val} onChange={e => setPromptDialog({ ...promptDialog, val: e.target.value })} className="w-full p-3 bg-[#1c110b] border-2 border-[#5c3a21] rounded text-white text-center font-bold tracking-widest focus:border-red-500 outline-none mb-6 select-text" placeholder="УДАЛИТЬ" autoFocus />
             <div className="flex justify-center gap-4">
-              <button onClick={() => setPromptDialog(null)} className="px-6 py-3 bg-[#3d2617] border border-[#5c3a21] text-[#a37c49] font-bold rounded-lg hover:bg-[#5c3a21] active:scale-95 transition-all w-32">Отмена</button>
-              <button onClick={() => { promptDialog.onConfirm(promptDialog.val); setPromptDialog(null); }} className="px-6 py-3 bg-red-900/60 border border-red-500 text-white font-bold rounded-lg hover:bg-red-700 active:scale-95 transition-all w-32">Удалить</button>
+              <button onClick={() => { setPromptDialog(null); playSound("click"); }} className="px-6 py-3 bg-[#3d2617] border border-[#5c3a21] text-[#a37c49] font-bold rounded-lg hover:bg-[#5c3a21] active:scale-95 transition-all w-32">Отмена</button>
+              <button onClick={() => { promptDialog.onConfirm(promptDialog.val); setPromptDialog(null); playSound("click"); }} className="px-6 py-3 bg-red-900/60 border border-red-500 text-white font-bold rounded-lg hover:bg-red-700 active:scale-95 transition-all w-32">Удалить</button>
             </div>
           </div>
         </div>
       )}
 
       {editingItem && (
-        <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm" onClick={() => setEditingItem(null)}>
+        <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm" onClick={() => { setEditingItem(null); playSound("modalClose"); }}>
           <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl w-full max-w-2xl relative animate-smooth-pop" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setEditingItem(null)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 active:scale-90 transition-all"><X size={24}/></button>
+            <button onClick={() => { setEditingItem(null); playSound("modalClose"); }} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 active:scale-90 transition-all"><X size={24}/></button>
             <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49] mb-6">Редактировать</h2>
             <form onSubmit={handleUpdateItem} className="space-y-4">
               <input required placeholder="Название" value={editingItem.title} onChange={e => setEditingItem({...editingItem, title: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none select-text" />
@@ -1070,18 +1174,18 @@ export default function TavernArchive() {
       )}
 
       {selectedImage && (
-        <div className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm cursor-zoom-out" onClick={() => setSelectedImage(null)}>
+        <div className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm cursor-zoom-out" onClick={() => { setSelectedImage(null); playSound("modalClose"); }}>
           <img src={selectedImage} alt="Fullscreen" loading="lazy" draggable={false} className="max-w-full max-h-[90vh] object-contain drop-shadow-2xl select-none" />
-          <button className="absolute top-4 right-4 text-gray-400 hover:text-red-500 active:scale-90 transition-all bg-black/50 p-2 rounded-full" onClick={() => setSelectedImage(null)}>
+          <button className="absolute top-4 right-4 text-gray-400 hover:text-red-500 active:scale-90 transition-all bg-black/50 p-2 rounded-full" onClick={() => { setSelectedImage(null); playSound("modalClose"); }}>
             <X size={32} />
           </button>
         </div>
       )}
 
       {activePage && (
-        <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm" onClick={() => { setActivePage(null); setIsEditingPage(false); }}>
+        <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm" onClick={() => { setActivePage(null); setIsEditingPage(false); playSound("modalClose"); }}>
           <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl w-full max-w-3xl relative animate-smooth-pop max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => { setActivePage(null); setIsEditingPage(false); }} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 active:scale-90 transition-all"><X size={24}/></button>
+            <button onClick={() => { setActivePage(null); setIsEditingPage(false); playSound("modalClose"); }} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 active:scale-90 transition-all"><X size={24}/></button>
             
             <h2 className="text-xl md:text-2xl font-bold font-pixeloid-mono text-[#a37c49] mb-4 pr-8">{activePage.title}</h2>
             
@@ -1102,12 +1206,12 @@ export default function TavernArchive() {
             <div className="mt-6 pt-4 border-t border-[#5c3a21] flex justify-end gap-3">
               {isEditingPage ? (
                 <>
-                  <button onClick={() => setIsEditingPage(false)} className="px-4 py-2 bg-[#3d2617] text-[#a37c49] font-bold rounded-lg hover:bg-[#5c3a21] transition-all">Отмена</button>
+                  <button onClick={() => { setIsEditingPage(false); playSound("click"); }} className="px-4 py-2 bg-[#3d2617] text-[#a37c49] font-bold rounded-lg hover:bg-[#5c3a21] transition-all">Отмена</button>
                   <button onClick={handleSaveInfoPage} className="px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-white font-bold rounded-lg hover:bg-[#7a4f2e] transition-all flex items-center gap-2"><Save size={18}/> Сохранить</button>
                 </>
               ) : (
                 userRole.level >= 2 && (
-                  <button onClick={() => { setEditPageContent(activePage.content); setIsEditingPage(true); }} className="px-6 py-2 bg-blue-600/20 border border-blue-500 text-blue-400 font-bold rounded-lg hover:bg-blue-600/40 transition-all flex items-center gap-2"><FileEdit size={18}/> Редактировать текст</button>
+                  <button onClick={() => { setEditPageContent(activePage.content); setIsEditingPage(true); playSound("click"); }} className="px-6 py-2 bg-blue-600/20 border border-blue-500 text-blue-400 font-bold rounded-lg hover:bg-blue-600/40 transition-all flex items-center gap-2"><FileEdit size={18}/> Редактировать текст</button>
                 )
               )}
             </div>
@@ -1116,9 +1220,9 @@ export default function TavernArchive() {
       )}
 
       {showProfile && user && (
-        <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowProfile(false)}>
+        <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4 animate-fade-in" onClick={() => { setShowProfile(false); playSound("modalClose"); }}>
           <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl w-full max-w-md relative animate-smooth-pop" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setShowProfile(false)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 active:scale-90 transition-all"><X size={24}/></button>
+            <button onClick={() => { setShowProfile(false); playSound("modalClose"); }} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 active:scale-90 transition-all"><X size={24}/></button>
             <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49] mb-6 text-center">Личный кабинет</h2>
             <form onSubmit={handleUpdateProfile} className="space-y-4">
               <div className="flex flex-col items-center mb-4 group/avatar">
@@ -1199,7 +1303,7 @@ export default function TavernArchive() {
                   return (
                     <button 
                       key={page.id}
-                      onClick={() => setActivePage(page)} 
+                      onClick={() => { setActivePage(page); playSound("modalOpen"); }} 
                       className="flex items-center gap-2 px-3 py-1.5 bg-red-900/20 border border-red-500/50 text-red-400 text-xs font-pixeloid-mono rounded hover:bg-red-900/40 hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start"
                       title={page.title}
                     >
@@ -1208,9 +1312,9 @@ export default function TavernArchive() {
                   );
                 })}
 
-                {view !== "home" && <button onClick={() => setView("home")} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/90 border border-[#5c3a21] text-[#a37c49] text-xs font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start"><Home size={14} /> На главную</button>}
-                {view !== "archive" && <button onClick={() => setView("archive")} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/90 border border-[#5c3a21] text-[#a37c49] text-xs font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start"><ScrollText size={14} /> Открыть свитки</button>}
-                {view !== "admin" && userRole.level >= 1 && <button onClick={() => setView("admin")} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/90 border border-[#5c3a21] text-[#a37c49] text-xs font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start"><Settings size={14} /> Админка</button>}
+                {view !== "home" && <button onClick={() => { setView("home"); playSound("click"); }} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/90 border border-[#5c3a21] text-[#a37c49] text-xs font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start"><Home size={14} /> На главную</button>}
+                {view !== "archive" && <button onClick={() => { setView("archive"); playSound("click"); }} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/90 border border-[#5c3a21] text-[#a37c49] text-xs font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start"><ScrollText size={14} /> Открыть свитки</button>}
+                {view !== "admin" && userRole.level >= 1 && <button onClick={() => { setView("admin"); playSound("click"); }} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/90 border border-[#5c3a21] text-[#a37c49] text-xs font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start"><Settings size={14} /> Админка</button>}
               </div>
             </div>
           </div>
@@ -1220,7 +1324,7 @@ export default function TavernArchive() {
               <img 
                 src="/logo.png" 
                 alt="Сытый Лис" 
-                onClick={() => setView("home")}
+                onClick={() => { setView("home"); playSound("click"); }}
                 loading="lazy"
                 draggable={false}
                 className="w-24 h-24 object-cover rounded-full border-4 border-[#5c3a21] animate-float bg-[#1c110b] hover:scale-105 transition-all cursor-pointer select-none" 
@@ -1241,7 +1345,7 @@ export default function TavernArchive() {
                     {isLoading ? (
                       <><SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard /></>
                     ) : displayedData.length > 0 ? displayedData.map((item) => (
-                      <ArchiveCard key={item.id} item={item} canEdit={canEdit} canDelete={canDelete} onEdit={(item) => setEditingItem(item)} onDelete={handleDeleteItem} onViewImage={(img) => setSelectedImage(img)} isFavorite={favorites.includes(item.id)} onToggleFavorite={handleToggleFavorite} />
+                      <ArchiveCard key={item.id} item={item} canEdit={canEdit} canDelete={canDelete} onEdit={(item) => { setEditingItem(item); playSound("modalOpen"); }} onDelete={handleDeleteItem} onViewImage={(img) => { setSelectedImage(img); playSound("modalOpen"); }} isFavorite={favorites.includes(item.id)} onToggleFavorite={handleToggleFavorite} />
                     )) : <p className="text-center w-full col-span-2 text-[#8c6e52]">Ничего не найдено...</p>}
                   </div>
                 ) : (
@@ -1253,25 +1357,25 @@ export default function TavernArchive() {
             {view === "archive" && (
               <div className="animate-smooth-fade-up w-full text-left">
                  <div className="flex flex-wrap items-center gap-2 mb-8">
-                    <button onClick={() => { setSelectedCategory("Все"); setCurrentPage(1); setShowOnlyFavorites(false); }} className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 ${selectedCategory === "Все" && !showOnlyFavorites ? 'bg-[#a37c49] text-[#160d08] border-[#a37c49] shadow-[0_0_15px_rgba(163,124,73,0.3)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-[#a37c49] hover:text-[#e6d5b8]'}`}>Все</button>
+                    <button onClick={() => { setSelectedCategory("Все"); setCurrentPage(1); setShowOnlyFavorites(false); playSound("click"); }} className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 ${selectedCategory === "Все" && !showOnlyFavorites ? 'bg-[#a37c49] text-[#160d08] border-[#a37c49] shadow-[0_0_15px_rgba(163,124,73,0.3)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-[#a37c49] hover:text-[#e6d5b8]'}`}>Все</button>
                     {categories.map(c => (
-                      <button key={c.id} onClick={() => { setSelectedCategory(c.name); setCurrentPage(1); setShowOnlyFavorites(false); }} className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 ${selectedCategory === c.name && !showOnlyFavorites ? 'bg-[#a37c49] text-[#160d08] border-[#a37c49] shadow-[0_0_15px_rgba(163,124,73,0.3)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-[#a37c49] hover:text-[#e6d5b8]'}`}>{c.name}</button>
+                      <button key={c.id} onClick={() => { setSelectedCategory(c.name); setCurrentPage(1); setShowOnlyFavorites(false); playSound("click"); }} className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 ${selectedCategory === c.name && !showOnlyFavorites ? 'bg-[#a37c49] text-[#160d08] border-[#a37c49] shadow-[0_0_15px_rgba(163,124,73,0.3)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-[#a37c49] hover:text-[#e6d5b8]'}`}>{c.name}</button>
                     ))}
                     
-                    <button onClick={() => setShowOnlyFavorites(!showOnlyFavorites)} className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 flex items-center gap-2 ml-auto ${showOnlyFavorites ? 'bg-yellow-600 text-white border-yellow-500 shadow-[0_0_15px_rgba(202,138,4,0.4)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-yellow-500 hover:text-yellow-400'}`}><Star size={16} fill={showOnlyFavorites ? "currentColor" : "none"} /> Избранное</button>
+                    <button onClick={() => { setShowOnlyFavorites(!showOnlyFavorites); playSound("click"); }} className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 flex items-center gap-2 ml-auto ${showOnlyFavorites ? 'bg-yellow-600 text-white border-yellow-500 shadow-[0_0_15px_rgba(202,138,4,0.4)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-yellow-500 hover:text-yellow-400'}`}><Star size={16} fill={showOnlyFavorites ? "currentColor" : "none"} /> Избранное</button>
                  </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {isLoading ? (
                       <><SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard /></>
                     ) : displayedData.length > 0 ? displayedData.map((item) => (
-                      <ArchiveCard key={item.id} item={item} canEdit={canEdit} canDelete={canDelete} onEdit={(item) => setEditingItem(item)} onDelete={handleDeleteItem} onViewImage={(img) => setSelectedImage(img)} isFavorite={favorites.includes(item.id)} onToggleFavorite={handleToggleFavorite} />
+                      <ArchiveCard key={item.id} item={item} canEdit={canEdit} canDelete={canDelete} onEdit={(item) => { setEditingItem(item); playSound("modalOpen"); }} onDelete={handleDeleteItem} onViewImage={(img) => { setSelectedImage(img); playSound("modalOpen"); }} isFavorite={favorites.includes(item.id)} onToggleFavorite={handleToggleFavorite} />
                     )) : <p className="text-center w-full col-span-2 text-[#8c6e52]">{showOnlyFavorites ? "В избранном пока пусто..." : "В этой категории пока нет записей..."}</p>}
                  </div>
                  {totalPages > 1 && !showOnlyFavorites && (
                    <div className="flex justify-center items-center gap-4 mt-12 pb-8">
-                     <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => prev - 1)} className="p-3 bg-[#2e1b13] border border-[#5c3a21] rounded text-[#a37c49] disabled:opacity-30 hover:bg-[#5c3a21] hover:text-white active:scale-90 transition-all"><ChevronLeft size={24}/></button>
+                     <button disabled={currentPage === 1} onClick={() => { setCurrentPage(prev => prev - 1); playSound("click"); }} className="p-3 bg-[#2e1b13] border border-[#5c3a21] rounded text-[#a37c49] disabled:opacity-30 hover:bg-[#5c3a21] hover:text-white active:scale-90 transition-all"><ChevronLeft size={24}/></button>
                      <span className="font-pixeloid-mono text-lg text-[#a37c49] select-text">Стр. {currentPage} из {totalPages}</span>
-                     <button disabled={currentPage === totalPages || totalPages === 0} onClick={() => setCurrentPage(prev => prev + 1)} className="p-3 bg-[#2e1b13] border border-[#5c3a21] rounded text-[#a37c49] disabled:opacity-30 hover:bg-[#5c3a21] hover:text-white active:scale-90 transition-all"><ChevronRight size={24}/></button>
+                     <button disabled={currentPage === totalPages || totalPages === 0} onClick={() => { setCurrentPage(prev => prev + 1); playSound("click"); }} className="p-3 bg-[#2e1b13] border border-[#5c3a21] rounded text-[#a37c49] disabled:opacity-30 hover:bg-[#5c3a21] hover:text-white active:scale-90 transition-all"><ChevronRight size={24}/></button>
                    </div>
                  )}
               </div>
@@ -1281,17 +1385,17 @@ export default function TavernArchive() {
               <div className="animate-smooth-fade-up w-full bg-[#2e1b13] p-8 rounded-xl border-double border-4 border-[#5c3a21]">
                 <div className="flex justify-between items-center mb-8 border-b border-[#5c3a21] pb-4"><h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49]">Панель Управления</h2></div>
                 <div className="flex flex-wrap gap-4 mb-8 font-pixeloid-mono text-sm">
-                  <button onClick={() => setAdminTab("dashboard")} className={`px-4 py-2 rounded transition-all active:scale-95 flex items-center gap-2 ${adminTab === 'dashboard' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}><LayoutDashboard size={16}/> Дашборд</button>
-                  <button onClick={() => setAdminTab("archive")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'archive' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Добавить</button>
-                  {userRole.level >= 2 && <button onClick={() => setAdminTab("bulk")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'bulk' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Импорт</button>}
+                  <button onClick={() => { setAdminTab("dashboard"); playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 flex items-center gap-2 ${adminTab === 'dashboard' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}><LayoutDashboard size={16}/> Дашборд</button>
+                  <button onClick={() => { setAdminTab("archive"); playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'archive' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Добавить</button>
+                  {userRole.level >= 2 && <button onClick={() => { setAdminTab("bulk"); playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'bulk' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Импорт</button>}
                   
-                  {userRole.level >= 2 && <button onClick={() => setAdminTab("users")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'users' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Аккаунты</button>}
+                  {userRole.level >= 2 && <button onClick={() => { setAdminTab("users"); playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'users' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Аккаунты</button>}
                   
-                  <button onClick={() => setAdminTab("media")} className={`px-4 py-2 rounded transition-all active:scale-95 flex items-center gap-2 ${adminTab === 'media' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}><ImagePlus size={16}/> Медиа</button>
-                  {userRole.level >= 2 && <button onClick={() => setAdminTab("categories")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'categories' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Категории</button>}
-                  {userRole.level >= 3 && <button onClick={() => setAdminTab("roles")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'roles' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Уровни</button>}
-                  {(userRole.id === "owner" || userRole.id === "creator") && <button onClick={() => setAdminTab("logs")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'logs' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Логи</button>}
-                  <button onClick={() => setAdminTab("diag")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'diag' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Диагностика</button>
+                  <button onClick={() => { setAdminTab("media"); playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 flex items-center gap-2 ${adminTab === 'media' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}><ImagePlus size={16}/> Медиа</button>
+                  {userRole.level >= 2 && <button onClick={() => { setAdminTab("categories"); playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'categories' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Категории</button>}
+                  {userRole.level >= 3 && <button onClick={() => { setAdminTab("roles"); playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'roles' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Уровни</button>}
+                  {(userRole.id === "owner" || userRole.id === "creator") && <button onClick={() => { setAdminTab("logs"); playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'logs' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Логи</button>}
+                  <button onClick={() => { setAdminTab("diag"); playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'diag' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Диагностика</button>
                 </div>
 
                 {adminTab === "dashboard" && (
@@ -1442,7 +1546,14 @@ export default function TavernArchive() {
 
                     <div className="bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
                       <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Download size={18}/> Экспорт</h3>
-                      <button onClick={handleExport} className="px-6 py-2 bg-[#3d2617] border border-[#5c3a21] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#5c3a21] active:scale-95 transition-all shadow-lg">Скачать файл</button>
+                      <div className="flex gap-4 flex-wrap">
+                        <button onClick={handleExport} className="px-6 py-2 bg-[#3d2617] border border-[#5c3a21] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#5c3a21] active:scale-95 transition-all shadow-lg flex items-center gap-2">
+                          <Download size={16} /> Скачать JSON
+                        </button>
+                        <button onClick={handleExportCSV} className="px-6 py-2 bg-[#3d2617] border border-green-700/50 text-green-400 font-bold font-pixeloid-mono rounded hover:bg-green-900/30 hover:border-green-500 active:scale-95 transition-all shadow-lg flex items-center gap-2">
+                          <FileSpreadsheet size={16} /> Скачать CSV (Excel)
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
