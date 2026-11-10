@@ -155,7 +155,6 @@ ArchiveCard.displayName = 'ArchiveCard';
 
 export default function TavernArchive() {
   const cursorDotRef = useRef<HTMLDivElement>(null);
-  const trailRef = useRef<HTMLDivElement>(null);
   const isHovering = useRef(false);
 
   const [clicks, setClicks] = useState<{ id: number; x: number; y: number }[]>([]);
@@ -264,18 +263,13 @@ export default function TavernArchive() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // ЛОГИКА КУРСОРА С ОДНИМ ПЛАВНЫМ ТРЕЙЛОМ
+  // ЛОГИКА КУРСОРА (ТОЛЬКО КРУЖОК, БЕЗ ШЛЕЙФА)
   useEffect(() => {
     if (window.matchMedia("(pointer: coarse)").matches) return;
 
-    let mouseX = window.innerWidth / 2;
-    let mouseY = window.innerHeight / 2;
-    let trailX = mouseX;
-    let trailY = mouseY;
-
     const onMouseMove = (e: MouseEvent) => {
-      mouseX = e.clientX;
-      mouseY = e.clientY;
+      const mouseX = e.clientX;
+      const mouseY = e.clientY;
       
       if (cursorDotRef.current) {
         cursorDotRef.current.style.transform = `translate(${mouseX}px, ${mouseY}px) translate(-50%, -50%)`;
@@ -299,27 +293,12 @@ export default function TavernArchive() {
       setTimeout(() => setClicks((prev) => prev.filter((c) => c.id !== newClick.id)), 500);
     };
 
-    let animationFrameId: number;
-    const animateTrail = () => {
-      // Плавное догоняние (чем меньше коэффициент, тем длиннее и плавнее шлейф)
-      trailX += (mouseX - trailX) * 0.15; 
-      trailY += (mouseY - trailY) * 0.15;
-
-      if (trailRef.current) {
-        trailRef.current.style.transform = `translate(${trailX}px, ${trailY}px) translate(-50%, -50%)`;
-      }
-
-      animationFrameId = requestAnimationFrame(animateTrail);
-    };
-
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mousedown", onMouseDown);
-    animateTrail();
     
     return () => {
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mousedown", onMouseDown);
-      cancelAnimationFrame(animationFrameId);
     };
   }, []);
 
@@ -1037,15 +1016,8 @@ export default function TavernArchive() {
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col select-none">
       
-      {/* ОДИН ПЛАВНЫЙ ТРЕЙЛ */}
-      <div ref={trailRef} className="fixed pointer-events-none rounded-full bg-[#E5B85C] shadow-[0_0_10px_#E5B85C] hidden md:block w-3 h-3 opacity-60 blur-[1px] z-[99997]" />
-
-      {/* КУРСОР-СТРЕЛКА (SVG) */}
-      <div ref={cursorDotRef} className="custom-cursor-dot hidden md:block pointer-events-none">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M5 3L19 12L12 13L9 20L5 3Z" fill="#E5B85C" stroke="#1c110b" strokeWidth="2" strokeLinejoin="round"/>
-        </svg>
-      </div>
+      {/* ОСНОВНАЯ ТОЧКА КУРСОРА */}
+      <div ref={cursorDotRef} className="custom-cursor-dot hidden md:block pointer-events-none" />
 
       {/* ЭФФЕКТ КЛИКА */}
       {clicks.map(c => <div key={c.id} className="cursor-click-ripple" style={{ left: c.x, top: c.y }} />)}
