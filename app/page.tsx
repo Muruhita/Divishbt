@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle, Save, Tag, CheckCircle2, Info, Home, BookOpen, LayoutDashboard, ImagePlus, Star, ArrowUp, Pill, AlertOctagon, PackageX, FileEdit } from "lucide-react";
 
-type ArchiveItem = { id: number; title: string; category: string; description: string; symbol?: string; dangerLevel?: string; image?: string; is_draft?: number; };
+type ArchiveItem = { id: number; title: string; category: string; description: string; symbol?: string; dangerLevel?: string; images?: string[]; is_draft?: number; };
 type DbArchiveItem = { id: number; title: string; category: string; description: string; symbol: string | null; danger_level: string | null; image: string | null; is_draft: number; };
 type User = { id: number; username: string; account_name: string; role: string; avatar?: string; };
 type DbUser = { id: number; username: string; account_name: string; role: string; avatar: string | null; };
@@ -15,7 +15,7 @@ type CategoryItem = { id: number; name: string };
 type InfoPage = { id: string; title: string; content: string; };
 
 const DANGER_LEVELS = ["Низкий", "Средний", "Высокий", "Смертельный"];
-const INITIAL_NEW_ITEM: NewArchiveItem = { title: "", category: "Комбинации Цифр", description: "", symbol: "", dangerLevel: "Низкий", image: "", is_draft: 0 };
+const INITIAL_NEW_ITEM: NewArchiveItem = { title: "", category: "Комбинации Цифр", description: "", symbol: "", dangerLevel: "Низкий", images: [], is_draft: 0 };
 const RUNES = ["ᚠ", "ᚢ", "ᚦ", "ᚨ", "ᚱ", "ᚲ", "ᚷ", "ᚹ", "ᚺ", "ᚾ", "ᛁ", "ᛃ", "ᛈ", "ᛇ", "ᛉ", "ᛊ", "ᛏ", "ᛒ", "ᛖ", "ᛗ", "ᛚ", "ᛜ", "ᛞ", "ᛟ"];
 
 const DEFAULT_CATEGORIES = ["Комбинации Цифр", "Слова", "Термины", "Аббревиатура", "Символика", "Картинки", "Другое"].map((name, i) => ({ id: i+1, name }));
@@ -64,18 +64,60 @@ const ArchiveCard = ({
   onToggleFavorite: (id: number) => void;
 }) => {
   if (!item || !item.title) return null;
+
+  const imgCount = item.images?.length || 0;
+
   return (
     <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.6)] hover:border-[#a37c49] hover:shadow-[0_0_20px_rgba(163,124,73,0.15)] hover:-translate-y-1.5 transition-all duration-300 group flex flex-col relative z-10 overflow-hidden animate-smooth-fade-up">
-      {item.image && (
-        <div className="w-full h-56 overflow-hidden border-b-2 border-[#5c3a21] cursor-pointer relative group/img flex items-center justify-center"
-          style={{ backgroundColor: '#d6c5b3', backgroundImage: 'radial-gradient(#b8a38a 1px, transparent 1px)', backgroundSize: '10px 10px' }}
-          onClick={() => onViewImage(item.image!)}>
-          <img src={item.image} alt={item.title} draggable={false} className="max-w-full max-h-full object-contain p-2 transition-transform duration-500 group-hover/img:scale-110 drop-shadow-md select-none" />
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
-            <Maximize2 size={32} className="text-[#e6d5b8]" />
+      
+      {/* БЛОК С КАРТИНКАМИ */}
+      {imgCount > 0 && (
+        <div className={`w-full border-b-2 border-[#5c3a21] relative group/img bg-[#d6c5b3] flex items-center justify-center overflow-hidden`} style={{ backgroundImage: 'radial-gradient(#b8a38a 1px, transparent 1px)', backgroundSize: '10px 10px' }}>
+          
+          {/* 1 Картинка */}
+          {imgCount === 1 && (
+            <div className="w-full h-56 cursor-pointer" onClick={() => onViewImage(item.images![0])}>
+              <img src={item.images![0]} alt={item.title} draggable={false} className="w-full h-full object-contain p-2 transition-transform duration-500 group-hover/img:scale-110 drop-shadow-md select-none" />
+            </div>
+          )}
+
+          {/* 2 Картинки */}
+          {imgCount === 2 && (
+            <div className="grid grid-cols-2 gap-1 w-full h-56 p-1">
+              {item.images!.map((img, i) => (
+                <div key={i} className="relative cursor-pointer overflow-hidden rounded-sm" onClick={() => onViewImage(img)}>
+                  <img src={img} alt={`${item.title} ${i+1}`} draggable={false} className="w-full h-full object-cover transition-transform duration-500 hover:scale-110 select-none" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 3+ Картинок */}
+          {imgCount >= 3 && (
+            <div className="grid grid-cols-2 grid-rows-2 gap-1 w-full h-56 p-1">
+              <div className="row-span-2 relative cursor-pointer overflow-hidden rounded-sm" onClick={() => onViewImage(item.images![0])}>
+                <img src={item.images![0]} alt={`${item.title} 1`} draggable={false} className="w-full h-full object-cover transition-transform duration-500 hover:scale-110 select-none" />
+              </div>
+              <div className="relative cursor-pointer overflow-hidden rounded-sm" onClick={() => onViewImage(item.images![1])}>
+                <img src={item.images![1]} alt={`${item.title} 2`} draggable={false} className="w-full h-full object-cover transition-transform duration-500 hover:scale-110 select-none" />
+              </div>
+              <div className="relative cursor-pointer overflow-hidden rounded-sm" onClick={() => onViewImage(item.images![2])}>
+                <img src={item.images![2]} alt={`${item.title} 3`} draggable={false} className="w-full h-full object-cover transition-transform duration-500 hover:scale-110 select-none" />
+                {imgCount > 3 && (
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm">
+                    <span className="text-white font-bold text-xl font-pixeloid-mono">+{imgCount - 3}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+            <Maximize2 size={32} className="text-white drop-shadow-lg" />
           </div>
         </div>
       )}
+
       <div className="p-6 flex flex-col flex-grow">
         <div className="flex justify-between items-start mb-3 relative z-10">
           <h3 className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8] select-text">{item.title}</h3>
@@ -363,11 +405,23 @@ export default function TavernArchive() {
       const res = await fetch(`/api/archive?page=${page}&limit=${LIMIT}&category=${encodeURIComponent(cat)}&search=${encodeURIComponent(search)}`);
       const result = await res.json();
       const items = result.items || [];
-      const formatted = (items as DbArchiveItem[]).map((item) => ({
-        id: item.id, title: item.title, category: item.category, description: item.description,
-        symbol: item.symbol || undefined, dangerLevel: item.danger_level || undefined,
-        image: item.image || undefined, is_draft: item.is_draft
-      }));
+      const formatted = (items as DbArchiveItem[]).map((item) => {
+        // Парсим картинки (могут быть JSON-массивом или одной строкой из старых записей)
+        let parsedImages: string[] = [];
+        if (item.image) {
+          if (item.image.trim().startsWith('[')) {
+            try { parsedImages = JSON.parse(item.image); } catch { parsedImages = [item.image]; }
+          } else {
+            parsedImages = [item.image];
+          }
+        }
+
+        return {
+          id: item.id, title: item.title, category: item.category, description: item.description,
+          symbol: item.symbol || undefined, dangerLevel: item.danger_level || undefined,
+          images: parsedImages, is_draft: item.is_draft
+        };
+      });
       setData(formatted);
       setTotalPages(Math.ceil((result.total || 0) / LIMIT));
       setCurrentPage(page);
@@ -498,24 +552,50 @@ export default function TavernArchive() {
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, index?: number) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      showToast("Картинка должна быть меньше 2МБ!", "warning");
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const isEditing = index === undefined;
+    const currentImages = isEditing ? (editingItem?.images || []) : (newItems[index!].images || []);
+    
+    // Лимит: максимум 3 картинки на запись (чтобы не сломать Vercel лимитом 4.5MB)
+    if (currentImages.length + files.length > 3) {
+      showToast("Можно прикрепить не более 3 картинок!", "warning");
       return;
     }
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64 = reader.result as string;
-      if (index !== undefined) {
-        const updated = [...newItems];
-        updated[index].image = base64;
-        setNewItems(updated);
-      } else if (editingItem) {
-        setEditingItem({ ...editingItem, image: base64 });
+
+    Array.from(files).forEach(file => {
+      if (file.size > 1024 * 1024) {
+        showToast(`Файл ${file.name} больше 1МБ! Максимум 1МБ на картинку.`, "warning");
+        return;
       }
-    };
-    reader.readAsDataURL(file);
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        if (isEditing) {
+          setEditingItem(prev => prev ? { ...prev, images: [...(prev.images || []), base64] } : null);
+        } else {
+          const updated = [...newItems];
+          updated[index!].images = [...(updated[index!].images || []), base64];
+          setNewItems(updated);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+    
+    // Сбрасываем input, чтобы можно было выбрать тот же файл снова
+    e.target.value = '';
+  };
+
+  const handleRemoveImage = (imgIndex: number, formIndex?: number) => {
+    if (formIndex !== undefined) {
+      const updated = [...newItems];
+      updated[formIndex].images = updated[formIndex].images?.filter((_, i) => i !== imgIndex);
+      setNewItems(updated);
+    } else if (editingItem) {
+      setEditingItem({ ...editingItem, images: editingItem.images?.filter((_, i) => i !== imgIndex) });
+    }
   };
 
   const handleDeleteItem = (id: number, title: string) => {
@@ -561,8 +641,14 @@ export default function TavernArchive() {
     if (validItems.length === 0) return showToast("Заполните хотя бы одну запись", "warning");
     playSound("save");
 
+    // Преобразуем массив картинок обратно в JSON-строку для БД
+    const payload = validItems.map(item => ({
+      ...item,
+      image: item.images && item.images.length > 0 ? JSON.stringify(item.images) : null
+    }));
+
     const res = await fetch("/api/archive", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(validItems)
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
     });
     
     if (res.ok) { 
@@ -577,8 +663,13 @@ export default function TavernArchive() {
     if (!editingItem || !user) return;
     playSound("save");
 
+    const payload = {
+      ...editingItem,
+      image: editingItem.images && editingItem.images.length > 0 ? JSON.stringify(editingItem.images) : null
+    };
+
     const res = await fetch("/api/archive", {
-      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(editingItem)
+      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
     });
     
     if (res.ok) { 
@@ -696,10 +787,18 @@ export default function TavernArchive() {
     try {
       const res = await fetch("/api/archive?limit=9999");
       const result = await res.json();
-      const exportData = (result.items || []).map((item: DbArchiveItem) => ({
-        title: item.title, category: item.category, description: item.description,
-        symbol: item.symbol, dangerLevel: item.danger_level, image: item.image 
-      }));
+      const exportData = (result.items || []).map((item: DbArchiveItem) => {
+        let images = [];
+        if (item.image) {
+          if (item.image.startsWith('[')) {
+            try { images = JSON.parse(item.image); } catch { images = [item.image]; }
+          } else { images = [item.image]; }
+        }
+        return {
+          title: item.title, category: item.category, description: item.description,
+          symbol: item.symbol, dangerLevel: item.danger_level, images 
+        };
+      });
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -715,8 +814,14 @@ export default function TavernArchive() {
     try {
       const parsed = JSON.parse(bulkJson);
       if (!Array.isArray(parsed)) throw new Error("JSON должен быть массивом");
+      
+      const payload = parsed.map((item: any) => ({
+        ...item,
+        image: item.images && Array.isArray(item.images) ? JSON.stringify(item.images) : (item.image || null)
+      }));
+
       const res = await fetch("/api/archive", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(parsed)
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
       });
       if (res.ok) {
         const result = await res.json();
@@ -771,7 +876,7 @@ export default function TavernArchive() {
           dangerLevel: dangerLevel,
           is_draft: 0,
           symbol: "",
-          image: ""
+          image: null
         };
       }).filter(item => item.title && item.description); 
 
@@ -914,6 +1019,20 @@ export default function TavernArchive() {
                 </select>
               </div>
               <textarea required placeholder="Описание (Markdown)" value={editingItem.description} onChange={e => setEditingItem({...editingItem, description: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white h-32 font-mono text-sm focus:border-[#a37c49] outline-none select-text" />
+              
+              <div className="mt-2 border-t border-[#5c3a21] pt-3">
+                <label className="block text-xs font-pixeloid-mono text-[#a37c49] mb-2 flex items-center gap-1"><ImageIcon size={14}/> Картинки (до 3 шт, макс 1МБ каждая)</label>
+                <input type="file" multiple accept="image/*" onChange={(e) => handleImageUpload(e)} className="w-full text-sm text-[#8c6e52] file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-[#3d2617] file:text-[#e6d5b8] hover:file:bg-[#5c3a21] file:cursor-pointer mb-3" />
+                <div className="flex flex-wrap gap-2">
+                  {editingItem.images?.map((img, i) => (
+                    <div key={i} className="relative inline-block border-2 border-[#5c3a21] rounded-lg overflow-hidden" style={{ backgroundColor: '#d6c5b3' }}>
+                      <img src={img} alt="Preview" draggable={false} className="h-20 object-contain p-1 select-none" />
+                      <button type="button" onClick={() => handleRemoveImage(i)} className="absolute top-0 right-0 bg-red-600/80 hover:bg-red-600 text-white p-0.5 rounded-bl-lg transition-colors"><X size={12} /></button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <label className="flex items-center gap-2 text-sm text-[#a37c49] font-pixeloid-mono cursor-pointer mt-4 mb-4">
                 <input type="checkbox" checked={editingItem.is_draft === 1} onChange={e => setEditingItem({...editingItem, is_draft: e.target.checked ? 1 : 0})} /> Сохранить как черновик (скрыто от пользователей)
               </label>
@@ -1161,7 +1280,6 @@ export default function TavernArchive() {
                       {newItems.map((item, index) => (
                         <div key={index} className="relative p-4 bg-[#1c110b] border border-[#5c3a21] rounded-lg">
                           
-                          {/* Кнопка удаления дополнительного блока */}
                           {newItems.length > 1 && (
                             <button 
                               type="button" 
@@ -1181,14 +1299,18 @@ export default function TavernArchive() {
                             </div>
                             <textarea required placeholder="Описание (Markdown)" value={item.description} onChange={e => { const upd = [...newItems]; upd[index].description = e.target.value; setNewItems(upd); }} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white h-20 focus:border-[#a37c49] outline-none transition-colors select-text" />
                             <label className="flex items-center gap-2 text-sm text-[#a37c49] font-pixeloid-mono cursor-pointer"><input type="checkbox" checked={item.is_draft === 1} onChange={e => { const upd = [...newItems]; upd[index].is_draft = e.target.checked ? 1 : 0; setNewItems(upd); }} />Сохранить как черновик (скрыто от пользователей)</label>
+                            
                             <div className="mt-2 border-t border-[#5c3a21] pt-3">
-                              <label className="block text-xs font-pixeloid-mono text-[#a37c49] mb-2 flex items-center gap-1"><ImageIcon size={14}/> Картинка (до 2МБ)</label>
-                              {!item.image ? <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, index)} className="w-full text-sm text-[#8c6e52] file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-[#3d2617] file:text-[#e6d5b8] hover:file:bg-[#5c3a21] file:cursor-pointer" /> : (
-                                <div className="relative inline-block border-2 border-[#5c3a21] rounded-lg overflow-hidden" style={{ backgroundColor: '#d6c5b3' }}>
-                                  <img src={item.image} alt="Preview" draggable={false} className="h-32 object-contain p-2 select-none" />
-                                  <button type="button" onClick={() => { const upd = [...newItems]; upd[index].image = ""; setNewItems(upd); }} className="absolute top-1 right-1 bg-red-600/80 hover:bg-red-600 text-white p-1 rounded-full transition-colors"><X size={14} /></button>
-                                </div>
-                              )}
+                              <label className="block text-xs font-pixeloid-mono text-[#a37c49] mb-2 flex items-center gap-1"><ImageIcon size={14}/> Картинки (до 3 шт, макс 1МБ каждая)</label>
+                              <input type="file" multiple accept="image/*" onChange={(e) => handleImageUpload(e, index)} className="w-full text-sm text-[#8c6e52] file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-[#3d2617] file:text-[#e6d5b8] hover:file:bg-[#5c3a21] file:cursor-pointer mb-3" />
+                              <div className="flex flex-wrap gap-2">
+                                {item.images?.map((img, i) => (
+                                  <div key={i} className="relative inline-block border-2 border-[#5c3a21] rounded-lg overflow-hidden" style={{ backgroundColor: '#d6c5b3' }}>
+                                    <img src={img} alt="Preview" draggable={false} className="h-20 object-contain p-1 select-none" />
+                                    <button type="button" onClick={() => handleRemoveImage(i, index)} className="absolute top-0 right-0 bg-red-600/80 hover:bg-red-600 text-white p-0.5 rounded-bl-lg transition-colors"><X size={12} /></button>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           </div>
                         </div>
