@@ -154,7 +154,6 @@ export default function TavernArchive() {
   const [editingItem, setEditingItem] = useState<ArchiveItem | null>(null);
   const [showProfile, setShowProfile] = useState(false);
 
-  // Стейты для текстовых страниц (Правила)
   const [infoPages, setInfoPages] = useState<InfoPage[]>(DEFAULT_INFO_PAGES);
   const [activePage, setActivePage] = useState<InfoPage | null>(null);
   const [isEditingPage, setIsEditingPage] = useState(false);
@@ -551,6 +550,10 @@ export default function TavernArchive() {
     });
   };
 
+  const handleRemoveNewItem = (indexToRemove: number) => {
+    setNewItems((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
   const handleAddMultipleItems = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -789,7 +792,7 @@ export default function TavernArchive() {
         showToast("Ошибка при сохранении", "error"); 
       }
 
-    } catch (error) {
+    } catch {
       showToast("Ошибка при обработке текста", "error");
     }
   };
@@ -1135,7 +1138,6 @@ export default function TavernArchive() {
                   <button onClick={() => setAdminTab("archive")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'archive' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Добавить</button>
                   {userRole.level >= 2 && <button onClick={() => setAdminTab("bulk")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'bulk' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Импорт</button>}
                   
-                  {/* ВКЛАДКА АККАУНТЫ ТОЛЬКО С ХРАНИТЕЛЯ (2) */}
                   {userRole.level >= 2 && <button onClick={() => setAdminTab("users")} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'users' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Аккаунты</button>}
                   
                   <button onClick={() => setAdminTab("media")} className={`px-4 py-2 rounded transition-all active:scale-95 flex items-center gap-2 ${adminTab === 'media' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}><ImagePlus size={16}/> Медиа</button>
@@ -1157,7 +1159,20 @@ export default function TavernArchive() {
                   <div className="animate-smooth-fade-up">
                     <form onSubmit={handleAddMultipleItems} className="space-y-6 max-w-xl">
                       {newItems.map((item, index) => (
-                        <div key={index} className="p-4 bg-[#1c110b] border border-[#5c3a21] rounded-lg">
+                        <div key={index} className="relative p-4 bg-[#1c110b] border border-[#5c3a21] rounded-lg">
+                          
+                          {/* Кнопка удаления дополнительного блока */}
+                          {newItems.length > 1 && (
+                            <button 
+                              type="button" 
+                              onClick={() => handleRemoveNewItem(index)} 
+                              className="absolute top-2 right-2 text-gray-500 hover:text-red-500 active:scale-90 transition-all bg-[#160d08] p-1.5 rounded"
+                              title="Удалить эту форму"
+                            >
+                              <X size={16} />
+                            </button>
+                          )}
+
                           <div className="space-y-3">
                             <input required placeholder="Название" value={item.title} onChange={e => { const upd = [...newItems]; upd[index].title = e.target.value; setNewItems(upd); }} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none transition-colors select-text" />
                             <div className="grid grid-cols-2 gap-4">
@@ -1282,7 +1297,6 @@ export default function TavernArchive() {
                   </div>
                 )}
 
-                {/* ФОРМА СОЗДАНИЯ АККАУНТА ТОЛЬКО С ХРАНИТЕЛЯ (2) */}
                 {adminTab === "users" && userRole.level >= 2 && (
                   <div className="space-y-10 font-sans animate-smooth-fade-up">
                     <form onSubmit={handleCreateUser} className="space-y-4 max-w-xl bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
