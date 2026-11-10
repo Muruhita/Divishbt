@@ -1555,4 +1555,65 @@ export default function TavernArchive() {
                   <div className="animate-smooth-fade-up">
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] flex items-center gap-2"><History size={18}/> История действий (Последние 100)</h3>
-                      <button onClick={handleClearLogs} className="px-4 py-2 bg-red-900/20 border border-red-500 text-red-400 font-bold
+                      <button onClick={handleClearLogs} className="px-4 py-2 bg-red-900/20 border border-red-500 text-red-400 font-bold hover:bg-red-900/40 active:scale-95 transition-all rounded">Очистить логи</button>
+                    </div>
+                    <div className="overflow-x-auto rounded-lg border border-[#5c3a21]">
+                      <table className="w-full text-left border-collapse">
+                        <thead className="bg-[#1c110b]">
+                          <tr className="text-[#8c6e52] border-b border-[#5c3a21] font-pixeloid-mono text-sm">
+                            <th className="p-3">Действие</th>
+                            <th className="p-3">Объект</th>
+                            <th className="p-3">Пользователь</th>
+                            <th className="p-3">Роль</th>
+                            <th className="p-3">Время</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {logsList.map((log) => (
+                            <tr key={log.id} className="border-b border-[#3d2617] hover:bg-[#1c110b] transition-colors">
+                              <td className="p-3 font-mono text-sm text-[#e6d5b8] select-text">{log.action}</td>
+                              <td className="p-3 text-sm text-[#c4b5a5] select-text">{log.item_title}</td>
+                              <td className="p-3 text-sm text-[#c4b5a5] select-text">{log.user_name}</td>
+                              <td className="p-3 text-sm font-bold font-pixeloid-mono text-[#a37c49] select-text">{log.user_role}</td>
+                              <td className="p-3 text-sm text-[#8c6e52] select-text">{new Date(log.timestamp).toLocaleString()}</td>
+                            </tr>
+                          ))}
+                          {logsList.length === 0 && (
+                            <tr>
+                              <td colSpan={5} className="p-4 text-center text-[#8c6e52]">Логи пусты</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {adminTab === "diag" && (
+                  <div className="animate-smooth-fade-up max-w-xl">
+                    <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Activity size={18}/> Диагностика базы данных</h3>
+                    <button onClick={async () => { try { const res = await fetch('/api/diag'); setDiagResult(await res.json()); } catch { setDiagResult({ status: 'error', message: 'Ошибка сети' }); } }} className="px-6 py-3 bg-[#5c3a21] border border-[#a37c49] text-white font-bold rounded-lg hover:bg-[#7a4f2e] active:scale-95 transition-all mb-6 flex items-center gap-2"><Database size={18}/> Проверить соединение</button>
+                    {diagResult && (
+                      <div className={`p-6 rounded-lg border-2 ${diagResult.status === 'ok' ? 'bg-green-900/20 border-green-500' : 'bg-red-900/20 border-red-500'}`}>
+                        <p className={`font-bold font-pixeloid-mono text-lg mb-2 ${diagResult.status === 'ok' ? 'text-green-400' : 'text-red-400'}`}>{diagResult.status === 'ok' ? '✓ Соединение установлено' : '✗ Ошибка соединения'}</p>
+                        <p className="text-[#c4b5a5] select-text">{diagResult.message}</p>
+                        {diagResult.latency !== undefined && <p className="text-[#8c6e52] text-sm mt-2 select-text">Задержка: {diagResult.latency} мс</p>}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showScrollTop && (
+        <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="fixed bottom-8 right-8 p-3 bg-[#5c3a21] border-2 border-[#a37c49] rounded-full text-white shadow-[0_0_20px_rgba(163,124,73,0.5)] hover:bg-[#7a4f2e] active:scale-90 transition-all z-50" title="Наверх">
+          <ArrowUp size={24} />
+        </button>
+      )}
+
+    </main>
+  );
+}
