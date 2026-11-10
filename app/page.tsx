@@ -155,19 +155,9 @@ ArchiveCard.displayName = 'ArchiveCard';
 
 export default function TavernArchive() {
   const cursorDotRef = useRef<HTMLDivElement>(null);
-  
-  // Рефы для шлейфа (6 точек)
-  const trail1Ref = useRef<HTMLDivElement>(null);
-  const trail2Ref = useRef<HTMLDivElement>(null);
-  const trail3Ref = useRef<HTMLDivElement>(null);
-  const trail4Ref = useRef<HTMLDivElement>(null);
-  const trail5Ref = useRef<HTMLDivElement>(null);
-  const trail6Ref = useRef<HTMLDivElement>(null);
-
+  const trailRef = useRef<HTMLDivElement>(null);
   const isHovering = useRef(false);
-  const lastSparkTime = useRef(0);
 
-  const [sparks, setSparks] = useState<{id: number, x: number, y: number, size: number, color: string, tx: number, ty: number}[]>([]);
   const [clicks, setClicks] = useState<{ id: number; x: number; y: number }[]>([]);
   const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' | 'info' | 'warning' } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ msg: string, onConfirm: () => void } | null>(null);
@@ -274,19 +264,14 @@ export default function TavernArchive() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // ЛОГИКА КУРСОРА, ШЛЕЙФА И ИСКР
+  // ЛОГИКА КУРСОРА С ОДНИМ ПЛАВНЫМ ТРЕЙЛОМ
   useEffect(() => {
     if (window.matchMedia("(pointer: coarse)").matches) return;
 
     let mouseX = window.innerWidth / 2;
     let mouseY = window.innerHeight / 2;
-    
-    let trail1X = mouseX, trail1Y = mouseY;
-    let trail2X = mouseX, trail2Y = mouseY;
-    let trail3X = mouseX, trail3Y = mouseY;
-    let trail4X = mouseX, trail4Y = mouseY;
-    let trail5X = mouseX, trail5Y = mouseY;
-    let trail6X = mouseX, trail6Y = mouseY;
+    let trailX = mouseX;
+    let trailY = mouseY;
 
     const onMouseMove = (e: MouseEvent) => {
       mouseX = e.clientX;
@@ -306,28 +291,6 @@ export default function TavernArchive() {
         isHovering.current = false;
         cursorDotRef.current?.classList.remove("hovering");
       }
-
-      const now = Date.now();
-      if (now - lastSparkTime.current > 25) {
-        lastSparkTime.current = now;
-        
-        const colors = ['#E5B85C', '#ffd700', '#ff8c00', '#ff4500'];
-        const newSpark = {
-          id: now + Math.random(),
-          x: mouseX - 6,
-          y: mouseY - 6,
-          size: Math.random() * 3 + 1.5, 
-          color: isHovering.current ? '#ffffff' : colors[Math.floor(Math.random() * colors.length)],
-          tx: (Math.random() - 0.5) * 80, 
-          ty: (Math.random() - 0.5) * 80 + 30 
-        };
-
-        setSparks(prev => [...prev, newSpark]);
-
-        setTimeout(() => {
-          setSparks(prev => prev.filter(s => s.id !== newSpark.id));
-        }, 600);
-      }
     };
 
     const onMouseDown = (e: MouseEvent) => {
@@ -338,19 +301,13 @@ export default function TavernArchive() {
 
     let animationFrameId: number;
     const animateTrail = () => {
-      trail1X += (mouseX - trail1X) * 0.4;  trail1Y += (mouseY - trail1Y) * 0.4;
-      trail2X += (trail1X - trail2X) * 0.35; trail2Y += (trail1Y - trail2Y) * 0.35;
-      trail3X += (trail2X - trail3X) * 0.3;  trail3Y += (trail2Y - trail3Y) * 0.3;
-      trail4X += (trail3X - trail4X) * 0.25; trail4Y += (trail3Y - trail4Y) * 0.25;
-      trail5X += (trail4X - trail5X) * 0.2;  trail5Y += (trail4Y - trail5Y) * 0.2;
-      trail6X += (trail5X - trail6X) * 0.15; trail6Y += (trail5Y - trail6Y) * 0.15;
+      // Плавное догоняние (чем меньше коэффициент, тем длиннее и плавнее шлейф)
+      trailX += (mouseX - trailX) * 0.15; 
+      trailY += (mouseY - trailY) * 0.15;
 
-      if (trail1Ref.current) trail1Ref.current.style.transform = `translate(${trail1X}px, ${trail1Y}px) translate(-50%, -50%)`;
-      if (trail2Ref.current) trail2Ref.current.style.transform = `translate(${trail2X}px, ${trail2Y}px) translate(-50%, -50%)`;
-      if (trail3Ref.current) trail3Ref.current.style.transform = `translate(${trail3X}px, ${trail3Y}px) translate(-50%, -50%)`;
-      if (trail4Ref.current) trail4Ref.current.style.transform = `translate(${trail4X}px, ${trail4Y}px) translate(-50%, -50%)`;
-      if (trail5Ref.current) trail5Ref.current.style.transform = `translate(${trail5X}px, ${trail5Y}px) translate(-50%, -50%)`;
-      if (trail6Ref.current) trail6Ref.current.style.transform = `translate(${trail6X}px, ${trail6Y}px) translate(-50%, -50%)`;
+      if (trailRef.current) {
+        trailRef.current.style.transform = `translate(${trailX}px, ${trailY}px) translate(-50%, -50%)`;
+      }
 
       animationFrameId = requestAnimationFrame(animateTrail);
     };
@@ -1080,31 +1037,8 @@ export default function TavernArchive() {
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col select-none">
       
-      {/* ШЛЕЙФ ИЗ 6 ТОЧЕК */}
-      <div ref={trail6Ref} className="fixed pointer-events-none rounded-full bg-[#E5B85C] shadow-[0_0_2px_#E5B85C] hidden md:block w-[3px] h-[3px] opacity-20 z-[99996]" />
-      <div ref={trail5Ref} className="fixed pointer-events-none rounded-full bg-[#E5B85C] shadow-[0_0_3px_#E5B85C] hidden md:block w-[4px] h-[4px] opacity-30 z-[99996]" />
-      <div ref={trail4Ref} className="fixed pointer-events-none rounded-full bg-[#E5B85C] shadow-[0_0_4px_#E5B85C] hidden md:block w-[5px] h-[5px] opacity-40 z-[99996]" />
-      <div ref={trail3Ref} className="fixed pointer-events-none rounded-full bg-[#E5B85C] shadow-[0_0_5px_#E5B85C] hidden md:block w-[6px] h-[6px] opacity-50 z-[99996]" />
-      <div ref={trail2Ref} className="fixed pointer-events-none rounded-full bg-[#E5B85C] shadow-[0_0_6px_#E5B85C] hidden md:block w-[7px] h-[7px] opacity-70 z-[99996]" />
-      <div ref={trail1Ref} className="fixed pointer-events-none rounded-full bg-[#E5B85C] shadow-[0_0_8px_#E5B85C] hidden md:block w-[8px] h-[8px] opacity-90 z-[99996]" />
-
-      {/* МАГИЧЕСКИЕ ИСКРЫ */}
-      {sparks.map(s => (
-        <div 
-          key={s.id} 
-          className="cursor-spark"
-          style={{
-            left: s.x,
-            top: s.y,
-            width: s.size,
-            height: s.size,
-            backgroundColor: s.color,
-            color: s.color,
-            '--tx': `${s.tx}px`,
-            '--ty': `${s.ty}px`
-          } as React.CSSProperties}
-        />
-      ))}
+      {/* ОДИН ПЛАВНЫЙ ТРЕЙЛ */}
+      <div ref={trailRef} className="fixed pointer-events-none rounded-full bg-[#E5B85C] shadow-[0_0_10px_#E5B85C] hidden md:block w-3 h-3 opacity-60 blur-[1px] z-[99997]" />
 
       {/* КУРСОР-СТРЕЛКА (SVG) */}
       <div ref={cursorDotRef} className="custom-cursor-dot hidden md:block pointer-events-none">
