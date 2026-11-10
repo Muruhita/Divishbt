@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
-import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle, Save, Tag, CheckCircle2, Info, Home, BookOpen, LayoutDashboard, ImagePlus, Star, ArrowUp, Pill, AlertOctagon, PackageX, FileEdit, Wind, FileSpreadsheet } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, Volume2, VolumeX, User as UserIcon, History, AlertTriangle, Save, Tag, CheckCircle2, Info, Home, BookOpen, LayoutDashboard, ImagePlus, Star, ArrowUp, Pill, AlertOctagon, PackageX, FileEdit, FileSpreadsheet } from "lucide-react";
 
 type ArchiveItem = { id: number; title: string; category: string; description: string; symbol?: string; dangerLevel?: string; images?: string[]; is_draft?: number; };
 type DbArchiveItem = { id: number; title: string; category: string; description: string; symbol: string | null; danger_level: string | null; image: string | null; is_draft: number; };
@@ -155,6 +155,9 @@ ArchiveCard.displayName = 'ArchiveCard';
 
 export default function TavernArchive() {
   const cursorDotRef = useRef<HTMLDivElement>(null);
+  const trail1Ref = useRef<HTMLDivElement>(null);
+  const trail2Ref = useRef<HTMLDivElement>(null);
+  const trail3Ref = useRef<HTMLDivElement>(null);
   const isHovering = useRef(false);
 
   const [clicks, setClicks] = useState<{ id: number; x: number; y: number }[]>([]);
@@ -231,9 +234,7 @@ export default function TavernArchive() {
   const [newRoleLevel, setNewRoleLevel] = useState(1);
 
   const [soundEnabled, setSoundEnabled] = useState(false);
-  const [ambientEnabled, setAmbientEnabled] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
-  const ambientSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
   const handleApiError = useCallback((status: number) => {
     if (status === 401) {
@@ -269,10 +270,12 @@ export default function TavernArchive() {
     const onMouseMove = (e: MouseEvent) => {
       const mouseX = e.clientX;
       const mouseY = e.clientY;
+      const transform = `translate(${mouseX}px, ${mouseY}px) translate(-50%, -50%)`;
       
-      if (cursorDotRef.current) {
-        cursorDotRef.current.style.transform = `translate(${mouseX}px, ${mouseY}px) translate(-50%, -50%)`;
-      }
+      if (cursorDotRef.current) cursorDotRef.current.style.transform = transform;
+      if (trail1Ref.current) trail1Ref.current.style.transform = transform;
+      if (trail2Ref.current) trail2Ref.current.style.transform = transform;
+      if (trail3Ref.current) trail3Ref.current.style.transform = transform;
 
       const target = e.target as HTMLElement;
       const isClickable = target.closest('a, button, input, select, textarea, [role="button"]');
@@ -342,53 +345,6 @@ export default function TavernArchive() {
       osc.start(now); osc.stop(now + 0.2);
     }
   }, [soundEnabled]);
-
-  const toggleAmbient = () => {
-    if (!audioCtxRef.current) {
-       const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-       audioCtxRef.current = new AudioContextClass();
-    }
-    const ctx = audioCtxRef.current;
-
-    if (ambientEnabled) {
-       if (ambientSourceRef.current) {
-          ambientSourceRef.current.stop();
-          ambientSourceRef.current.disconnect();
-          ambientSourceRef.current = null;
-       }
-       setAmbientEnabled(false);
-    } else {
-       const bufferSize = ctx.sampleRate * 2;
-       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-       const data = buffer.getChannelData(0);
-       let lastOut = 0;
-       for (let i = 0; i < bufferSize; i++) {
-         const white = Math.random() * 2 - 1;
-         data[i] = (lastOut + (0.02 * white)) / 1.02;
-         lastOut = data[i];
-         data[i] *= 3.5;
-       }
-
-       const noiseSource = ctx.createBufferSource();
-       noiseSource.buffer = buffer;
-       noiseSource.loop = true;
-
-       const filter = ctx.createBiquadFilter();
-       filter.type = "lowpass";
-       filter.frequency.value = 400;
-
-       const gainNode = ctx.createGain();
-       gainNode.gain.value = 0.04;
-
-       noiseSource.connect(filter);
-       filter.connect(gainNode);
-       gainNode.connect(ctx.destination);
-
-       noiseSource.start();
-       ambientSourceRef.current = noiseSource;
-       setAmbientEnabled(true);
-    }
-  };
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -1015,8 +971,11 @@ export default function TavernArchive() {
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col select-none">
       
-      {/* ОСНОВНАЯ ТОЧКА КУРСОРА */}
+      {/* КУРСОР И ТРЕЙЛ */}
       <div ref={cursorDotRef} className="custom-cursor-dot hidden md:block pointer-events-none" />
+      <div ref={trail1Ref} className="custom-cursor-trail trail-1 hidden md:block pointer-events-none" />
+      <div ref={trail2Ref} className="custom-cursor-trail trail-2 hidden md:block pointer-events-none" />
+      <div ref={trail3Ref} className="custom-cursor-trail trail-3 hidden md:block pointer-events-none" />
 
       {/* ЭФФЕКТ КЛИКА */}
       {clicks.map(c => <div key={c.id} className="cursor-click-ripple" style={{ left: c.x, top: c.y }} />)}
@@ -1030,15 +989,11 @@ export default function TavernArchive() {
 
       <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 50% 0%, #a37c49 0%, transparent 70%)" }}></div>
 
-      {/* КНОПКИ ЗВУКА */}
+      {/* КНОПКА ЗВУКА */}
       <div className="absolute top-4 left-4 z-[100] flex gap-2">
         <button onClick={() => { setSoundEnabled(!soundEnabled); if (!soundEnabled) playSound("success"); }}
           className="p-2 bg-[#1c110b]/80 border border-[#5c3a21] rounded hover:bg-[#a37c49] text-[#8c6e52] active:scale-95 transition-all" title="Звуки интерфейса">
           {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
-        </button>
-        <button onClick={toggleAmbient}
-          className={`p-2 bg-[#1c110b]/80 border border-[#5c3a21] rounded hover:bg-[#a37c49] active:scale-95 transition-all ${ambientEnabled ? 'text-[#a37c49]' : 'text-[#8c6e52]'}`} title="Фоновый звук таверны">
-          <Wind size={20} />
         </button>
       </div>
 
