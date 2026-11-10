@@ -266,7 +266,7 @@ export default function TavernArchive() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // ЛОГИКА МАГИЧЕСКОГО КУРСОРА С ИСКРАМИ
+  // ЛОГИКА КУРСОРА И ИСКР
   useEffect(() => {
     if (window.matchMedia("(pointer: coarse)").matches) return;
 
@@ -290,15 +290,15 @@ export default function TavernArchive() {
       }
 
       const now = Date.now();
-      // Создаем искру не чаще, чем раз в 25мс
       if (now - lastSparkTime.current > 25) {
         lastSparkTime.current = now;
         
         const colors = ['#E5B85C', '#ffd700', '#ff8c00', '#ff4500'];
         const newSpark = {
           id: now + Math.random(),
-          x: mouseX,
-          y: mouseY,
+          // Смещаем искры к кончику стрелки (влево-вверх)
+          x: mouseX - 6,
+          y: mouseY - 6,
           size: Math.random() * 3 + 1.5, 
           color: isHovering.current ? '#ffffff' : colors[Math.floor(Math.random() * colors.length)],
           tx: (Math.random() - 0.5) * 80, 
@@ -388,7 +388,6 @@ export default function TavernArchive() {
        const bufferSize = ctx.sampleRate * 2;
        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
        const data = buffer.getChannelData(0);
-       // Генерируем "коричневый шум" для эффекта огня/ветра
        let lastOut = 0;
        for (let i = 0; i < bufferSize; i++) {
          const white = Math.random() * 2 - 1;
@@ -403,10 +402,10 @@ export default function TavernArchive() {
 
        const filter = ctx.createBiquadFilter();
        filter.type = "lowpass";
-       filter.frequency.value = 400; // Низкий гул
+       filter.frequency.value = 400;
 
        const gainNode = ctx.createGain();
-       gainNode.gain.value = 0.04; // Очень тихо, на фоне
+       gainNode.gain.value = 0.04;
 
        noiseSource.connect(filter);
        filter.connect(gainNode);
@@ -894,12 +893,11 @@ export default function TavernArchive() {
           `"${(item.description || '').replace(/"/g, '""')}"`,
           `"${(item.symbol || '').replace(/"/g, '""')}"`,
           `"${(item.danger_level || '').replace(/"/g, '""')}"`,
-          `"${(item.image || '').replace(/"/g, '""')}"` // Оставляем сырой JSON картинок на случай бэкапа
+          `"${(item.image || '').replace(/"/g, '""')}"`
         ];
         csvRows.push(row.join(","));
       }
 
-      // Добавляем BOM (\uFEFF) для корректного отображения кириллицы в Excel
       const csvString = "\uFEFF" + csvRows.join("\n");
       const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
@@ -1062,8 +1060,12 @@ export default function TavernArchive() {
         />
       ))}
 
-      {/* ОСНОВНАЯ ТОЧКА КУРСОРА */}
-      <div ref={cursorDotRef} className="custom-cursor-dot hidden md:block pointer-events-none" />
+      {/* КУРСОР-СТРЕЛКА (SVG) */}
+      <div ref={cursorDotRef} className="custom-cursor-dot hidden md:block pointer-events-none">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M5 3L19 12L12 13L9 20L5 3Z" fill="#E5B85C" stroke="#1c110b" strokeWidth="2" strokeLinejoin="round"/>
+        </svg>
+      </div>
 
       {/* ЭФФЕКТ КЛИКА */}
       {clicks.map(c => <div key={c.id} className="cursor-click-ripple" style={{ left: c.x, top: c.y }} />)}
