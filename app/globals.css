@@ -8,13 +8,16 @@ body {
   background-color: #160d08;
   color: #e6d5b8;
   overflow-x: hidden;
-  /* Запрет выделения текста везде */
+}
+
+/* Класс для запрета выделения только на декоративных элементах */
+.no-select {
   user-select: none;
   -webkit-user-select: none;
 }
 
-/* Разрешаем выделение только для контента */
-.select-text, input, textarea {
+/* Разрешаем выделение для полей ввода */
+input, textarea {
   user-select: text !important;
   -webkit-user-select: text !important;
 }
