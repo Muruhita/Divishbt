@@ -23,15 +23,21 @@ export async function POST(req: Request) {
     let finalAccountName = user.account_name as string;
     let needsNewToken = false;
 
+    // Проверка уникальности логина
     if (newUsername && newUsername !== user.username) {
-      const checkRes = await db.execute({ sql: "SELECT id FROM users WHERE username = ?", args: [newUsername] });
+      const checkRes = await db.execute({ sql: "SELECT id FROM users WHERE username = ? AND id != ?", args: [newUsername, authUser.id] });
       if (checkRes.rows.length > 0) return NextResponse.json({ error: "Этот логин уже занят" }, { status: 400 });
+      
       await db.execute({ sql: "UPDATE users SET username = ? WHERE id = ?", args: [newUsername, authUser.id] });
       finalUsername = newUsername;
       needsNewToken = true;
     }
 
+    // Проверка уникальности имени аккаунта
     if (newAccountName && newAccountName !== user.account_name) {
+      const checkRes = await db.execute({ sql: "SELECT id FROM users WHERE account_name = ? AND id != ?", args: [newAccountName, authUser.id] });
+      if (checkRes.rows.length > 0) return NextResponse.json({ error: "Это имя уже занято другим пользователем" }, { status: 400 });
+
       await db.execute({ sql: "UPDATE users SET account_name = ? WHERE id = ?", args: [newAccountName, authUser.id] });
       finalAccountName = newAccountName;
       needsNewToken = true;
@@ -51,7 +57,6 @@ export async function POST(req: Request) {
 
     const response = NextResponse.json({ success: true });
 
-    // Если сменился логин или имя, перевыпускаем JWT токен
     if (needsNewToken) {
       const newToken = await signToken({
         id: authUser.id,
