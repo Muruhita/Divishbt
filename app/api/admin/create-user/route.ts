@@ -16,18 +16,34 @@ export async function POST(req: Request) {
 
     const { username, password, account_name, role } = await req.json();
 
+    // ПРОВЕРКА НА ДУБЛИКАТЫ (Логин или Имя)
+    const existing = await db.execute({
+      sql: "SELECT username, account_name FROM users WHERE username = ? OR account_name = ?",
+      args: [username, account_name]
+    });
+
+    if (existing.rows.length > 0) {
+      const isUsernameTaken = existing.rows.some(r => r.username === username);
+      const isAccountNameTaken = existing.rows.some(r => r.account_name === account_name);
+      
+      let errMsg = "";
+      if (isUsernameTaken && isAccountNameTaken) errMsg = "И этот логин, и это имя уже заняты.";
+      else if (isUsernameTaken) errMsg = "Этот логин уже занят.";
+      else errMsg = "Это имя аккаунта уже занято.";
+
+      return NextResponse.json({ error: errMsg }, { status: 400 });
+    }
+
     const rolesRes = await db.execute("SELECT id, level FROM roles");
     const rolesMap = new Map(rolesRes.rows.map(r => [r.id, Number(r.level)]));
     
     const reqLevel = rolesMap.get(requester.role) || 0;
     const newLevel = rolesMap.get(role) || 0;
 
-    // ЖЕСТКАЯ ПРОВЕРКА: Создавать аккаунты может только Хранитель (2), Создатель (3) и Овнер (4)
     if (requester.role !== 'owner' && reqLevel < 2) {
       return NextResponse.json({ error: "Недостаточно прав для создания аккаунтов" }, { status: 403 });
     }
 
-    // Проверка на то, что нельзя создать ранг выше или равный своему
     if (requester.role !== 'owner' && reqLevel <= newLevel) {
       return NextResponse.json({ error: "Недостаточно прав для создания этого ранга" }, { status: 403 });
     }
