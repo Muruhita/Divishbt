@@ -1,5 +1,6 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
+import rehypeSanitize from "rehype-sanitize";
 import { Star, Pencil, Trash2, Maximize2 } from "lucide-react";
 import { ArchiveItem } from "@/types";
 import { Highlight } from "./Highlight";
@@ -23,10 +24,10 @@ export const SkeletonCard = React.memo(() => (
 ));
 SkeletonCard.displayName = 'SkeletonCard';
 
-// Компонент для рендера Markdown с подсветкой
 const MarkdownWithHighlight = ({ text, query }: { text: string, query: string }) => {
   return (
     <ReactMarkdown
+      rehypePlugins={[rehypeSanitize]} // <--- ЗАЩИТА ОТ XSS
       components={{
         p: ({ children }) => <p>{React.Children.map(children, child => typeof child === 'string' ? <Highlight text={child} query={query} /> : child)}</p>,
         li: ({ children }) => <li>{React.Children.map(children, child => typeof child === 'string' ? <Highlight text={child} query={query} /> : child)}</li>,
