@@ -243,11 +243,22 @@ export default function TavernArchive() {
     const reader = new FileReader(); reader.onloadend = () => setUser(prev => prev ? { ...prev, avatar: reader.result as string } : null); reader.readAsDataURL(file);
   };
 
-  // ОБНОВЛЕННАЯ ФУНКЦИЯ СЖАТИЯ
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, index?: number) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
+    processImageFiles(Array.from(files), index);
+    e.target.value = '';
+  };
 
+  const handleImageDrop = (e: React.DragEvent<HTMLDivElement>, index?: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processImageFiles(Array.from(e.dataTransfer.files), index);
+    }
+  };
+
+  const processImageFiles = async (files: File[], index?: number) => {
     const isEditing = index === undefined;
     const currentImages = isEditing ? (editingItem?.images || []) : (newItems[index!].images || []);
     
@@ -256,24 +267,20 @@ export default function TavernArchive() {
       return;
     }
 
-    const options = {
-      maxSizeMB: 0.2, // Сжимаем до 200 КБ
-      maxWidthOrHeight: 1200, // Ограничиваем разрешение
-      useWebWorker: true,
-    };
+    const options = { maxSizeMB: 0.2, maxWidthOrHeight: 1200, useWebWorker: true };
 
-    for (const file of Array.from(files)) {
-      // Проверяем исходный размер (если больше 5МБ, возможно, стоит предупредить)
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) {
+        showToast(`Файл ${file.name} не является картинкой`, "warning");
+        continue;
+      }
       if (file.size > 5 * 1024 * 1024) {
-        showToast(`Файл ${file.name} слишком большой (макс 5МБ для сжатия)`, "warning");
+        showToast(`Файл ${file.name} слишком большой (макс 5МБ)`, "warning");
         continue;
       }
 
       try {
-        // Сжимаем файл
         const compressedFile = await imageCompression(file, options);
-        
-        // Конвертируем сжатый файл в Base64
         const base64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onloadend = () => resolve(reader.result as string);
@@ -291,12 +298,9 @@ export default function TavernArchive() {
           });
         }
       } catch (error) {
-        console.error("Ошибка сжатия:", error);
         showToast(`Не удалось сжать ${file.name}`, "error");
       }
     }
-    
-    e.target.value = '';
   };
 
   const handleRemoveImage = (imgIndex: number, formIndex?: number) => {
@@ -405,7 +409,6 @@ export default function TavernArchive() {
     if (res.ok) { showToast("Сохранено", "success"); setIsEditingPage(false); const u = infoPages.map(p => p.id === activePage.id ? { ...p, content: editPageContent } : p); setInfoPages(u); setActivePage({ ...activePage, content: editPageContent }); }
   };
 
-  // --- БЭКАП ---
   const handleDownloadBackup = async () => {
     try {
       const res = await fetch("/api/admin/backup");
@@ -532,7 +535,10 @@ export default function TavernArchive() {
                 user={user} userRole={userRole} roles={roles} setRoles={setRoles} 
                 categories={categories} stats={stats} adminTab={adminTab} setAdminTab={setAdminTab} 
                 newItems={newItems} setNewItems={setNewItems} handleAddMultipleItems={handleAddMultipleItems} 
-                handleImageUpload={handleImageUpload} handleRemoveImage={handleRemoveImage} handleClearDatabase={handleClearDatabase} 
+                handleImageUpload={handleImageUpload} 
+                handleImageDrop={handleImageDrop} 
+                handleRemoveImage={handleRemoveImage} 
+                handleClearDatabase={handleClearDatabase} 
                 mediaList={mediaList} handleDeleteMedia={handleDeleteMedia} 
                 newCatName={newCatName} setNewCatName={setNewCatName} handleAddCategory={handleAddCategory} handleDeleteCategory={handleDeleteCategory} 
                 newRoleName={newRoleName} setNewRoleName={setNewRoleName} newRoleLevel={newRoleLevel} setNewRoleLevel={setNewRoleLevel} handleAddRole={handleAddRole} handleUpdateRole={handleUpdateRole} handleDeleteRole={handleDeleteRole} 
