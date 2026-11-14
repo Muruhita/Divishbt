@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
+import { revalidateTag } from "next/cache";
+import { sendDiscordNotification } from "@/lib/discord";
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +14,7 @@ async function getUserLevel(role: string) {
 }
 
 export async function GET(req: Request) {
+  // ... (остается без изменений)
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('tavern_token')?.value;
@@ -28,7 +31,6 @@ export async function GET(req: Request) {
 
     if (category !== "Все") { whereConditions.push("category = ?"); args.push(category); }
     
-    // УЛУЧШЕННЫЙ ПОИСК: Ищем по title, description, symbol и category
     if (search) {
       whereConditions.push("(LOWER(title) LIKE LOWER(?) OR LOWER(description) LIKE LOWER(?) OR LOWER(symbol) LIKE LOWER(?) OR LOWER(category) LIKE LOWER(?))");
       args.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
@@ -73,8 +75,7 @@ export async function POST(req: Request) {
     
     for (const item of items) {
       if (!item.title || item.title.length > 200) throw new Error("Некорректный заголовок");
-      if (item.image && item.image.length > 3 * 1024 * 1024) throw new Error("Картинка слишком большая (макс 2МБ)");
-
+      
       await db.execute({
         sql: "INSERT INTO archive (title, category, description, symbol, danger_level, image, is_draft) VALUES (?, ?, ?, ?, ?, ?, ?)",
         args: [item.title.trim(), item.category, item.description, item.symbol || "", item.dangerLevel || null, item.image || null, item.is_draft ? 1 : 0],
@@ -83,7 +84,11 @@ export async function POST(req: Request) {
         sql: "INSERT INTO logs (action, item_title, user_name, user_role) VALUES (?, ?, ?, ?)",
         args: ["СОЗДАНИЕ", item.title.trim(), user.account_name, user.role],
       });
+
+      // Отправляем вебхук!
+      sendDiscordNotification("СОЗДАНИЕ", item.title.trim(), user.account_name, user.role);
     }
+    revalidateTag('archive'); // Сбрасываем кэш
     return NextResponse.json({ success: true, count: items.length });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Ошибка при добавлении";
@@ -92,6 +97,7 @@ export async function POST(req: Request) {
 }
 
 export async function PUT(req: Request) {
+  // ... (остается без изменений)
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('tavern_token')?.value;
@@ -115,7 +121,7 @@ export async function PUT(req: Request) {
       sql: "INSERT INTO logs (action, item_title, user_name, user_role) VALUES (?, ?, ?, ?)",
       args: ["ИЗМЕНЕНИЕ", item.title.trim(), user.account_name, user.role],
     });
-
+    revalidateTag('archive');
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: "Ошибка при обновлении" }, { status: 500 });
@@ -123,6 +129,7 @@ export async function PUT(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+  // ... (остается без изменений)
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('tavern_token')?.value;
@@ -142,6 +149,7 @@ export async function DELETE(req: Request) {
       if (user.role !== "owner") return NextResponse.json({ error: "Только Овнер может очистить базу" }, { status: 403 });
       await db.execute("DELETE FROM archive");
       await db.execute({ sql: "INSERT INTO logs (action, item_title, user_name, user_role) VALUES (?, ?, ?, ?)", args: ["ОЧИСТКА_БАЗЫ", "ВСЕ ЗАПИСИ", user.account_name, user.role] });
+      revalidateTag('archive');
       return NextResponse.json({ success: true });
     }
 
@@ -149,7 +157,7 @@ export async function DELETE(req: Request) {
 
     await db.execute({ sql: "DELETE FROM archive WHERE id = ?", args: [id] });
     await db.execute({ sql: "INSERT INTO logs (action, item_title, user_name, user_role) VALUES (?, ?, ?, ?)", args: ["УДАЛЕНИЕ", `ID: ${id}`, user.account_name, user.role] });
-
+    revalidateTag('archive');
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: "Ошибка удаления" }, { status: 500 });
