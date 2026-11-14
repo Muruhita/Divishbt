@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
+import { sendDiscordNotification } from "@/lib/discord";
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +17,6 @@ export async function POST(req: Request) {
 
     const { username, password, account_name, role } = await req.json();
 
-    // ПРОВЕРКА НА ДУБЛИКАТЫ (Логин или Имя)
     const existing = await db.execute({
       sql: "SELECT username, account_name FROM users WHERE username = ? OR account_name = ?",
       args: [username, account_name]
@@ -25,12 +25,7 @@ export async function POST(req: Request) {
     if (existing.rows.length > 0) {
       const isUsernameTaken = existing.rows.some(r => r.username === username);
       const isAccountNameTaken = existing.rows.some(r => r.account_name === account_name);
-      
-      let errMsg = "";
-      if (isUsernameTaken && isAccountNameTaken) errMsg = "И этот логин, и это имя уже заняты.";
-      else if (isUsernameTaken) errMsg = "Этот логин уже занят.";
-      else errMsg = "Это имя аккаунта уже занято.";
-
+      let errMsg = isUsernameTaken && isAccountNameTaken ? "И этот логин, и это имя уже заняты." : isUsernameTaken ? "Этот логин уже занят." : "Это имя аккаунта уже занято.";
       return NextResponse.json({ error: errMsg }, { status: 400 });
     }
 
@@ -40,22 +35,13 @@ export async function POST(req: Request) {
     const reqLevel = rolesMap.get(requester.role) || 0;
     const newLevel = rolesMap.get(role) || 0;
 
-    if (requester.role !== 'owner' && reqLevel < 2) {
-      return NextResponse.json({ error: "Недостаточно прав для создания аккаунтов" }, { status: 403 });
-    }
-
-    if (requester.role !== 'owner' && reqLevel <= newLevel) {
-      return NextResponse.json({ error: "Недостаточно прав для создания этого ранга" }, { status: 403 });
-    }
+    if (requester.role !== 'owner' && reqLevel < 2) return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
+    if (requester.role !== 'owner' && reqLevel <= newLevel) return NextResponse.json({ error: "Недостаточно прав для создания этого ранга" }, { status: 403 });
 
     if (role === 'owner') {
-      if (requester.role !== 'owner') {
-        return NextResponse.json({ error: "Только Овнер может создавать Овнера" }, { status: 403 });
-      }
+      if (requester.role !== 'owner') return NextResponse.json({ error: "Только Овнер может создавать Овнера" }, { status: 403 });
       const ownerCount = await db.execute("SELECT COUNT(*) as count FROM users WHERE role = 'owner'");
-      if (Number(ownerCount.rows[0].count) >= 1) {
-        return NextResponse.json({ error: "Овнер уже существует." }, { status: 400 });
-      }
+      if (Number(ownerCount.rows[0].count) >= 1) return NextResponse.json({ error: "Овнер уже существует." }, { status: 400 });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -69,6 +55,8 @@ export async function POST(req: Request) {
       sql: "INSERT INTO logs (action, item_title, user_name, user_role) VALUES (?, ?, ?, ?)",
       args: ["СОЗДАНИЕ_АККАУНТА", account_name, requester.account_name, requester.role],
     });
+
+    sendDiscordNotification("СОЗДАНИЕ_АККАУНТА", account_name, requester.account_name, requester.role);
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
