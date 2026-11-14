@@ -7,6 +7,7 @@ interface AdminViewProps {
   user: User;
   userRole: RoleItem;
   roles: RoleItem[];
+  setRoles: (roles: RoleItem[]) => void; // Добавлено для редактирования
   categories: CategoryItem[];
   stats: { archives: number; users: number; categories: number };
   adminTab: string;
@@ -176,7 +177,10 @@ export const AdminView = (props: AdminViewProps) => {
           <div className="space-y-2">
             {props.roles.map(r => (
               <div key={r.id} className="flex flex-wrap items-center gap-2 p-3 bg-[#1c110b] border border-[#5c3a21] rounded">
-                <input type="text" value={r.name} onChange={e => { const newRoles = props.roles.map(role => role.id === r.id ? { ...role, name: e.target.value } : role); /* setRoles handled internally or via prop */ }} className="flex-grow p-1 bg-transparent border-b border-transparent hover:border-[#5c3a21] text-white font-pixeloid-mono outline-none" />
+                <input type="text" value={r.name} onChange={e => { 
+                  const newRoles = props.roles.map(role => role.id === r.id ? { ...role, name: e.target.value } : role); 
+                  props.setRoles(newRoles); // Теперь изменения сохраняются в стейт
+                }} className="flex-grow p-1 bg-transparent border-b border-transparent hover:border-[#5c3a21] text-white font-pixeloid-mono outline-none" />
                 <input type="number" value={r.level} readOnly className="w-20 p-1 bg-[#160d08] border border-[#5c3a21] rounded text-center text-white" />
                 {(props.userRole.id === "owner" || props.userRole.level > r.level) && <button onClick={() => props.handleUpdateRole(r.id, r.name, r.level)} className="text-green-500 hover:text-green-400 p-1.5"><Save size={16}/></button>}
                 {r.id !== "owner" && (props.userRole.id === "owner" || props.userRole.level > r.level) && <button onClick={() => props.handleDeleteRole(r.id)} className="text-red-500 hover:text-red-400 p-1.5"><Trash2 size={16}/></button>}
@@ -218,7 +222,7 @@ export const AdminView = (props: AdminViewProps) => {
             <input required placeholder="Имя" value={props.newAcc.account_name} onChange={e => props.setNewAcc({...props.newAcc, account_name: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white outline-none" />
             <div className="flex items-center gap-2"><input required={!props.autoUser} placeholder="Логин" value={props.newAcc.username} onChange={e => props.setNewAcc({...props.newAcc, username: e.target.value})} disabled={props.autoUser} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white outline-none disabled:opacity-50" /><label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer"><input type="checkbox" checked={props.autoUser} onChange={e => props.setAutoUser(e.target.checked)} /> Рандом</label></div>
             <div className="flex items-center gap-2"><input required={!props.autoPass} placeholder="Пароль" value={props.newAcc.password} onChange={e => props.setNewAcc({...props.newAcc, password: e.target.value})} disabled={props.autoPass} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white outline-none disabled:opacity-50" /><label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer"><input type="checkbox" checked={props.autoPass} onChange={e => props.setAutoPass(e.target.checked)} /> Рандом</label></div>
-            <select value={props.newAcc.role} onChange={e => props.setNewAcc({...props.newAcc, role: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white outline-none">{props.roles.filter(r => props.userRole.id === "owner" || r.level < props.userRole.level).map(r => <option key={r.id} value={r.id}>{r.name} (Ур. {r.level})</option>)}</select>
+            <select value={props.newAcc.role} onChange={e => props.setNewAcc({...props.newAcc, role: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white outline-none">{props.roles.filter(r => props.userRole.id === "owner" || Number(r.level) < Number(props.userRole.level)).map(r => <option key={r.id} value={r.id}>{r.name} (Ур. {r.level})</option>)}</select>
             <button type="submit" className="px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-white font-bold rounded transition-all">Сгенерировать</button>
           </form>
           <div>
@@ -229,14 +233,15 @@ export const AdminView = (props: AdminViewProps) => {
                 <tbody>
                   {props.usersList.map(u => {
                     const roleObj = props.roles.find(r => r.id === u.role);
-                    const roleLevel = roleObj ? roleObj.level : 0;
+                    // Приводим к числу, чтобы избежать багов со строками
+                    const roleLevel = roleObj ? Number(roleObj.level) : 0;
                     return (
                       <tr key={u.id} className="border-b border-[#3d2617] hover:bg-[#1c110b] transition-colors">
                         <td className="p-3 font-medium select-text">{u.account_name}</td>
                         <td className={`p-3 text-sm font-bold font-pixeloid-mono ${props.getRoleColor(roleLevel)} select-text`}>{roleObj?.name || u.role}</td>
                         <td className="p-3 font-mono text-[#c4b5a5] select-text">{u.username}</td>
                         <td className="p-3">
-                          {props.userRole.level > roleLevel && u.id !== props.user.id && (
+                          {Number(props.userRole.level) > roleLevel && u.id !== props.user.id && (
                             <button onClick={() => props.handleDeleteUser(u.id, u.account_name)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded"><Trash2 size={16} /></button>
                           )}
                         </td>
@@ -280,7 +285,15 @@ export const AdminView = (props: AdminViewProps) => {
       {props.adminTab === "diag" && (
         <div className="animate-smooth-fade-up max-w-xl">
           <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Activity size={18}/> Диагностика</h3>
-          <button onClick={async () => { try { const res = await fetch('/api/diag'); props.setDiagResult(await res.json()); } catch { props.setDiagResult({ status: 'error', message: 'Ошибка' }); } }} className="px-6 py-3 bg-[#5c3a21] border border-[#a37c49] text-white font-bold rounded-lg mb-6 flex items-center gap-2"><Database size={18}/> Проверить</button>
+          <button onClick={async () => { 
+            try { 
+              // Исправлен путь на правильный
+              const res = await fetch('/api/admin/diagnostics'); 
+              props.setDiagResult(await res.json()); 
+            } catch { 
+              props.setDiagResult({ status: 'error', message: 'Ошибка сети' }); 
+            } 
+          }} className="px-6 py-3 bg-[#5c3a21] border border-[#a37c49] text-white font-bold rounded-lg mb-6 flex items-center gap-2"><Database size={18}/> Проверить</button>
           {props.diagResult && (
             <div className={`p-6 rounded-lg border-2 ${props.diagResult.status === 'ok' ? 'bg-green-900/20 border-green-500' : 'bg-red-900/20 border-red-500'}`}>
               <p className={`font-bold font-pixeloid-mono text-lg mb-2 ${props.diagResult.status === 'ok' ? 'text-green-400' : 'text-red-400'}`}>{props.diagResult.status === 'ok' ? '✓ OK' : '✗ Ошибка'}</p>
