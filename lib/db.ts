@@ -1,13 +1,13 @@
 import { createClient } from "@libsql/client";
 
-const url = process.env.tavernoydb_TURSO_DATABASE_URL || process.env.tavernodb_TURSO_DATABASE_URL || process.env.TURSO_DATABASE_URL;
-const authToken = process.env.tavernoydb_TURSO_AUTH_TOKEN || process.env.tavernodb_TURSO_AUTH_TOKEN || process.env.TURSO_AUTH_TOKEN;
+const url = process.env.tavernoydb_TURSO_DATABASE_URL;
+const authToken = process.env.tavernoydb_TURSO_AUTH_TOKEN;
 
 if (!url || !authToken) {
-  console.warn("⚠️ ВНИМАНИЕ: Переменные окружения Turso не найдены.");
+  console.error("⚠️ ВНИМАНИЕ: Переменные окружения Turso (tavernoydb_TURSO_DATABASE_URL / tavernoydb_TURSO_AUTH_TOKEN) не найдены!");
 }
 
 export const db = createClient({
-  url: url || "libsql://dummy-url.turso.io",
-  authToken: authToken || "dummy-token",
+  url: url || "",
+  authToken: authToken || "",
 });
