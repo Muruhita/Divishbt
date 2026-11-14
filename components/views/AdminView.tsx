@@ -59,9 +59,11 @@ interface AdminViewProps {
 export const AdminView = (props: AdminViewProps) => {
   return (
     <div className="animate-smooth-fade-up w-full bg-[#2e1b13] p-8 rounded-xl border-double border-4 border-[#5c3a21]">
-      <div className="flex justify-between items-center mb-8 border-b border-[#5c3a21] pb-4"><h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49]">Панель Управления</h2></div>
+      <div className="flex justify-between items-center mb-8 border-b border-[#5c3a21] pb-4">
+        <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49]">Панель Управления</h2>
+      </div>
       
-      {/* Кнопки вкладок */}
+      {/* Навигация по вкладкам */}
       <div className="flex flex-wrap gap-4 mb-8 font-pixeloid-mono text-sm">
         <button onClick={() => { props.setAdminTab("dashboard"); props.playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 flex items-center gap-2 ${props.adminTab === 'dashboard' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}><LayoutDashboard size={16}/> Дашборд</button>
         <button onClick={() => { props.setAdminTab("archive"); props.playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 ${props.adminTab === 'archive' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Добавить</button>
@@ -77,9 +79,21 @@ export const AdminView = (props: AdminViewProps) => {
       {/* --- DASHBOARD --- */}
       {props.adminTab === "dashboard" && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-smooth-fade-up">
-          <div className="bg-[#1c110b] p-6 rounded-xl border border-[#5c3a21] text-center shadow-lg"><ScrollText size={40} className="mx-auto text-[#a37c49] mb-4" /><h3 className="text-3xl font-bold text-[#e6d5b8] select-text">{props.stats.archives}</h3><p className="text-[#8c6e52] font-pixeloid-mono mt-2">Записей в архиве</p></div>
-          <div className="bg-[#1c110b] p-6 rounded-xl border border-[#5c3a21] text-center shadow-lg"><Users size={40} className="mx-auto text-[#a37c49] mb-4" /><h3 className="text-3xl font-bold text-[#e6d5b8] select-text">{props.stats.users}</h3><p className="text-[#8c6e52] font-pixeloid-mono mt-2">Пользователей</p></div>
-          <div className="bg-[#1c110b] p-6 rounded-xl border border-[#5c3a21] text-center shadow-lg"><Tag size={40} className="mx-auto text-[#a37c49] mb-4" /><h3 className="text-3xl font-bold text-[#e6d5b8] select-text">{props.stats.categories}</h3><p className="text-[#8c6e52] font-pixeloid-mono mt-2">Категорий</p></div>
+          <div className="bg-[#1c110b] p-6 rounded-xl border border-[#5c3a21] text-center shadow-lg">
+            <ScrollText size={40} className="mx-auto text-[#a37c49] mb-4" />
+            <h3 className="text-3xl font-bold text-[#e6d5b8] select-text">{props.stats.archives}</h3>
+            <p className="text-[#8c6e52] font-pixeloid-mono mt-2">Записей в архиве</p>
+          </div>
+          <div className="bg-[#1c110b] p-6 rounded-xl border border-[#5c3a21] text-center shadow-lg">
+            <Users size={40} className="mx-auto text-[#a37c49] mb-4" />
+            <h3 className="text-3xl font-bold text-[#e6d5b8] select-text">{props.stats.users}</h3>
+            <p className="text-[#8c6e52] font-pixeloid-mono mt-2">Пользователей</p>
+          </div>
+          <div className="bg-[#1c110b] p-6 rounded-xl border border-[#5c3a21] text-center shadow-lg">
+            <Tag size={40} className="mx-auto text-[#a37c49] mb-4" />
+            <h3 className="text-3xl font-bold text-[#e6d5b8] select-text">{props.stats.categories}</h3>
+            <p className="text-[#8c6e52] font-pixeloid-mono mt-2">Категорий</p>
+          </div>
         </div>
       )}
 
@@ -95,11 +109,17 @@ export const AdminView = (props: AdminViewProps) => {
                 <div className="space-y-3">
                   <input required placeholder="Название" value={item.title} onChange={e => { const upd = [...props.newItems]; upd[index].title = e.target.value; props.setNewItems(upd); }} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none transition-colors" />
                   <div className="grid grid-cols-2 gap-4">
-                    <select value={item.category} onChange={e => { const upd = [...props.newItems]; upd[index].category = e.target.value; props.setNewItems(upd); }} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white outline-none">{props.categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select>
-                    <select value={item.dangerLevel} onChange={e => { const upd = [...props.newItems]; upd[index].dangerLevel = e.target.value; props.setNewItems(upd); }} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white outline-none">{DANGER_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}</select>
+                    <select value={item.category} onChange={e => { const upd = [...props.newItems]; upd[index].category = e.target.value; props.setNewItems(upd); }} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white outline-none">
+                      {props.categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                    </select>
+                    <select value={item.dangerLevel} onChange={e => { const upd = [...props.newItems]; upd[index].dangerLevel = e.target.value; props.setNewItems(upd); }} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white outline-none">
+                      {DANGER_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+                    </select>
                   </div>
                   <textarea required placeholder="Описание (Markdown)" value={item.description} onChange={e => { const upd = [...props.newItems]; upd[index].description = e.target.value; props.setNewItems(upd); }} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white h-20 outline-none" />
-                  <label className="flex items-center gap-2 text-sm text-[#a37c49] font-pixeloid-mono cursor-pointer"><input type="checkbox" checked={item.is_draft === 1} onChange={e => { const upd = [...props.newItems]; upd[index].is_draft = e.target.checked ? 1 : 0; props.setNewItems(upd); }} />Черновик</label>
+                  <label className="flex items-center gap-2 text-sm text-[#a37c49] font-pixeloid-mono cursor-pointer">
+                    <input type="checkbox" checked={item.is_draft === 1} onChange={e => { const upd = [...props.newItems]; upd[index].is_draft = e.target.checked ? 1 : 0; props.setNewItems(upd); }} /> Черновик
+                  </label>
                   
                   <div className="mt-2 border-t border-[#5c3a21] pt-3">
                     <label className="block text-xs font-pixeloid-mono text-[#a37c49] mb-2 flex items-center gap-1"><ImageIcon size={14}/> Картинки</label>
@@ -224,7 +244,9 @@ export const AdminView = (props: AdminViewProps) => {
             <input required placeholder="Имя" value={props.newAcc.account_name} onChange={e => props.setNewAcc({...props.newAcc, account_name: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white outline-none" />
             <div className="flex items-center gap-2"><input required={!props.autoUser} placeholder="Логин" value={props.newAcc.username} onChange={e => props.setNewAcc({...props.newAcc, username: e.target.value})} disabled={props.autoUser} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white outline-none disabled:opacity-50" /><label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer"><input type="checkbox" checked={props.autoUser} onChange={e => props.setAutoUser(e.target.checked)} /> Рандом</label></div>
             <div className="flex items-center gap-2"><input required={!props.autoPass} placeholder="Пароль" value={props.newAcc.password} onChange={e => props.setNewAcc({...props.newAcc, password: e.target.value})} disabled={props.autoPass} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white outline-none disabled:opacity-50" /><label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer"><input type="checkbox" checked={props.autoPass} onChange={e => props.setAutoPass(e.target.checked)} /> Рандом</label></div>
-            <select value={props.newAcc.role} onChange={e => props.setNewAcc({...props.newAcc, role: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white outline-none">{props.roles.filter(r => props.userRole.id === "owner" || Number(r.level) < Number(props.userRole.level)).map(r => <option key={r.id} value={r.id}>{r.name} (Ур. {r.level})</option>)}</select>
+            <select value={props.newAcc.role} onChange={e => props.setNewAcc({...props.newAcc, role: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white outline-none">
+              {props.roles.filter(r => props.userRole.id === "owner" || Number(r.level) < Number(props.userRole.level)).map(r => <option key={r.id} value={r.id}>{r.name} (Ур. {r.level})</option>)}
+            </select>
             <button type="submit" className="px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-white font-bold rounded transition-all">Сгенерировать</button>
           </form>
           <div>
