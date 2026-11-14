@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { LayoutDashboard, ScrollText, Users, Tag, ImagePlus, ShieldAlert, History, Activity, Database, Plus, X, Image as ImageIcon, AlertTriangle, BookOpen, Upload, Download, FileSpreadsheet, Trash2, Save, CheckCircle2, HardDriveDownload, HardDriveUpload } from "lucide-react";
 import { User, RoleItem, CategoryItem, NewArchiveItem, DbUser, LogItem } from "@/types";
 import { DANGER_LEVELS } from "@/constants";
@@ -16,6 +16,7 @@ interface AdminViewProps {
   setNewItems: (i: NewArchiveItem[]) => void;
   handleAddMultipleItems: (e: React.FormEvent) => void;
   handleImageUpload: (e: React.ChangeEvent<HTMLInputElement>, index?: number) => void;
+  handleImageDrop: (e: React.DragEvent<HTMLDivElement>, index?: number) => void;
   handleRemoveImage: (i: number, formIndex?: number) => void;
   handleClearDatabase: () => void;
   mediaList: { id: number, title: string, image: string }[];
@@ -54,12 +55,13 @@ interface AdminViewProps {
   setDiagResult: (v: any) => void;
   playSound: (t: string) => void;
   getRoleColor: (level: number) => string;
-  // Для бэкапа
   handleDownloadBackup: () => void;
   handleUploadBackup: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export const AdminView = (props: AdminViewProps) => {
+  const [dragActive, setDragActive] = useState<Record<number, boolean>>({});
+
   return (
     <div className="animate-smooth-fade-up w-full bg-[#2e1b13] p-8 rounded-xl border-double border-4 border-[#5c3a21]">
       <div className="flex justify-between items-center mb-8 border-b border-[#5c3a21] pb-4">
@@ -79,7 +81,6 @@ export const AdminView = (props: AdminViewProps) => {
         <button onClick={() => { props.setAdminTab("diag"); props.playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 ${props.adminTab === 'diag' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Диагностика</button>
       </div>
 
-      {/* --- DASHBOARD --- */}
       {props.adminTab === "dashboard" && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-smooth-fade-up">
           <div className="bg-[#1c110b] p-6 rounded-xl border border-[#5c3a21] text-center shadow-lg"><ScrollText size={40} className="mx-auto text-[#a37c49] mb-4" /><h3 className="text-3xl font-bold text-[#e6d5b8] select-text">{props.stats.archives}</h3><p className="text-[#8c6e52] font-pixeloid-mono mt-2">Записей в архиве</p></div>
@@ -88,7 +89,6 @@ export const AdminView = (props: AdminViewProps) => {
         </div>
       )}
 
-      {/* --- ARCHIVE ADD --- */}
       {props.adminTab === "archive" && (
         <div className="animate-smooth-fade-up">
           <form onSubmit={props.handleAddMultipleItems} className="space-y-6 max-w-xl">
@@ -114,7 +114,20 @@ export const AdminView = (props: AdminViewProps) => {
                   
                   <div className="mt-2 border-t border-[#5c3a21] pt-3">
                     <label className="block text-xs font-pixeloid-mono text-[#a37c49] mb-2 flex items-center gap-1"><ImageIcon size={14}/> Картинки</label>
-                    <input type="file" multiple accept="image/*" onChange={(e) => props.handleImageUpload(e, index)} className="w-full text-sm text-[#8c6e52] file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-[#3d2617] file:text-[#e6d5b8] hover:file:bg-[#5c3a21] file:cursor-pointer mb-3" />
+                    
+                    <div 
+                      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({...prev, [index]: true})); }}
+                      onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({...prev, [index]: false})); }}
+                      onDrop={(e) => { setDragActive(prev => ({...prev, [index]: false})); props.handleImageDrop(e, index); }}
+                      className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors mb-3 ${dragActive[index] ? 'border-[#a37c49] bg-[#a37c49]/10' : 'border-[#5c3a21] hover:border-[#a37c49]/50'}`}
+                    >
+                      <input type="file" multiple accept="image/*" onChange={(e) => props.handleImageUpload(e, index)} className="hidden" id={`file-upload-${index}`} />
+                      <label htmlFor={`file-upload-${index}`} className="cursor-pointer flex flex-col items-center justify-center text-[#8c6e52]">
+                        <Upload size={24} className="mb-2 opacity-50" />
+                        <span className="text-sm font-pixeloid-mono">Перетащите картинки сюда или нажмите для выбора</span>
+                      </label>
+                    </div>
+
                     <div className="flex flex-wrap gap-2">
                       {item.images?.map((img, i) => (
                         <div key={i} className="relative inline-block border-2 border-[#5c3a21] rounded-lg overflow-hidden bg-[#d6c5b3]">
@@ -142,7 +155,6 @@ export const AdminView = (props: AdminViewProps) => {
         </div>
       )}
 
-      {/* --- MEDIA --- */}
       {props.adminTab === "media" && (
         <div className="animate-smooth-fade-up w-full">
           <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4">Галерея картинок</h3>
@@ -159,7 +171,6 @@ export const AdminView = (props: AdminViewProps) => {
         </div>
       )}
 
-      {/* --- CATEGORIES --- */}
       {props.adminTab === "categories" && props.userRole.level >= 2 && (
         <div className="animate-smooth-fade-up max-w-xl">
           <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Tag size={18}/> Категории</h3>
@@ -178,7 +189,6 @@ export const AdminView = (props: AdminViewProps) => {
         </div>
       )}
 
-      {/* --- ROLES --- */}
       {props.adminTab === "roles" && props.userRole.level >= 3 && (
         <div className="animate-smooth-fade-up max-w-2xl">
           <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><ShieldAlert size={18}/> Роли</h3>
@@ -203,7 +213,6 @@ export const AdminView = (props: AdminViewProps) => {
         </div>
       )}
 
-      {/* --- BULK --- */}
       {props.adminTab === "bulk" && props.userRole.level >= 2 && (
         <div className="space-y-8 max-w-3xl animate-smooth-fade-up">
           <div className="bg-[#1c110b] p-6 rounded-lg border-2 border-[#a37c49]">
@@ -227,7 +236,6 @@ export const AdminView = (props: AdminViewProps) => {
         </div>
       )}
 
-      {/* --- USERS --- */}
       {props.adminTab === "users" && props.userRole.level >= 2 && (
         <div className="space-y-10 animate-smooth-fade-up">
           <form onSubmit={props.handleCreateUser} className="space-y-4 max-w-xl bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
@@ -269,7 +277,6 @@ export const AdminView = (props: AdminViewProps) => {
         </div>
       )}
 
-      {/* --- LOGS --- */}
       {props.adminTab === "logs" && (props.userRole.id === "owner" || props.userRole.id === "creator") && (
         <div className="animate-smooth-fade-up">
           <div className="flex justify-between items-center mb-4">
@@ -300,7 +307,6 @@ export const AdminView = (props: AdminViewProps) => {
         </div>
       )}
 
-      {/* --- BACKUP --- */}
       {props.adminTab === "backup" && props.userRole.id === "owner" && (
         <div className="animate-smooth-fade-up max-w-2xl">
           <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Database size={18}/> Бэкап Базы Данных</h3>
@@ -324,7 +330,6 @@ export const AdminView = (props: AdminViewProps) => {
         </div>
       )}
 
-      {/* --- DIAG --- */}
       {props.adminTab === "diag" && (
         <div className="animate-smooth-fade-up max-w-3xl">
           <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Activity size={18}/> Диагностика системы</h3>
