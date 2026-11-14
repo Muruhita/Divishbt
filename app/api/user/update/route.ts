@@ -3,10 +3,14 @@ import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { verifyToken, signToken } from "@/lib/auth";
+import { verifyCsrf } from "@/lib/csrf";
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
+  const csrfError = verifyCsrf(req);
+  if (csrfError) return csrfError;
+
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('tavern_token')?.value;
@@ -23,7 +27,6 @@ export async function POST(req: Request) {
     let finalAccountName = user.account_name as string;
     let needsNewToken = false;
 
-    // Проверка уникальности логина
     if (newUsername && newUsername !== user.username) {
       const checkRes = await db.execute({ sql: "SELECT id FROM users WHERE username = ? AND id != ?", args: [newUsername, authUser.id] });
       if (checkRes.rows.length > 0) return NextResponse.json({ error: "Этот логин уже занят" }, { status: 400 });
@@ -33,7 +36,6 @@ export async function POST(req: Request) {
       needsNewToken = true;
     }
 
-    // Проверка уникальности имени аккаунта
     if (newAccountName && newAccountName !== user.account_name) {
       const checkRes = await db.execute({ sql: "SELECT id FROM users WHERE account_name = ? AND id != ?", args: [newAccountName, authUser.id] });
       if (checkRes.rows.length > 0) return NextResponse.json({ error: "Это имя уже занято другим пользователем" }, { status: 400 });
@@ -52,6 +54,9 @@ export async function POST(req: Request) {
 
     if (avatar !== undefined) {
       if (avatar && avatar.length > 1024 * 1024) return NextResponse.json({ error: "Аватар слишком большой" }, { status: 400 });
+      if (avatar && !avatar.match(/^data:image\/(png|jpeg|jpg|webp|gif);base64,/)) {
+        return NextResponse.json({ error: "Недопустимый формат аватара" }, { status: 400 });
+      }
       await db.execute({ sql: "UPDATE users SET avatar = ? WHERE id = ?", args: [avatar, authUser.id] });
     }
 
@@ -65,8 +70,11 @@ export async function POST(req: Request) {
         role: authUser.role
       });
       response.cookies.set('tavern_token', newToken, {
-        httpOnly: true, secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict', maxAge: 5 * 60 * 60, path: '/'
+        httpOnly: true, 
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict', // <--- ЗАЩИТА CSRF
+        maxAge: 5 * 60 * 60, 
+        path: '/'
       });
     }
 
