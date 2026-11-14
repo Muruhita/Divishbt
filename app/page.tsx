@@ -81,7 +81,7 @@ export default function TavernArchive() {
   
   const [usersList, setUsersList] = useState<DbUser[]>([]);
   const [logsList, setLogsList] = useState<LogItem[]>([]);
-  const [diagResult, setDiagResult] = useState<{ status: string, latency?: number, message: string } | null>(null);
+  const [diagResult, setDiagResult] = useState<any>(null);
   const [stats, setStats] = useState({ archives: 0, users: 0, categories: 0 });
   const [mediaList, setMediaList] = useState<{ id: number, title: string, image: string }[]>([]);
 
