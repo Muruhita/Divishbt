@@ -4,10 +4,19 @@ import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { sendDiscordNotification } from "@/lib/discord";
+import { verifyCsrf } from "@/lib/csrf";
+import { rateLimit } from "@/lib/rate-limit";
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
+  const csrfError = verifyCsrf(req);
+  if (csrfError) return csrfError;
+
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+  const limitRes = rateLimit(ip, 10, 60000); // 10 пользователей в минуту максимум
+  if (!limitRes.success) return NextResponse.json({ error: `Слишком много запросов. Подождите ${limitRes.retryAfter} сек.` }, { status: 429 });
+
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('tavern_token')?.value;
@@ -35,7 +44,7 @@ export async function POST(req: Request) {
     const reqLevel = rolesMap.get(requester.role) || 0;
     const newLevel = rolesMap.get(role) || 0;
 
-    if (requester.role !== 'owner' && reqLevel < 2) return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
+    if (requester.role !== 'owner' && reqLevel < 2) return NextResponse.json({ error: "Недостаточно прав для создания аккаунтов" }, { status: 403 });
     if (requester.role !== 'owner' && reqLevel <= newLevel) return NextResponse.json({ error: "Недостаточно прав для создания этого ранга" }, { status: 403 });
 
     if (role === 'owner') {
