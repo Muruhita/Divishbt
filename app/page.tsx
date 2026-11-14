@@ -1,158 +1,16 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import ReactMarkdown from "react-markdown";
-import { Search, ChevronLeft, ChevronRight, Flame, ScrollText, Skull, Plus, X, LogOut, Trash2, Users, Settings, Database, Activity, ShieldAlert, Download, Upload, Image as ImageIcon, Maximize2, Pencil, User as UserIcon, History, AlertTriangle, Save, Tag, CheckCircle2, Info, Home, BookOpen, LayoutDashboard, ImagePlus, Star, ArrowUp, Pill, AlertOctagon, PackageX, FileEdit, FileSpreadsheet } from "lucide-react";
-
-type ArchiveItem = { id: number; title: string; category: string; description: string; symbol?: string; dangerLevel?: string; images?: string[]; is_draft?: number; };
-type DbArchiveItem = { id: number; title: string; category: string; description: string; symbol: string | null; danger_level: string | null; image: string | null; is_draft: number; };
-type User = { id: number; username: string; account_name: string; role: string; avatar?: string; };
-type DbUser = { id: number; username: string; account_name: string; role: string; avatar: string | null; };
-type LogItem = { id: number; action: string; item_title: string; user_name: string; user_role: string; timestamp: string; };
-type NewArchiveItem = Omit<ArchiveItem, "id">;
-type RoleItem = { id: string; name: string; level: number };
-type CategoryItem = { id: number; name: string };
-type InfoPage = { id: string; title: string; content: string; };
-type ImportJsonItem = { title: string; category: string; description: string; symbol?: string; dangerLevel?: string; images?: string[]; image?: string; is_draft?: number; };
-
-const DANGER_LEVELS = ["Низкий", "Средний", "Высокий", "Смертельный"];
-const INITIAL_NEW_ITEM: NewArchiveItem = { title: "", category: "Комбинации Цифр", description: "", symbol: "", dangerLevel: "Низкий", images: [], is_draft: 0 };
-const RUNES = ["ᚠ", "ᚢ", "ᚦ", "ᚨ", "ᚱ", "ᚲ", "ᚷ", "ᚹ", "ᚺ", "ᚾ", "ᛁ", "ᛃ", "ᛈ", "ᛇ", "ᛉ", "ᛊ", "ᛏ", "ᛒ", "ᛖ", "ᛗ", "ᛚ", "ᛜ", "ᛞ", "ᛟ"];
-
-const DEFAULT_CATEGORIES = ["Комбинации Цифр", "Слова", "Термины", "Аббревиатура", "Символика", "Картинки", "Другое"].map((name, i) => ({ id: i+1, name }));
-const DEFAULT_ROLES = [
-  { id: "owner", name: "Овнер (Dev)", level: 4 },
-  { id: "creator", name: "Создатель Сервера", level: 3 },
-  { id: "guardian", name: "Хранитель", level: 2 },
-  { id: "high", name: "Хай Стафф", level: 1 },
-  { id: "low", name: "Лоу Стафф", level: 0 }
-];
-
-const DEFAULT_INFO_PAGES: InfoPage[] = [
-  { id: 'pharma', title: 'ЗАПРЕЩЕННЫЕ ФАРМАЦЕВТИЧЕСКИЕ ПРЕПАРАТЫ И ПИЩЕВЫЕ ДОБАВКИ', content: 'Текст правил от Хранителя/Овнера будет здесь...' },
-  { id: 'offensive', title: 'НЕПРИЕМЛЕМЫЙ/ОСКОРБИТЕЛЬНЫЙ КОНТЕНТ', content: 'Текст правил от Хранителя/Овнера будет здесь...' },
-  { id: 'dangerous', title: 'ОПАСНЫЕ ТОВАРЫ', content: 'Текст правил от Хранителя/Овнера будет здесь...' }
-];
-
-const SkeletonCard = React.memo(() => (
-  <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] rounded-lg p-6 flex flex-col h-64 animate-pulse">
-    <div className="flex justify-between items-start mb-4">
-      <div className="h-6 bg-[#5c3a21]/50 rounded w-1/2"></div>
-      <div className="h-8 w-8 bg-[#5c3a21]/50 rounded"></div>
-    </div>
-    <div className="flex gap-2 mb-4">
-      <div className="h-6 w-20 bg-[#5c3a21]/50 rounded"></div>
-      <div className="h-6 w-16 bg-[#5c3a21]/50 rounded"></div>
-    </div>
-    <div className="space-y-2 flex-grow">
-      <div className="h-4 bg-[#5c3a21]/50 rounded w-full"></div>
-      <div className="h-4 bg-[#5c3a21]/50 rounded w-5/6"></div>
-      <div className="h-4 bg-[#5c3a21]/50 rounded w-4/6"></div>
-    </div>
-  </div>
-));
-SkeletonCard.displayName = 'SkeletonCard';
-
-const ArchiveCard = React.memo(({ 
-  item, canEdit, canDelete, onEdit, onDelete, onViewImage, isFavorite, onToggleFavorite
-}: { 
-  item: ArchiveItem; 
-  canEdit: boolean; 
-  canDelete: boolean; 
-  onEdit: (item: ArchiveItem) => void;
-  onDelete: (id: number, title: string) => void;
-  onViewImage: (img: string) => void;
-  isFavorite: boolean;
-  onToggleFavorite: (id: number) => void;
-}) => {
-  if (!item || !item.title) return null;
-
-  const imgCount = item.images?.length || 0;
-
-  return (
-    <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.6)] hover:border-[#a37c49] hover:shadow-[0_0_20px_rgba(163,124,73,0.15)] hover:-translate-y-1.5 transition-all duration-300 group flex flex-col relative z-10 overflow-hidden animate-smooth-fade-up">
-      
-      {imgCount > 0 && (
-        <div className={`w-full border-b-2 border-[#5c3a21] relative group/img bg-[#d6c5b3] flex items-center justify-center overflow-hidden`} style={{ backgroundImage: 'radial-gradient(#b8a38a 1px, transparent 1px)', backgroundSize: '10px 10px' }}>
-          
-          {imgCount === 1 && (
-            <div className="w-full h-56 cursor-pointer" onClick={() => onViewImage(item.images![0])}>
-              <img src={item.images![0]} loading="lazy" alt={item.title} draggable={false} className="w-full h-full object-contain p-2 transition-transform duration-500 group-hover/img:scale-110 drop-shadow-md no-select" />
-            </div>
-          )}
-
-          {imgCount === 2 && (
-            <div className="grid grid-cols-2 gap-1 w-full h-56 p-1">
-              {item.images!.map((img, i) => (
-                <div key={i} className="relative cursor-pointer overflow-hidden rounded-sm" onClick={() => onViewImage(img)}>
-                  <img src={img} loading="lazy" alt={`${item.title} ${i+1}`} draggable={false} className="w-full h-full object-cover transition-transform duration-500 hover:scale-110 no-select" />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {imgCount >= 3 && (
-            <div className="grid grid-cols-2 grid-rows-2 gap-1 w-full h-56 p-1">
-              <div className="row-span-2 relative cursor-pointer overflow-hidden rounded-sm" onClick={() => onViewImage(item.images![0])}>
-                <img src={item.images![0]} loading="lazy" alt={`${item.title} 1`} draggable={false} className="w-full h-full object-cover transition-transform duration-500 hover:scale-110 no-select" />
-              </div>
-              <div className="relative cursor-pointer overflow-hidden rounded-sm" onClick={() => onViewImage(item.images![1])}>
-                <img src={item.images![1]} loading="lazy" alt={`${item.title} 2`} draggable={false} className="w-full h-full object-cover transition-transform duration-500 hover:scale-110 no-select" />
-              </div>
-              <div className="relative cursor-pointer overflow-hidden rounded-sm" onClick={() => onViewImage(item.images![2])}>
-                <img src={item.images![2]} loading="lazy" alt={`${item.title} 3`} draggable={false} className="w-full h-full object-cover transition-transform duration-500 hover:scale-110 no-select" />
-                {imgCount > 3 && (
-                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm">
-                    <span className="text-white font-bold text-xl font-pixeloid-mono no-select">+{imgCount - 3}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-            <Maximize2 size={32} className="text-white drop-shadow-lg" />
-          </div>
-        </div>
-      )}
-
-      <div className="p-6 flex flex-col flex-grow">
-        <div className="flex justify-between items-start mb-3 relative z-10">
-          <h3 className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8] select-text">{item.title}</h3>
-          <div className="flex gap-2 items-center">
-             {item.is_draft === 1 && <span className="text-xs bg-yellow-600 text-white px-2 py-1 rounded font-bold">Черновик</span>}
-             {item.symbol && <span className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8] bg-[#1c110b] px-3 py-1 rounded border border-[#5c3a21] select-text">{item.symbol}</span>}
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 mb-4 relative z-10">
-          <span className="inline-block px-3 py-1 text-xs font-bold font-pixeloid-mono bg-[#1c110b] text-[#a37c49] rounded border border-[#5c3a21] uppercase select-text">{item.category}</span>
-          {item.dangerLevel && <span className="inline-block px-2 py-1 text-xs font-bold font-pixeloid-mono rounded border border-red-900/50 bg-red-900/20 text-red-400 uppercase select-text">{item.dangerLevel}</span>}
-          
-          <div className="ml-auto flex items-center gap-1 relative z-[60]">
-            <button 
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFavorite(item.id); }} 
-              className={`p-1.5 rounded active:scale-90 transition-all cursor-pointer ${isFavorite ? 'text-yellow-400 bg-yellow-500/10' : 'text-gray-500 hover:text-yellow-400 bg-white/5 hover:bg-yellow-500/10'}`}
-              title={isFavorite ? "Удалить из избранного" : "В избранное"}
-            >
-              <Star size={16} fill={isFavorite ? "currentColor" : "none"} />
-            </button>
-            
-            {canEdit && (
-              <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(item); }} className="text-blue-400 hover:text-blue-300 bg-blue-500/10 p-1.5 rounded active:scale-90 transition-all cursor-pointer"><Pencil size={16} /></button>
-            )}
-            {canDelete && (
-              <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(item.id, item.title); }} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all cursor-pointer"><Trash2 size={16} /></button>
-            )}
-          </div>
-        </div>
-        <div className="text-[#c4b5a5] font-sans leading-relaxed flex-grow relative z-10 prose prose-invert prose-sm max-w-none select-text">
-          <ReactMarkdown>{item.description}</ReactMarkdown>
-        </div>
-      </div>
-    </div>
-  );
-});
-ArchiveCard.displayName = 'ArchiveCard';
+import { ArchiveItem, DbArchiveItem, User, DbUser, LogItem, NewArchiveItem, RoleItem, CategoryItem, InfoPage, ImportJsonItem } from "@/types";
+import { DEFAULT_CATEGORIES, DEFAULT_ROLES, DEFAULT_INFO_PAGES, INITIAL_NEW_ITEM, RUNES } from "@/constants";
+import { ArchiveCard, SkeletonCard } from "@/components/ui/ArchiveCard";
+import { LoginBook } from "@/components/ui/LoginBook";
+import { Header } from "@/components/ui/Header";
+import { HomeView } from "@/components/views/HomeView";
+import { ArchiveView } from "@/components/views/ArchiveView";
+import { AdminView } from "@/components/views/AdminView";
+import { Modals } from "@/components/Modals";
+import { ArrowUp, CheckCircle2, Skull, AlertTriangle, Info } from "lucide-react";
 
 export default function TavernArchive() {
   const cursorDotRef = useRef<HTMLDivElement>(null);
@@ -170,7 +28,6 @@ export default function TavernArchive() {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
   }, []);
-
   const showConfirm = useCallback((msg: string, onConfirm: () => void) => setConfirmDialog({ msg, onConfirm }), []);
   const showPrompt = useCallback((msg: string, onConfirm: (val: string) => void) => setPromptDialog({ msg, val: "", onConfirm }), []);
 
@@ -190,7 +47,6 @@ export default function TavernArchive() {
 
   const [categories, setCategories] = useState<CategoryItem[]>(DEFAULT_CATEGORIES);
   const [roles, setRoles] = useState<RoleItem[]>(DEFAULT_ROLES);
-  
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<ArchiveItem | null>(null);
   const [showProfile, setShowProfile] = useState(false);
@@ -221,7 +77,6 @@ export default function TavernArchive() {
   
   const [bulkJson, setBulkJson] = useState(""); 
   const [bulkText, setBulkText] = useState("");
-  
   const [adminTab, setAdminTab] = useState<"dashboard" | "archive" | "bulk" | "users" | "diag" | "logs" | "categories" | "roles" | "media">("dashboard");
   
   const [usersList, setUsersList] = useState<DbUser[]>([]);
@@ -234,689 +89,283 @@ export default function TavernArchive() {
   const [newRoleName, setNewRoleName] = useState("");
   const [newRoleLevel, setNewRoleLevel] = useState(1);
 
-  // Заглушка для звука (кнопка удалена)
-  const playSound = useCallback((type: "click" | "save" | "delete" | "success" | "modalOpen" | "modalClose") => {
-    // Звук отключен
-  }, []);
+  const playSound = useCallback((type: string) => {}, []);
 
   const handleApiError = useCallback((status: number) => {
     if (status === 401) {
       setTimeout(() => {
-        setUser(null);
-        setFavorites([]);
-        localStorage.removeItem("tavern_session");
-        setView("home"); 
+        setUser(null); setFavorites([]); localStorage.removeItem("tavern_session"); setView("home"); 
       }, 0);
       showToast("Сессия истекла, войдите снова", "warning");
     }
   }, [showToast]);
 
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-    }, 500);
+    const handler = setTimeout(() => setDebouncedSearch(searchQuery), 500);
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
   useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 300) setShowScrollTop(true);
-      else setShowScrollTop(false);
-    };
+    const handleScroll = () => setShowScrollTop(window.scrollY > 300);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   useEffect(() => {
     if (window.matchMedia("(pointer: coarse)").matches) return;
-
     const onMouseMove = (e: MouseEvent) => {
-      const mouseX = e.clientX;
-      const mouseY = e.clientY;
-      const transform = `translate(${mouseX}px, ${mouseY}px) translate(-50%, -50%)`;
-      
-      if (cursorDotRef.current) cursorDotRef.current.style.transform = transform;
-      if (trail1Ref.current) trail1Ref.current.style.transform = transform;
-      if (trail2Ref.current) trail2Ref.current.style.transform = transform;
-      if (trail3Ref.current) trail3Ref.current.style.transform = transform;
-
+      const transform = `translate(${e.clientX}px, ${e.clientY}px) translate(-50%, -50%)`;
+      [cursorDotRef, trail1Ref, trail2Ref, trail3Ref].forEach(ref => { if (ref.current) ref.current.style.transform = transform; });
       const target = e.target as HTMLElement;
       const isClickable = target.closest('a, button, input, select, textarea, [role="button"]');
-      
-      if (isClickable && !isHovering.current) {
-        isHovering.current = true;
-        cursorDotRef.current?.classList.add("hovering");
-      } else if (!isClickable && isHovering.current) {
-        isHovering.current = false;
-        cursorDotRef.current?.classList.remove("hovering");
-      }
+      if (isClickable && !isHovering.current) { isHovering.current = true; cursorDotRef.current?.classList.add("hovering"); }
+      else if (!isClickable && isHovering.current) { isHovering.current = false; cursorDotRef.current?.classList.remove("hovering"); }
     };
-
     const onMouseDown = (e: MouseEvent) => {
       const newClick = { id: Date.now(), x: e.clientX, y: e.clientY };
       setClicks((prev) => [...prev, newClick]);
       setTimeout(() => setClicks((prev) => prev.filter((c) => c.id !== newClick.id)), 500);
     };
-
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mousedown", onMouseDown);
-    
-    return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mousedown", onMouseDown);
-    };
+    return () => { window.removeEventListener("mousemove", onMouseMove); window.removeEventListener("mousedown", onMouseDown); };
   }, []);
 
   const fetchSettings = useCallback(async () => {
     try {
       const catRes = await fetch('/api/admin/categories');
-      if (catRes.ok) {
-        const catData = await catRes.json();
-        if (catData && catData.length > 0) setCategories(catData);
-      }
+      if (catRes.ok) { const d = await catRes.json(); if (d && d.length > 0) setCategories(d); }
       const roleRes = await fetch('/api/admin/roles');
-      if (roleRes.ok) {
-        const roleData = await roleRes.json();
-        if (roleData && roleData.length > 0) setRoles(roleData);
-      }
+      if (roleRes.ok) { const d = await roleRes.json(); if (d && d.length > 0) setRoles(d); }
       const infoRes = await fetch('/api/info-pages');
-      if (infoRes.ok) {
-        const pagesData = await infoRes.json();
-        if (pagesData && pagesData.length > 0) setInfoPages(pagesData);
-      }
-    } catch { console.error("Ошибка загрузки настроек"); }
+      if (infoRes.ok) { const d = await infoRes.json(); if (d && d.length > 0) setInfoPages(d); }
+    } catch {}
   }, []);
 
   const fetchFavorites = useCallback(async () => {
     try {
       const res = await fetch(`/api/favorites`);
-      if (res.ok) setFavorites(await res.json());
-      else handleApiError(res.status);
-    } catch { console.error("Ошибка загрузки избранного"); }
+      if (res.ok) setFavorites(await res.json()); else handleApiError(res.status);
+    } catch {}
   }, [handleApiError]);
 
   const handleToggleFavorite = useCallback(async (archiveId: number) => {
     if (!user) return showToast("Войдите, чтобы добавлять в избранное", "warning");
-    const isCurrentlyFavorite = favorites.includes(archiveId);
-    const action = isCurrentlyFavorite ? "remove" : "add";
-
-    if (isCurrentlyFavorite) setFavorites(prev => prev.filter(id => id !== archiveId));
-    else setFavorites(prev => [...prev, archiveId]);
-    playSound("click");
-
+    const isFav = favorites.includes(archiveId);
+    setFavorites(prev => isFav ? prev.filter(id => id !== archiveId) : [...prev, archiveId]);
     try {
-      const res = await fetch("/api/favorites", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ archiveId, action })
-      });
-      if (!res.ok) throw new Error();
+      await fetch("/api/favorites", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ archiveId, action: isFav ? "remove" : "add" }) });
     } catch {
-      if (isCurrentlyFavorite) setFavorites(prev => [...prev, archiveId]);
-      else setFavorites(prev => prev.filter(id => id !== archiveId));
-      showToast("Не удалось сохранить избранное", "error");
+      setFavorites(prev => isFav ? [...prev, archiveId] : prev.filter(id => id !== archiveId));
+      showToast("Ошибка сохранения", "error");
     }
-  }, [user, favorites, showToast, playSound]);
+  }, [user, favorites, showToast]);
 
   const fetchArchive = useCallback(async (page = 1, cat = selectedCategory, search = debouncedSearch) => {
     setIsLoading(true);
     try {
       const res = await fetch(`/api/archive?page=${page}&limit=${LIMIT}&category=${encodeURIComponent(cat)}&search=${encodeURIComponent(search)}`);
       const result = await res.json();
-      const items = result.items || [];
-      const formatted = (items as DbArchiveItem[]).map((item) => {
+      const formatted = (result.items || []).map((item: DbArchiveItem) => {
         let parsedImages: string[] = [];
         if (item.image) {
-          if (item.image.trim().startsWith('[')) {
-            try { parsedImages = JSON.parse(item.image); } catch { parsedImages = [item.image]; }
-          } else {
-            parsedImages = [item.image];
-          }
+          if (item.image.trim().startsWith('[')) { try { parsedImages = JSON.parse(item.image); } catch { parsedImages = [item.image]; } }
+          else { parsedImages = [item.image]; }
         }
-        return {
-          id: item.id, title: item.title, category: item.category, description: item.description,
-          symbol: item.symbol || undefined, dangerLevel: item.danger_level || undefined,
-          images: parsedImages, is_draft: item.is_draft
-        };
+        return { id: item.id, title: item.title, category: item.category, description: item.description, symbol: item.symbol || undefined, dangerLevel: item.danger_level || undefined, images: parsedImages, is_draft: item.is_draft };
       });
-      setData(formatted);
-      setTotalPages(Math.ceil((result.total || 0) / LIMIT));
-      setCurrentPage(page);
-    } catch { setData([]); }
-    finally { setIsLoading(false); }
+      setData(formatted); setTotalPages(Math.ceil((result.total || 0) / LIMIT)); setCurrentPage(page);
+    } catch { setData([]); } finally { setIsLoading(false); }
   }, [selectedCategory, debouncedSearch]);
 
   useEffect(() => {
-    const checkSession = () => {
-      try {
-        const savedSession = localStorage.getItem("tavern_session");
-        if (savedSession) {
-          const { userData, expiresAt } = JSON.parse(savedSession);
-          if (Date.now() < expiresAt) {
-            setUser(userData); 
-            fetchFavorites();
-          } else localStorage.removeItem("tavern_session"); 
-        }
-      } catch { localStorage.removeItem("tavern_session"); } 
-      finally { setIsCheckingAuth(false); }
-    };
-    checkSession();
+    try {
+      const s = localStorage.getItem("tavern_session");
+      if (s) {
+        const { userData, expiresAt } = JSON.parse(s);
+        if (Date.now() < expiresAt) { setUser(userData); fetchFavorites(); }
+        else localStorage.removeItem("tavern_session"); 
+      }
+    } catch { localStorage.removeItem("tavern_session"); } 
+    finally { setIsCheckingAuth(false); }
     fetchSettings();
   }, [fetchFavorites, fetchSettings]);
 
-  useEffect(() => {
-    if (user) fetchArchive(currentPage, selectedCategory, debouncedSearch);
-  }, [user, currentPage, selectedCategory, debouncedSearch, fetchArchive]);
+  useEffect(() => { if (user) fetchArchive(currentPage, selectedCategory, debouncedSearch); }, [user, currentPage, selectedCategory, debouncedSearch, fetchArchive]);
 
   const userRole = roles.find(r => r.id === user?.role) || DEFAULT_ROLES.find(r => r.id === user?.role) || { level: 0, id: "guest", name: "Гость" };
   const canEdit = user?.role === 'owner' || user?.role === 'creator' || userRole.level >= 3;
   const canDelete = user?.role === 'owner' || user?.role === 'creator' || user?.role === 'high' || userRole.level >= 1;
-
-  const getRoleColor = (level: number) => {
-    if (level >= 4) return "text-owner-glow";
-    if (level === 3) return "text-purple-500";
-    if (level === 2) return "text-blue-500";
-    if (level === 1) return "text-green-500";
-    return "text-gray-400";
-  };
+  const getRoleColor = (level: number) => level >= 4 ? "text-owner-glow" : level === 3 ? "text-purple-500" : level === 2 ? "text-blue-500" : level === 1 ? "text-green-500" : "text-gray-400";
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError("");
-    playSound("click");
+    e.preventDefault(); setLoginError("");
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: loginUser, password: loginPass })
-      });
-      const data = await res.json();
-      
+      const res = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: loginUser, password: loginPass }) });
+      const d = await res.json();
       if (res.ok) {
         setIsBookOpening(true);
-        playSound("success");
         setTimeout(() => {
-          setUser({ ...data }); 
-          setLoginUser(""); setLoginPass("");
-          fetchFavorites();
-          const expiresAt = Date.now() + (5 * 60 * 60 * 1000); 
-          localStorage.setItem("tavern_session", JSON.stringify({ userData: { ...data }, expiresAt }));
+          setUser({ ...d }); setLoginUser(""); setLoginPass(""); fetchFavorites();
+          localStorage.setItem("tavern_session", JSON.stringify({ userData: { ...d }, expiresAt: Date.now() + (5 * 60 * 60 * 1000) }));
           setIsBookOpening(false);
         }, 1500);
-      } else { setLoginError(data.error || "Ошибка входа"); }
+      } else setLoginError(d.error || "Ошибка входа");
     } catch { setLoginError("Ошибка соединения"); }
   };
 
   const handleLogout = useCallback(() => {
-    playSound("click");
-    setIsBookClosing(true);
-    setStartBookCloseAnim(false); 
-    setLoginUser(""); setLoginPass(""); setLoginError("");
+    setIsBookClosing(true); setStartBookCloseAnim(false); setLoginUser(""); setLoginPass(""); setLoginError("");
     document.cookie = "tavern_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    setTimeout(() => { setStartBookCloseAnim(true); }, 50);
-    setTimeout(() => {
-      setUser(null); setFavorites([]);
-      localStorage.removeItem("tavern_session");
-      setView("home"); setIsBookClosing(false); setStartBookCloseAnim(false);
-    }, 1600);
-  }, [playSound]);
+    setTimeout(() => setStartBookCloseAnim(true), 50);
+    setTimeout(() => { setUser(null); setFavorites([]); localStorage.removeItem("tavern_session"); setView("home"); setIsBookClosing(false); setStartBookCloseAnim(false); }, 1600);
+  }, []);
 
-  const openProfile = () => {
-    if (user) {
-      setNewAccountName(user.account_name);
-      setNewUsername(user.username);
-      setNewPass(""); setOldPass("");
-      setShowProfile(true);
-      playSound("modalOpen");
-    }
-  };
+  const openProfile = () => { if (user) { setNewAccountName(user.account_name); setNewUsername(user.username); setNewPass(""); setOldPass(""); setShowProfile(true); } };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-    playSound("save");
-
-    const res = await fetch("/api/user/update", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        oldPassword: oldPass, newPassword: newPass, avatar: user.avatar,
-        newUsername: newUsername !== user.username ? newUsername : undefined,
-        newAccountName: newAccountName !== user.account_name ? newAccountName : undefined
-      })
-    });
-
+    e.preventDefault(); if (!user) return;
+    const res = await fetch("/api/user/update", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ oldPassword: oldPass, newPassword: newPass, avatar: user.avatar, newUsername: newUsername !== user.username ? newUsername : undefined, newAccountName: newAccountName !== user.account_name ? newAccountName : undefined }) });
     if (res.status === 401) return handleApiError(401);
-    const data = await res.json();
+    const d = await res.json();
     if (res.ok) {
-      showToast("Профиль успешно обновлен!", "success");
-      setOldPass(""); setNewPass("");
-      const updatedUser = { ...user, username: newUsername || user.username, account_name: newAccountName || user.account_name };
-      setUser(updatedUser);
-      const saved = JSON.parse(localStorage.getItem("tavern_session")!);
-      saved.userData = updatedUser;
-      localStorage.setItem("tavern_session", JSON.stringify(saved));
-    } else { showToast(`Ошибка: ${data.error}`, "error"); }
+      showToast("Профиль обновлен!", "success"); setOldPass(""); setNewPass("");
+      const updated = { ...user, username: newUsername || user.username, account_name: newAccountName || user.account_name };
+      setUser(updated);
+      const saved = JSON.parse(localStorage.getItem("tavern_session")!); saved.userData = updated; localStorage.setItem("tavern_session", JSON.stringify(saved));
+    } else showToast(`Ошибка: ${d.error}`, "error");
   };
 
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 500 * 1024) {
-      showToast("Аватарка должна быть меньше 500КБ!", "warning");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onloadend = () => setUser(prev => prev ? { ...prev, avatar: reader.result as string } : null);
-    reader.readAsDataURL(file);
+    const file = e.target.files?.[0]; if (!file) return;
+    if (file.size > 500 * 1024) return showToast("Максимум 500КБ!", "warning");
+    const reader = new FileReader(); reader.onloadend = () => setUser(prev => prev ? { ...prev, avatar: reader.result as string } : null); reader.readAsDataURL(file);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, index?: number) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, index?: number) => {
+    const files = e.target.files; if (!files || files.length === 0) return;
     const isEditing = index === undefined;
     const currentImages = isEditing ? (editingItem?.images || []) : (newItems[index!].images || []);
-    
-    if (currentImages.length + files.length > 3) {
-      showToast("Можно прикрепить не более 3 картинок!", "warning");
-      return;
+    if (currentImages.length + files.length > 3) return showToast("Максимум 3 картинки!", "warning");
+    for (const file of Array.from(files)) {
+      if (file.size > 1024 * 1024) { showToast(`Файл ${file.name} > 1МБ`, "warning"); continue; }
+      const formData = new FormData(); formData.append('file', file);
+      try {
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const d = await res.json();
+        if (res.ok && d.url) {
+          if (isEditing) setEditingItem(prev => prev ? { ...prev, images: [...(prev.images || []), d.url] } : null);
+          else setNewItems(prev => { const u = [...prev]; u[index!].images = [...(u[index!].images || []), d.url]; return u; });
+        } else showToast(d.error || 'Ошибка загрузки', 'error');
+      } catch { showToast('Ошибка соединения', 'error'); }
     }
-
-    Array.from(files).forEach(file => {
-      if (file.size > 1024 * 1024) {
-        showToast(`Файл ${file.name} больше 1МБ! Максимум 1МБ на картинку.`, "warning");
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
-        if (isEditing) {
-          setEditingItem(prev => prev ? { ...prev, images: [...(prev.images || []), base64] } : null);
-        } else {
-          setNewItems(prev => {
-            const updated = [...prev];
-            updated[index!].images = [...(updated[index!].images || []), base64];
-            return updated;
-          });
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-    
     e.target.value = '';
   };
 
   const handleRemoveImage = (imgIndex: number, formIndex?: number) => {
-    if (formIndex !== undefined) {
-      setNewItems(prev => {
-        const updated = [...prev];
-        updated[formIndex].images = updated[formIndex].images?.filter((_, i) => i !== imgIndex);
-        return updated;
-      });
-    } else if (editingItem) {
-      setEditingItem({ ...editingItem, images: editingItem.images?.filter((_, i) => i !== imgIndex) });
-    }
+    if (formIndex !== undefined) setNewItems(prev => { const u = [...prev]; u[formIndex].images = u[formIndex].images?.filter((_, i) => i !== imgIndex); return u; });
+    else if (editingItem) setEditingItem({ ...editingItem, images: editingItem.images?.filter((_, i) => i !== imgIndex) });
   };
 
   const handleDeleteItem = useCallback((id: number, title: string) => {
     if (!user) return;
-    showConfirm(`Вы уверены, что хотите удалить запись "${title}"?`, async () => {
-      playSound("delete");
+    showConfirm(`Удалить запись "${title}"?`, async () => {
       const res = await fetch(`/api/archive?id=${id}`, { method: "DELETE" });
       if (res.status === 401) return handleApiError(401);
-      fetchArchive(currentPage);
-      showToast("Запись удалена", "info");
+      fetchArchive(currentPage); showToast("Запись удалена", "info");
     });
-  }, [user, showConfirm, playSound, fetchArchive, currentPage, showToast, handleApiError]);
+  }, [user, showConfirm, fetchArchive, currentPage, showToast, handleApiError]);
 
   const handleClearDatabase = () => {
     if (!user || userRole.id !== "owner") return;
-    showPrompt("ВНИМАНИЕ! Это удалит ВСЕ записи навсегда. Введите слово 'УДАЛИТЬ':", async (val) => {
-      if (val !== "УДАЛИТЬ") return showToast("Отменено. Слово введено неверно.", "warning");
-      playSound("delete");
+    showPrompt("Введите 'УДАЛИТЬ':", async (val) => {
+      if (val !== "УДАЛИТЬ") return showToast("Отменено", "warning");
       const res = await fetch(`/api/archive?clear=true`, { method: "DELETE" });
-      if (res.ok) { showToast("База данных полностью очищена!", "success"); fetchArchive(1); }
-      else { showToast("Ошибка при очистке базы.", "error"); }
+      if (res.ok) { showToast("База очищена!", "success"); fetchArchive(1); } else showToast("Ошибка", "error");
     });
   };
 
   const handleClearLogs = () => {
     if (!user || (userRole.id !== "owner" && userRole.id !== "creator")) return;
-    showConfirm("Очистить все логи? Это действие необратимо.", async () => {
-      playSound("delete");
+    showConfirm("Очистить логи?", async () => {
       const res = await fetch("/api/admin/logs", { method: "DELETE" });
-      if (res.ok) { setLogsList([]); showToast("Логи успешно очищены!", "success"); }
-      else { showToast("Ошибка при очистке логов", "error"); }
+      if (res.ok) { setLogsList([]); showToast("Логи очищены", "success"); }
     });
-  };
-
-  const handleRemoveNewItem = (indexToRemove: number) => {
-    setNewItems((prev) => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
   const handleAddMultipleItems = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-    const validItems = newItems.filter(item => item.title.trim() !== "" && item.description.trim() !== "");
-    if (validItems.length === 0) return showToast("Заполните хотя бы одну запись", "warning");
-    playSound("save");
-
-    const payload = validItems.map(item => ({
-      ...item,
-      image: item.images && item.images.length > 0 ? JSON.stringify(item.images) : null
-    }));
-
-    const res = await fetch("/api/archive", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
-    });
-    
-    if (res.ok) { 
-      const result = await res.json();
-      showToast(`Успешно добавлено ${result.count} записей!`, "success");
-      fetchArchive(1); setNewItems([{ ...INITIAL_NEW_ITEM }]); 
-    } else { showToast("Ошибка при сохранении", "error"); }
+    e.preventDefault(); if (!user) return;
+    const valid = newItems.filter(i => i.title.trim() && i.description.trim());
+    if (valid.length === 0) return showToast("Заполните форму", "warning");
+    const payload = valid.map(i => ({ ...i, image: i.images && i.images.length > 0 ? JSON.stringify(i.images) : null }));
+    const res = await fetch("/api/archive", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    if (res.ok) { const d = await res.json(); showToast(`Добавлено ${d.count} записей!`, "success"); fetchArchive(1); setNewItems([{ ...INITIAL_NEW_ITEM }]); }
   };
 
   const handleUpdateItem = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingItem || !user) return;
-    playSound("save");
-
-    const payload = {
-      ...editingItem,
-      image: editingItem.images && editingItem.images.length > 0 ? JSON.stringify(editingItem.images) : null
-    };
-
-    const res = await fetch("/api/archive", {
-      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
-    });
-    
-    if (res.ok) { 
-      showToast("Запись обновлена!", "success"); setEditingItem(null); fetchArchive(currentPage); 
-    } else { showToast("Ошибка при обновлении", "error"); }
+    e.preventDefault(); if (!editingItem || !user) return;
+    const payload = { ...editingItem, image: editingItem.images && editingItem.images.length > 0 ? JSON.stringify(editingItem.images) : null };
+    const res = await fetch("/api/archive", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    if (res.ok) { showToast("Обновлено!", "success"); setEditingItem(null); fetchArchive(currentPage); }
   };
 
-  const handleAddCategory = async () => {
-    if (!newCatName.trim()) return;
-    playSound("save");
-    const res = await fetch("/api/admin/categories", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: newCatName })
-    });
-    if (res.ok) { setNewCatName(""); fetchSettings(); showToast("Категория добавлена", "success"); }
-    else { showToast("Ошибка при добавлении категории", "error"); }
-  };
+  const handleAddCategory = async () => { if (!newCatName.trim()) return; const res = await fetch("/api/admin/categories", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: newCatName }) }); if (res.ok) { setNewCatName(""); fetchSettings(); showToast("Добавлено", "success"); } };
+  const handleDeleteCategory = (id: number) => showConfirm("Удалить?", async () => { const res = await fetch(`/api/admin/categories?id=${id}`, { method: "DELETE" }); if (res.ok) { fetchSettings(); showToast("Удалено", "info"); } });
+  const handleAddRole = async () => { if (!newRoleName.trim()) return; const res = await fetch("/api/admin/roles", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: newRoleName, level: newRoleLevel }) }); if (res.ok) { setNewRoleName(""); setNewRoleLevel(1); fetchSettings(); showToast("Создано", "success"); } };
+  const handleUpdateRole = async (id: string, name: string, level: number) => { const res = await fetch("/api/admin/roles", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name, level }) }); if (res.ok) { fetchSettings(); showToast("Обновлено", "success"); } };
+  const handleDeleteRole = (id: string) => showConfirm("Удалить роль?", async () => { const res = await fetch(`/api/admin/roles?id=${id}`, { method: "DELETE" }); if (res.ok) { fetchSettings(); showToast("Удалено", "info"); } });
 
-  const handleDeleteCategory = (id: number) => {
-    showConfirm("Удалить категорию?", async () => {
-      playSound("delete");
-      const res = await fetch(`/api/admin/categories?id=${id}`, { method: "DELETE" });
-      if (res.ok) { fetchSettings(); showToast("Категория удалена", "info"); }
-    });
-  };
-
-  const handleAddRole = async () => {
-    if (!newRoleName.trim()) return;
-    playSound("save");
-    const res = await fetch("/api/admin/roles", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: newRoleName, level: newRoleLevel })
-    });
-    if (res.ok) { setNewRoleName(""); setNewRoleLevel(1); fetchSettings(); showToast("Уровень создан", "success"); }
-    else { showToast("Ошибка при добавлении роли", "error"); }
-  };
-
-  const handleUpdateRole = async (id: string, name: string, level: number) => {
-    playSound("save");
-    const res = await fetch("/api/admin/roles", {
-      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name, level })
-    });
-    if (res.ok) { fetchSettings(); showToast("Уровень обновлен", "success"); }
-    else { const err = await res.json(); showToast(err.error, "error"); }
-  };
-
-  const handleDeleteRole = (id: string) => {
-    showConfirm("Удалить уровень доступа?", async () => {
-      playSound("delete");
-      const res = await fetch(`/api/admin/roles?id=${id}`, { method: "DELETE" });
-      if (res.ok) { fetchSettings(); showToast("Уровень удален", "info"); }
-      else { const err = await res.json(); showToast(err.error, "error"); }
-    });
-  };
-
-  const generateRandom = (length = 15) => {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
-    let result = "";
-    for (let i = 0; i < length; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
-    return result;
-  };
-
+  const generateRandom = (length = 15) => { const c = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*"; let r = ""; for (let i = 0; i < length; i++) r += c.charAt(Math.floor(Math.random() * c.length)); return r; };
   const handleCreateUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-    playSound("save");
-    
-    if (newAcc.role === "owner" && userRole.id !== "owner") return showToast("Только Овнер может создать Овнера", "error");
-
-    const finalUsername = autoUser ? generateRandom(15) : newAcc.username;
-    const finalPassword = autoPass ? generateRandom(15) : newAcc.password;
-
-    const res = await fetch("/api/admin/create-user", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...newAcc, username: finalUsername, password: finalPassword })
-    });
-
+    e.preventDefault(); if (!user) return;
+    const finalU = autoUser ? generateRandom(15) : newAcc.username; const finalP = autoPass ? generateRandom(15) : newAcc.password;
+    const res = await fetch("/api/admin/create-user", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...newAcc, username: finalU, password: finalP }) });
     if (res.ok) {
-      showToast(`Аккаунт создан! Логин: ${finalUsername} | Пароль: ${finalPassword}`, "success");
-      const fileContent = `Данные для входа в Таверну "Сытый Лис"\n\nИмя аккаунта: ${newAcc.account_name}\nЛогин: ${finalUsername}\nПароль: ${finalPassword}\n\nРекомендуем сменить пароль после входа.`;
-      const blob = new Blob([fileContent], { type: "text/plain;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = `Доступ_${newAcc.account_name.replace(/\s+/g, '_')}.txt`;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a); 
-      
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-
-      setNewAcc({ account_name: "", username: "", password: "", role: roles[roles.length - 1]?.id || "low" });
-      setAutoUser(false); setAutoPass(false); fetchUsers();
-    } else { const err = await res.json(); showToast(err.error, "error"); }
+      showToast(`Создан! Логин: ${finalU} | Пароль: ${finalP}`, "success");
+      const blob = new Blob([`Логин: ${finalU}\nПароль: ${finalP}`], { type: "text/plain" });
+      const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `Доступ_${newAcc.account_name}.txt`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setNewAcc({ account_name: "", username: "", password: "", role: roles[roles.length - 1]?.id || "low" }); setAutoUser(false); setAutoPass(false); fetchUsers();
+    } else { const d = await res.json(); showToast(d.error, "error"); }
   };
-
-  const handleDeleteUser = (id: number, targetName: string) => {
-    if (!user) return;
-    showConfirm(`Удалить аккаунт "${targetName}"?`, async () => {
-      playSound("delete");
-      const res = await fetch(`/api/admin/users?id=${id}`, { method: "DELETE" });
-      if (res.ok) { fetchUsers(); showToast("Аккаунт удален", "info"); }
-      else { const err = await res.json(); showToast(err.error, "error"); }
-    });
-  };
+  const handleDeleteUser = (id: number, name: string) => showConfirm(`Удалить "${name}"?`, async () => { const res = await fetch(`/api/admin/users?id=${id}`, { method: "DELETE" }); if (res.ok) { fetchUsers(); showToast("Удален", "info"); } else { const d = await res.json(); showToast(d.error, "error"); } });
 
   const fetchUsers = async () => { if (!user) return; const res = await fetch(`/api/admin/users`); if (res.ok) setUsersList(await res.json()); };
   const fetchLogs = async () => { const res = await fetch("/api/admin/logs"); if (res.ok) setLogsList(await res.json()); };
   const fetchStats = async () => { const res = await fetch("/api/admin/stats"); if (res.ok) setStats(await res.json()); };
   const fetchMedia = async () => { const res = await fetch("/api/admin/images"); if (res.ok) setMediaList(await res.json()); };
+  const handleDeleteMedia = (id: number) => showConfirm("Удалить картинку?", async () => { const res = await fetch(`/api/admin/images?id=${id}`, { method: "DELETE" }); if (res.ok) { fetchMedia(); showToast("Удалено", "success"); } });
 
-  const handleDeleteMedia = (id: number) => {
-    showConfirm("Удалить эту картинку из базы?", async () => {
-      const res = await fetch(`/api/admin/images?id=${id}`, { method: "DELETE" });
-      if (res.ok) { fetchMedia(); showToast("Картинка удалена", "success"); }
-      else { showToast("Ошибка удаления", "error"); }
-    });
-  };
+  const handleExport = async () => { const res = await fetch("/api/archive?limit=9999"); const d = await res.json(); const e = (d.items || []).map((i: any) => { let img = []; if (i.image) { if (i.image.startsWith('[')) { try { img = JSON.parse(i.image); } catch { img = [i.image]; } } else img = [i.image]; } return { title: i.title, category: i.category, description: i.description, symbol: i.symbol, dangerLevel: i.danger_level, images: img }; }); const b = new Blob([JSON.stringify(e, null, 2)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "export.json"; a.click(); };
+  const handleExportCSV = async () => { const res = await fetch("/api/archive?limit=9999"); const d = await res.json(); const h = ["Название","Категория","Описание","Символ","Уровень","Картинки"].join(","); const r = (d.items || []).map((i: any) => [`"${(i.title||'').replace(/"/g,'""')}"`,`"${(i.category||'').replace(/"/g,'""')}"`,`"${(i.description||'').replace(/"/g,'""')}"`,`"${(i.symbol||'').replace(/"/g,'""')}"`,`"${(i.danger_level||'').replace(/"/g,'""')}"`,`"${(i.image||'').replace(/"/g,'""')}"`].join(",")); const b = new Blob(["\uFEFF" + [h, ...r].join("\n")], { type: "text/csv" }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "export.csv"; a.click(); };
 
-  const handleExport = async () => {
-    playSound("click");
-    try {
-      const res = await fetch("/api/archive?limit=9999");
-      const result = await res.json();
-      const exportData = (result.items || []).map((item: DbArchiveItem) => {
-        let images = [];
-        if (item.image) {
-          if (item.image.startsWith('[')) {
-            try { images = JSON.parse(item.image); } catch { images = [item.image]; }
-          } else { images = [item.image]; }
-        }
-        return {
-          title: item.title, category: item.category, description: item.description,
-          symbol: item.symbol, dangerLevel: item.danger_level, images 
-        };
-      });
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = "tavern_archive_export.json"; a.click();
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      showToast("Экспорт начат", "success");
-    } catch { showToast("Ошибка при экспорте", "error"); }
-  };
-
-  const handleExportCSV = async () => {
-    playSound("click");
-    try {
-      const res = await fetch("/api/archive?limit=9999");
-      const result = await res.json();
-      const items = result.items || [];
-
-      const headers = ["Название", "Категория", "Описание", "Символ", "Уровень опасности", "Картинки (JSON)"];
-      const csvRows = [headers.join(",")];
-
-      for (const item of items) {
-        const row = [
-          `"${(item.title || '').replace(/"/g, '""')}"`,
-          `"${(item.category || '').replace(/"/g, '""')}"`,
-          `"${(item.description || '').replace(/"/g, '""')}"`,
-          `"${(item.symbol || '').replace(/"/g, '""')}"`,
-          `"${(item.danger_level || '').replace(/"/g, '""')}"`,
-          `"${(item.image || '').replace(/"/g, '""')}"`
-        ];
-        csvRows.push(row.join(","));
-      }
-
-      const csvString = "\uFEFF" + csvRows.join("\n");
-      const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "tavern_archive_export.csv";
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      showToast("CSV Экспорт начат", "success");
-    } catch { 
-      showToast("Ошибка при экспорте CSV", "error"); 
-    }
-  };
-
-  const handleBulkImport = async () => {
-    if (!user) return;
-    playSound("save");
-    try {
-      const parsed = JSON.parse(bulkJson) as ImportJsonItem[];
-      if (!Array.isArray(parsed)) throw new Error("JSON должен быть массивом");
-      
-      const payload = parsed.map((item) => ({
-        ...item,
-        image: item.images && Array.isArray(item.images) ? JSON.stringify(item.images) : (item.image || null)
-      }));
-
-      const res = await fetch("/api/archive", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
-      });
-      if (res.ok) {
-        const result = await res.json();
-        showToast(`Успешно добавлено ${result.count} записей!`, "success");
-        setBulkJson(""); fetchArchive(1);
-      } else { showToast("Ошибка при импорте", "error"); }
-    } catch { showToast("Ошибка формата JSON.", "error"); }
-  };
+  const handleBulkImport = async () => { try { const p = JSON.parse(bulkJson) as ImportJsonItem[]; if (!Array.isArray(p)) throw new Error(); const pl = p.map(i => ({ ...i, image: i.images && Array.isArray(i.images) ? JSON.stringify(i.images) : (i.image || null) })); const res = await fetch("/api/archive", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(pl) }); if (res.ok) { const d = await res.json(); showToast(`Добавлено ${d.count}!`, "success"); setBulkJson(""); fetchArchive(1); } } catch { showToast("Ошибка JSON", "error"); } };
 
   const handleTextImport = async () => {
     if (!user || !bulkText.trim()) return;
-    playSound("save");
-
     try {
-      const blocks = bulkText.split('---').filter(b => b.trim() !== "");
-      
-      const parsedItems = blocks.map(block => {
-        const lines = block.split('\n');
-        let title = "";
-        let category = "Другое";
-        let dangerLevel = "Низкий";
-        let descriptionLines: string[] = [];
-        let parsingDescription = false;
-
-        lines.forEach(line => {
-          const lowerLine = line.toLowerCase();
-          if (lowerLine.startsWith("название:")) {
-            title = line.substring(9).trim();
-          } else if (lowerLine.startsWith("категория:")) {
-            const cat = line.substring(10).trim().toLowerCase();
-            const foundCat = categories.find(c => {
-              const dbCat = c.name.toLowerCase();
-              return dbCat === cat || dbCat.includes(cat) || cat.includes(dbCat);
-            });
-            category = foundCat ? foundCat.name : "Другое";
-          } else if (lowerLine.startsWith("уровень:")) {
-            const lvl = line.substring(8).trim().toLowerCase();
-            const foundLvl = DANGER_LEVELS.find(l => l.toLowerCase() === lvl);
-            dangerLevel = foundLvl || "Низкий";
-          } else if (lowerLine.startsWith("описание:")) {
-            descriptionLines.push(line.substring(9).trim());
-            parsingDescription = true;
-          } else if (parsingDescription) {
-             descriptionLines.push(line);
-          }
+      const b = bulkText.split('---').filter(x => x.trim());
+      const p = b.map(block => {
+        let t = "", c = "Другое", dL = "Низкий", dLns: string[] = [], pD = false;
+        block.split('\n').forEach(line => {
+          const l = line.toLowerCase();
+          if (l.startsWith("название:")) t = line.substring(9).trim();
+          else if (l.startsWith("категория:")) { const cat = line.substring(10).trim().toLowerCase(); const f = categories.find(x => x.name.toLowerCase() === cat); c = f ? f.name : "Другое"; }
+          else if (l.startsWith("уровень:")) dL = line.substring(8).trim();
+          else if (l.startsWith("описание:")) { dLns.push(line.substring(9).trim()); pD = true; }
+          else if (pD) dLns.push(line);
         });
-
-        return {
-          title: title,
-          category: category,
-          description: descriptionLines.join('\n').trim(),
-          dangerLevel: dangerLevel,
-          is_draft: 0,
-          symbol: "",
-          image: null
-        };
-      }).filter(item => item.title && item.description); 
-
-      if (parsedItems.length === 0) {
-        return showToast("Не найдено ни одной корректной записи. Проверьте формат.", "warning");
-      }
-
-      const res = await fetch("/api/archive", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(parsedItems)
-      });
-
-      if (res.ok) {
-        const result = await res.json();
-        showToast(`Успешно добавлено ${result.count} записей!`, "success");
-        setBulkText(""); 
-        fetchArchive(1);
-      } else { 
-        showToast("Ошибка при сохранении", "error"); 
-      }
-
-    } catch {
-      showToast("Ошибка при обработке текста", "error");
-    }
+        return { title: t, category: c, description: dLns.join('\n').trim(), dangerLevel: dL, is_draft: 0, symbol: "", image: null };
+      }).filter(x => x.title && x.description);
+      if (p.length === 0) return showToast("Нет корректных записей", "warning");
+      const res = await fetch("/api/archive", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p) });
+      if (res.ok) { const d = await res.json(); showToast(`Добавлено ${d.count}!`, "success"); setBulkText(""); fetchArchive(1); }
+    } catch { showToast("Ошибка", "error"); }
   };
 
   const handleSaveInfoPage = async () => {
     if (!activePage) return;
-    playSound("save");
-    const res = await fetch("/api/info-pages", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: activePage.id, content: editPageContent })
-    });
-
-    if (res.ok) {
-      showToast("Текст успешно сохранен!", "success");
-      setIsEditingPage(false);
-      const updatedPages = infoPages.map(p => p.id === activePage.id ? { ...p, content: editPageContent } : p);
-      setInfoPages(updatedPages);
-      setActivePage({ ...activePage, content: editPageContent });
-    } else {
-      showToast("Ошибка при сохранении текста", "error");
-    }
+    const res = await fetch("/api/info-pages", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: activePage.id, content: editPageContent }) });
+    if (res.ok) { showToast("Сохранено", "success"); setIsEditingPage(false); const u = infoPages.map(p => p.id === activePage.id ? { ...p, content: editPageContent } : p); setInfoPages(u); setActivePage({ ...activePage, content: editPageContent }); }
   };
 
   useEffect(() => {
@@ -934,597 +383,69 @@ export default function TavernArchive() {
 
   return (
     <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col">
-      
-      {/* КУРСОР И ТРЕЙЛ */}
       <div ref={cursorDotRef} className="custom-cursor-dot hidden md:block pointer-events-none" />
       <div ref={trail1Ref} className="custom-cursor-trail trail-1 hidden md:block pointer-events-none" />
       <div ref={trail2Ref} className="custom-cursor-trail trail-2 hidden md:block pointer-events-none" />
       <div ref={trail3Ref} className="custom-cursor-trail trail-3 hidden md:block pointer-events-none" />
-
-      {/* ЭФФЕКТ КЛИКА */}
       {clicks.map(c => <div key={c.id} className="cursor-click-ripple" style={{ left: c.x, top: c.y }} />)}
-
       <div className="pixel-stars pointer-events-none"></div>
       <div className="fog-container pointer-events-none"><div className="fog-layer"></div><div className="fog-layer"></div></div>
-      
-      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-        {RUNES.slice(0, 6).map((rune, i) => <div key={i} className="rune pointer-events-none">{rune}</div>)}
-      </div>
-
+      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">{RUNES.slice(0, 6).map((r, i) => <div key={i} className="rune pointer-events-none">{r}</div>)}</div>
       <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 50% 0%, #a37c49 0%, transparent 70%)" }}></div>
 
       {toast && (
         <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[9999] animate-smooth-pop pointer-events-none">
-          <div className={`px-6 py-4 rounded-lg border-2 shadow-[0_0_30px_rgba(0,0,0,0.8)] flex items-center gap-3 font-pixeloid-mono backdrop-blur-md text-lg
-            ${toast.type === 'success' ? 'bg-[#1a2e1c]/95 border-green-500 text-green-100' :
-              toast.type === 'error' ? 'bg-[#2e1a1a]/95 border-red-500 text-red-100' :
-              toast.type === 'warning' ? 'bg-[#2e2a1a]/95 border-orange-500 text-orange-100' :
-              'bg-[#2e1b13]/95 border-[#a37c49] text-[#e6d5b8]'}`}>
-            {toast.type === 'success' && <CheckCircle2 size={24} className="text-green-400" />}
-            {toast.type === 'error' && <Skull size={24} className="text-red-400" />}
-            {toast.type === 'warning' && <AlertTriangle size={24} className="text-orange-400" />}
-            {toast.type === 'info' && <Info size={24} className="text-[#a37c49]" />}
+          <div className={`px-6 py-4 rounded-lg border-2 shadow-lg flex items-center gap-3 font-pixeloid-mono backdrop-blur-md ${toast.type === 'success' ? 'bg-[#1a2e1c]/95 border-green-500' : toast.type === 'error' ? 'bg-[#2e1a1a]/95 border-red-500' : toast.type === 'warning' ? 'bg-[#2e2a1a]/95 border-orange-500' : 'bg-[#2e1b13]/95 border-[#a37c49]'}`}>
+            {toast.type === 'success' ? <CheckCircle2 size={24} className="text-green-400" /> : toast.type === 'error' ? <Skull size={24} className="text-red-400" /> : toast.type === 'warning' ? <AlertTriangle size={24} className="text-orange-400" /> : <Info size={24} className="text-[#a37c49]" />}
             {toast.msg}
           </div>
         </div>
       )}
 
-      {confirmDialog && (
-        <div className="fixed inset-0 z-[9998] bg-black/80 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm">
-          <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-8 rounded-xl max-w-md w-full animate-smooth-pop text-center shadow-2xl relative overflow-hidden">
-            <AlertTriangle size={56} className="mx-auto text-orange-500 mb-6 drop-shadow-lg relative z-10" />
-            <h3 className="text-2xl font-bold font-pixeloid-mono text-[#e6d5b8] mb-4 relative z-10">Подтверждение</h3>
-            <p className="text-[#c4b5a5] font-sans text-lg mb-8 relative z-10">{confirmDialog.msg}</p>
-            <div className="flex justify-center gap-4 relative z-10">
-              <button onClick={() => { playSound("click"); setConfirmDialog(null); }} className="px-6 py-3 bg-[#3d2617] border border-[#5c3a21] text-[#a37c49] font-bold rounded-lg hover:bg-[#5c3a21] active:scale-95 transition-all w-32">Отмена</button>
-              <button onClick={() => { confirmDialog.onConfirm(); setConfirmDialog(null); playSound("click"); }} className="px-6 py-3 bg-red-900/40 border border-red-500 text-red-400 font-bold rounded-lg hover:bg-red-900/60 active:scale-95 transition-all w-32">Да</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modals 
+        confirmDialog={confirmDialog} setConfirmDialog={setConfirmDialog}
+        promptDialog={promptDialog} setPromptDialog={setPromptDialog}
+        editingItem={editingItem} setEditingItem={setEditingItem} handleUpdateItem={handleUpdateItem}
+        selectedImage={selectedImage} setSelectedImage={setSelectedImage}
+        activePage={activePage} setActivePage={setActivePage} isEditingPage={isEditingPage} setIsEditingPage={setIsEditingPage} editPageContent={editPageContent} setEditPageContent={setEditPageContent} handleSaveInfoPage={handleSaveInfoPage}
+        showProfile={showProfile} setShowProfile={setShowProfile} user={user} handleUpdateProfile={handleUpdateProfile} handleAvatarUpload={handleAvatarUpload}
+        newAccountName={newAccountName} setNewAccountName={setNewAccountName} newUsername={newUsername} setNewUsername={setNewUsername} newPass={newPass} setNewPass={setNewPass} oldPass={oldPass} setOldPass={setOldPass}
+        categories={categories} handleImageUpload={handleImageUpload} handleRemoveImage={handleRemoveImage} userRole={userRole}
+      />
 
-      {promptDialog && (
-        <div className="fixed inset-0 z-[9998] bg-black/80 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm">
-          <div className="bg-[#2e1b13] border-double border-4 border-red-900/50 p-8 rounded-xl max-w-md w-full animate-smooth-pop text-center shadow-2xl relative overflow-hidden">
-            <Skull size={56} className="mx-auto text-red-500 mb-6 animate-pulse drop-shadow-lg" />
-            <h3 className="text-2xl font-bold font-pixeloid-mono text-red-500 mb-4">Опасная зона</h3>
-            <p className="text-[#c4b5a5] font-sans text-sm mb-6">{promptDialog.msg}</p>
-            <input type="text" value={promptDialog.val} onChange={e => setPromptDialog({ ...promptDialog, val: e.target.value })} className="w-full p-3 bg-[#1c110b] border-2 border-[#5c3a21] rounded text-white text-center font-bold tracking-widest focus:border-red-500 outline-none mb-6" placeholder="УДАЛИТЬ" autoFocus />
-            <div className="flex justify-center gap-4">
-              <button onClick={() => { setPromptDialog(null); playSound("click"); }} className="px-6 py-3 bg-[#3d2617] border border-[#5c3a21] text-[#a37c49] font-bold rounded-lg hover:bg-[#5c3a21] active:scale-95 transition-all w-32">Отмена</button>
-              <button onClick={() => { promptDialog.onConfirm(promptDialog.val); setPromptDialog(null); playSound("click"); }} className="px-6 py-3 bg-red-900/60 border border-red-500 text-white font-bold rounded-lg hover:bg-red-700 active:scale-95 transition-all w-32">Удалить</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {editingItem && (
-        <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm" onClick={() => { setEditingItem(null); playSound("modalClose"); }}>
-          <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl w-full max-w-2xl relative animate-smooth-pop" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => { setEditingItem(null); playSound("modalClose"); }} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 active:scale-90 transition-all"><X size={24}/></button>
-            <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49] mb-6">Редактировать</h2>
-            <form onSubmit={handleUpdateItem} className="space-y-4">
-              <input required placeholder="Название" value={editingItem.title} onChange={e => setEditingItem({...editingItem, title: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <select value={editingItem.category} onChange={e => setEditingItem({...editingItem, category: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none">
-                  {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                </select>
-                <select value={editingItem.dangerLevel || "Низкий"} onChange={e => setEditingItem({...editingItem, dangerLevel: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none">
-                  {DANGER_LEVELS.map(l => <option key={l} value={l}>Уровень: {l}</option>)}
-                </select>
-              </div>
-              <textarea required placeholder="Описание (Markdown)" value={editingItem.description} onChange={e => setEditingItem({...editingItem, description: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white h-32 font-mono text-sm focus:border-[#a37c49] outline-none" />
-              
-              <div className="mt-2 border-t border-[#5c3a21] pt-3">
-                <label className="block text-xs font-pixeloid-mono text-[#a37c49] mb-2 flex items-center gap-1"><ImageIcon size={14}/> Картинки (до 3 шт, макс 1МБ каждая)</label>
-                <input type="file" multiple accept="image/*" onChange={(e) => handleImageUpload(e)} className="w-full text-sm text-[#8c6e52] file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-[#3d2617] file:text-[#e6d5b8] hover:file:bg-[#5c3a21] file:cursor-pointer mb-3" />
-                <div className="flex flex-wrap gap-2">
-                  {editingItem.images?.map((img, i) => (
-                    <div key={i} className="relative inline-block border-2 border-[#5c3a21] rounded-lg overflow-hidden" style={{ backgroundColor: '#d6c5b3' }}>
-                      <img src={img} alt="Preview" loading="lazy" draggable={false} className="h-20 object-contain p-1 no-select" />
-                      <button type="button" onClick={() => handleRemoveImage(i)} className="absolute top-0 right-0 bg-red-600/80 hover:bg-red-600 text-white p-0.5 rounded-bl-lg transition-colors"><X size={12} /></button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <label className="flex items-center gap-2 text-sm text-[#a37c49] font-pixeloid-mono cursor-pointer mt-4 mb-4">
-                <input type="checkbox" checked={editingItem.is_draft === 1} onChange={e => setEditingItem({...editingItem, is_draft: e.target.checked ? 1 : 0})} /> Сохранить как черновик (скрыто от пользователей)
-              </label>
-              <button type="submit" className="px-6 py-2 bg-[#5c3a21] text-white font-bold rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Сохранить</button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {selectedImage && (
-        <div className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm cursor-zoom-out" onClick={() => { setSelectedImage(null); playSound("modalClose"); }}>
-          <img src={selectedImage} alt="Fullscreen" loading="lazy" draggable={false} className="max-w-full max-h-[90vh] object-contain drop-shadow-2xl no-select" />
-          <button className="absolute top-4 right-4 text-gray-400 hover:text-red-500 active:scale-90 transition-all bg-black/50 p-2 rounded-full" onClick={() => { setSelectedImage(null); playSound("modalClose"); }}>
-            <X size={32} />
-          </button>
-        </div>
-      )}
-
-      {activePage && (
-        <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm" onClick={() => { setActivePage(null); setIsEditingPage(false); playSound("modalClose"); }}>
-          <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl w-full max-w-3xl relative animate-smooth-pop max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => { setActivePage(null); setIsEditingPage(false); playSound("modalClose"); }} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 active:scale-90 transition-all"><X size={24}/></button>
-            
-            <h2 className="text-xl md:text-2xl font-bold font-pixeloid-mono text-[#a37c49] mb-4 pr-8">{activePage.title}</h2>
-            
-            <div className="flex-grow overflow-y-auto pr-2 custom-scrollbar">
-              {isEditingPage ? (
-                <textarea 
-                  value={editPageContent} 
-                  onChange={e => setEditPageContent(e.target.value)} 
-                  className="w-full h-64 p-4 bg-[#160d08] border-2 border-[#5c3a21] rounded-lg text-[#e6d5b8] font-mono text-sm focus:border-[#a37c49] outline-none whitespace-pre-wrap" 
-                />
-              ) : (
-                <div className="text-[#c4b5a5] font-sans leading-relaxed max-w-none whitespace-pre-wrap break-words select-text">
-                  {activePage.content}
-                </div>
-              )}
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-[#5c3a21] flex justify-end gap-3">
-              {isEditingPage ? (
-                <>
-                  <button onClick={() => { setIsEditingPage(false); playSound("click"); }} className="px-4 py-2 bg-[#3d2617] text-[#a37c49] font-bold rounded-lg hover:bg-[#5c3a21] transition-all">Отмена</button>
-                  <button onClick={handleSaveInfoPage} className="px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-white font-bold rounded-lg hover:bg-[#7a4f2e] transition-all flex items-center gap-2"><Save size={18}/> Сохранить</button>
-                </>
-              ) : (
-                userRole.level >= 2 && (
-                  <button onClick={() => { setEditPageContent(activePage.content); setIsEditingPage(true); playSound("click"); }} className="px-6 py-2 bg-blue-600/20 border border-blue-500 text-blue-400 font-bold rounded-lg hover:bg-blue-600/40 transition-all flex items-center gap-2"><FileEdit size={18}/> Редактировать текст</button>
-                )
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showProfile && user && (
-        <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4 animate-fade-in" onClick={() => { setShowProfile(false); playSound("modalClose"); }}>
-          <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] p-6 rounded-xl w-full max-w-md relative animate-smooth-pop" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => { setShowProfile(false); playSound("modalClose"); }} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 active:scale-90 transition-all"><X size={24}/></button>
-            <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49] mb-6 text-center">Личный кабинет</h2>
-            <form onSubmit={handleUpdateProfile} className="space-y-4">
-              <div className="flex flex-col items-center mb-4 group/avatar">
-                <div className="w-24 h-24 rounded-full border-4 border-[#5c3a21] group-hover/avatar:border-[#a37c49] overflow-hidden bg-[#1c110b] mb-2 flex items-center justify-center relative cursor-pointer transition-colors">
-                  {user.avatar ? <img src={user.avatar} alt="Avatar" loading="lazy" draggable={false} className="w-full h-full object-cover group-hover/avatar:scale-110 transition-transform duration-300 no-select" /> : <UserIcon size={40} className="text-[#5c3a21] group-hover/avatar:text-[#a37c49] transition-colors" />}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity"><span className="text-xs text-white font-bold">Сменить</span></div>
-                  <input type="file" accept="image/*" onChange={handleAvatarUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
-                </div>
-              </div>
-              <div className="space-y-2 border-t border-[#5c3a21] pt-4">
-                <label className="text-sm font-pixeloid-mono text-[#a37c49]">Изменить имя</label>
-                <input type="text" placeholder="Новое имя" value={newAccountName} onChange={e => setNewAccountName(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
-              </div>
-              <div className="space-y-2 border-t border-[#5c3a21] pt-4">
-                <label className="text-sm font-pixeloid-mono text-[#a37c49]">Изменить логин</label>
-                <input type="text" placeholder="Новый логин" value={newUsername} onChange={e => setNewUsername(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
-              </div>
-              <div className="space-y-2 border-t border-[#5c3a21] pt-4">
-                <label className="text-sm font-pixeloid-mono text-[#a37c49]">Смена пароля</label>
-                <input type="password" placeholder="Старый пароль" value={oldPass} onChange={e => setOldPass(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
-                <input type="password" placeholder="Новый пароль" value={newPass} onChange={e => setNewPass(e.target.value)} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
-              </div>
-              <button type="submit" className="w-full py-2 bg-[#5c3a21] text-white font-bold rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Сохранить изменения</button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {(!user || isBookClosing) && (
-        <div className={`fixed inset-0 z-[999] flex items-center justify-center overflow-hidden book-container ${(isBookOpening || (isBookClosing && !startBookCloseAnim)) ? 'book-open' : ''}`}>
-          <div className="absolute inset-0 bg-[#0a0705]"></div>
-          <div className="book-cover-left flex items-center justify-end pr-4"><div className="w-1/2 h-full border-r border-[#5c3a21]"></div><div className="book-corner book-corner-tl"></div><div className="book-corner book-corner-bl"></div></div>
-          <div className="book-cover-right flex items-center justify-start pl-4"><div className="w-1/2 h-full border-l border-[#5c3a21]"></div><div className="book-corner book-corner-tr"></div><div className="book-corner book-corner-br"></div></div>
-          <div className="book-spine"></div>
-          <div className="login-content">
-            <div className="bg-[#2e1b13]/95 border-4 border-[#a37c49] p-8 rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.9)] relative z-50">
-              <div className="flex justify-center mb-6 relative">
-                <div className="absolute inset-0 bg-[#a37c49] blur-2xl opacity-20 rounded-full animate-pulse"></div>
-                <img src="/logo.png" alt="Сытый Лис" loading="lazy" draggable={false} className="w-32 h-32 object-cover rounded-full border-4 border-[#5c3a21] relative z-10 animate-float bg-[#1c110b] no-select" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-              </div>
-              <h1 className="text-3xl font-bold font-pixeloid-mono text-center mb-2 text-[#E5B85C] uppercase flex justify-center items-center gap-2 drop-shadow-md"><Flame /> Сытый Лис</h1>
-              <p className="text-center text-[#8c6e52] mb-8 font-pixeloid-mono">Открыть древний фолиант</p>
-              <form onSubmit={handleLogin} className="space-y-5">
-                <div><label className="block text-sm font-pixeloid-mono text-[#a37c49] mb-1">Логин</label><input type="text" required value={loginUser} onChange={(e) => setLoginUser(e.target.value)} className="w-full p-3 bg-[#1c110b] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none transition-colors" /></div>
-                <div><label className="block text-sm font-pixeloid-mono text-[#a37c49] mb-1">Пароль</label><input type="password" required value={loginPass} onChange={(e) => setLoginPass(e.target.value)} className="w-full p-3 bg-[#1c110b] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none transition-colors" /></div>
-                {loginError && <p className="text-red-400 text-sm text-center animate-shake">{loginError}</p>}
-                <button type="submit" className="w-full py-3 bg-[#5c3a21] text-[#e6d5b8] font-bold font-pixeloid-mono text-lg rounded hover:bg-[#7a4f2e] active:scale-95 transition-all shadow-[0_4px_0_#1c110b] hover:shadow-none hover:translate-y-1 flex items-center justify-center gap-2"><BookOpen size={20} /> Открыть</button>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
+      <LoginBook 
+        isBookOpening={isBookOpening} isBookClosing={isBookClosing} startBookCloseAnim={startBookCloseAnim}
+        loginUser={loginUser} setLoginUser={setLoginUser} loginPass={loginPass} setLoginPass={setLoginPass} loginError={loginError} handleLogin={handleLogin}
+        isVisible={!user || isBookClosing}
+      />
 
       {user && (
         <div className="flex-grow flex flex-col relative z-10 w-full animate-content-fade">
-          <div className="w-full flex justify-end p-4 relative z-[60] animate-menu-drop" style={{ animationDelay: '0.2s' }}>
-            <div className="flex flex-col items-end gap-2">
-              <button type="button" className={`flex items-center gap-3 bg-[#2e1b13]/90 border ${userRole.id === 'owner' ? 'owner-border' : 'border-[#5c3a21]'} p-1.5 rounded-lg cursor-pointer hover:border-[#a37c49] transition-all group text-left`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); openProfile(); }}>
-                <div className="w-10 h-10 rounded bg-[#1c110b] overflow-hidden flex items-center justify-center border border-[#5c3a21] group-hover:border-[#a37c49] transition-colors">
-                  {user.avatar ? <img src={user.avatar} alt="Avatar" loading="lazy" draggable={false} className="w-full h-full object-cover no-select" /> : <UserIcon size={20} className="text-[#5c3a21] group-hover:text-[#a37c49] transition-colors" />}
-                </div>
-                <div className="flex flex-col text-right pr-2">
-                  <span className="text-sm font-bold font-pixeloid-mono select-text">{user.account_name}</span>
-                  <span className={`text-xs font-bold font-pixeloid-mono ${getRoleColor(userRole.level)} select-text`}>{userRole.name}</span>
-                </div>
-                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleLogout(); }} className="p-2 text-red-400 hover:bg-red-500/20 rounded active:scale-90 transition-all" title="Выйти"><LogOut size={18} /></button>
-              </button>
-
-              <div className="flex flex-col gap-1 items-end">
-                
-                {infoPages.map(page => {
-                  let Icon = Info;
-                  let shortName = "";
-                  if (page.id === 'pharma') { Icon = Pill; shortName = "Фарма"; }
-                  if (page.id === 'offensive') { Icon = AlertOctagon; shortName = "Контент"; }
-                  if (page.id === 'dangerous') { Icon = PackageX; shortName = "Товары"; }
-
-                  return (
-                    <button 
-                      key={page.id}
-                      onClick={() => { setActivePage(page); playSound("modalOpen"); }} 
-                      className="flex items-center gap-2 px-3 py-1.5 bg-red-900/20 border border-red-500/50 text-red-400 text-xs font-pixeloid-mono rounded hover:bg-red-900/40 hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start"
-                      title={page.title}
-                    >
-                      <Icon size={14} /> {shortName}
-                    </button>
-                  );
-                })}
-
-                {view !== "home" && <button onClick={() => { setView("home"); playSound("click"); }} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/90 border border-[#5c3a21] text-[#a37c49] text-xs font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start"><Home size={14} /> На главную</button>}
-                {view !== "archive" && <button onClick={() => { setView("archive"); playSound("click"); }} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/90 border border-[#5c3a21] text-[#a37c49] text-xs font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start"><ScrollText size={14} /> Открыть свитки</button>}
-                {view !== "admin" && userRole.level >= 1 && <button onClick={() => { setView("admin"); playSound("click"); }} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/90 border border-[#5c3a21] text-[#a37c49] text-xs font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start"><Settings size={14} /> Админка</button>}
-              </div>
-            </div>
-          </div>
-
+          <Header user={user} userRole={userRole} infoPages={infoPages} view={view} setView={setView} openProfile={openProfile} handleLogout={handleLogout} setActivePage={setActivePage} playSound={playSound} getRoleColor={getRoleColor} />
+          
           <div className="max-w-5xl mx-auto px-6 pb-12 w-full flex flex-col flex-grow -mt-16">
             <header className="flex justify-center mb-8">
-              <img 
-                src="/logo.png" 
-                alt="Сытый Лис" 
-                onClick={() => { setView("home"); playSound("click"); }}
-                loading="lazy"
-                draggable={false}
-                className="w-24 h-24 object-cover rounded-full border-4 border-[#5c3a21] animate-float bg-[#1c110b] hover:scale-105 transition-all cursor-pointer no-select" 
-                onError={(e) => { e.currentTarget.style.display = 'none'; }} 
-              />
+              <img src="/logo.png" alt="Сытый Лис" onClick={() => setView("home")} className="w-24 h-24 object-cover rounded-full border-4 border-[#5c3a21] animate-float bg-[#1c110b] hover:scale-105 transition-all cursor-pointer no-select" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             </header>
 
             {view === "home" && (
-              <div className="flex-grow flex flex-col items-center animate-smooth-fade-up text-center pb-20">
-                <h2 className="text-4xl font-bold font-pixeloid-mono text-[#a37c49] mb-6">Запретный Архив</h2>
-                <div className="relative w-full max-w-2xl mb-8 group">
-                  <input type="text" placeholder="Поиск..." value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} className="w-full p-4 pl-12 bg-[#2e1b13] border-2 border-[#5c3a21] rounded-lg text-[#e6d5b8] font-pixeloid-mono focus:border-[#a37c49] transition-colors shadow-lg" />
-                  <Search className="absolute left-4 top-4 text-[#6b513b] group-focus-within:text-[#a37c49] transition-colors" size={24} />
-                </div>
-                
-                {searchQuery.length > 0 || selectedCategory !== "Все" ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full text-left">
-                    {isLoading ? (
-                      <><SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard /></>
-                    ) : displayedData.length > 0 ? displayedData.map((item) => (
-                      <ArchiveCard key={item.id} item={item} canEdit={canEdit} canDelete={canDelete} onEdit={(item) => { setEditingItem(item); playSound("modalOpen"); }} onDelete={handleDeleteItem} onViewImage={(img) => { setSelectedImage(img); playSound("modalOpen"); }} isFavorite={favorites.includes(item.id)} onToggleFavorite={handleToggleFavorite} />
-                    )) : <p className="text-center w-full col-span-2 text-[#8c6e52]">Ничего не найдено...</p>}
-                  </div>
-                ) : (
-                  <div className="text-[#8c6e52] mt-12 text-lg font-pixeloid-mono opacity-50 flex flex-col items-center gap-4"><ScrollText size={64} className="opacity-20" />Используйте поиск или меню справа сверху, чтобы открыть свитки.</div>
-                )}
-              </div>
+              <HomeView searchQuery={searchQuery} setSearchQuery={setSearchQuery} setCurrentPage={setCurrentPage} isLoading={isLoading} displayedData={displayedData} selectedCategory={selectedCategory} favorites={favorites} canEdit={canEdit} canDelete={canDelete} handleToggleFavorite={handleToggleFavorite} setEditingItem={setEditingItem} handleDeleteItem={handleDeleteItem} setSelectedImage={setSelectedImage} playSound={playSound} />
             )}
 
             {view === "archive" && (
-              <div className="animate-smooth-fade-up w-full text-left">
-                 <div className="flex flex-wrap items-center gap-2 mb-8">
-                    <button onClick={() => { setSelectedCategory("Все"); setCurrentPage(1); setShowOnlyFavorites(false); playSound("click"); }} className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 ${selectedCategory === "Все" && !showOnlyFavorites ? 'bg-[#a37c49] text-[#160d08] border-[#a37c49] shadow-[0_0_15px_rgba(163,124,73,0.3)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-[#a37c49] hover:text-[#e6d5b8]'}`}>Все</button>
-                    {categories.map(c => (
-                      <button key={c.id} onClick={() => { setSelectedCategory(c.name); setCurrentPage(1); setShowOnlyFavorites(false); playSound("click"); }} className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 ${selectedCategory === c.name && !showOnlyFavorites ? 'bg-[#a37c49] text-[#160d08] border-[#a37c49] shadow-[0_0_15px_rgba(163,124,73,0.3)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-[#a37c49] hover:text-[#e6d5b8]'}`}>{c.name}</button>
-                    ))}
-                    
-                    <button onClick={() => { setShowOnlyFavorites(!showOnlyFavorites); playSound("click"); }} className={`px-4 py-2 rounded border font-pixeloid-mono uppercase tracking-wider text-sm transition-all duration-300 active:scale-95 flex items-center gap-2 ml-auto ${showOnlyFavorites ? 'bg-yellow-600 text-white border-yellow-500 shadow-[0_0_15px_rgba(202,138,4,0.4)] scale-105' : 'bg-[#2e1b13] border-[#5c3a21] text-[#8c6e52] hover:border-yellow-500 hover:text-yellow-400'}`}><Star size={16} fill={showOnlyFavorites ? "currentColor" : "none"} /> Избранное</button>
-                 </div>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {isLoading ? (
-                      <><SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard /></>
-                    ) : displayedData.length > 0 ? displayedData.map((item) => (
-                      <ArchiveCard key={item.id} item={item} canEdit={canEdit} canDelete={canDelete} onEdit={(item) => { setEditingItem(item); playSound("modalOpen"); }} onDelete={handleDeleteItem} onViewImage={(img) => { setSelectedImage(img); playSound("modalOpen"); }} isFavorite={favorites.includes(item.id)} onToggleFavorite={handleToggleFavorite} />
-                    )) : <p className="text-center w-full col-span-2 text-[#8c6e52]">{showOnlyFavorites ? "В избранном пока пусто..." : "В этой категории пока нет записей..."}</p>}
-                 </div>
-                 {totalPages > 1 && !showOnlyFavorites && (
-                   <div className="flex justify-center items-center gap-4 mt-12 pb-8">
-                     <button disabled={currentPage === 1} onClick={() => { setCurrentPage(prev => prev - 1); playSound("click"); }} className="p-3 bg-[#2e1b13] border border-[#5c3a21] rounded text-[#a37c49] disabled:opacity-30 hover:bg-[#5c3a21] hover:text-white active:scale-90 transition-all"><ChevronLeft size={24}/></button>
-                     <span className="font-pixeloid-mono text-lg text-[#a37c49]">Стр. {currentPage} из {totalPages}</span>
-                     <button disabled={currentPage === totalPages || totalPages === 0} onClick={() => { setCurrentPage(prev => prev + 1); playSound("click"); }} className="p-3 bg-[#2e1b13] border border-[#5c3a21] rounded text-[#a37c49] disabled:opacity-30 hover:bg-[#5c3a21] hover:text-white active:scale-90 transition-all"><ChevronRight size={24}/></button>
-                   </div>
-                 )}
-              </div>
+              <ArchiveView categories={categories} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} showOnlyFavorites={showOnlyFavorites} setShowOnlyFavorites={setShowOnlyFavorites} isLoading={isLoading} displayedData={displayedData} favorites={favorites} canEdit={canEdit} canDelete={canDelete} handleToggleFavorite={handleToggleFavorite} setEditingItem={setEditingItem} handleDeleteItem={handleDeleteItem} setSelectedImage={setSelectedImage} currentPage={currentPage} totalPages={totalPages} setCurrentPage={setCurrentPage} playSound={playSound} />
             )}
 
             {view === "admin" && userRole.level >= 1 && (
-              <div className="animate-smooth-fade-up w-full bg-[#2e1b13] p-8 rounded-xl border-double border-4 border-[#5c3a21]">
-                <div className="flex justify-between items-center mb-8 border-b border-[#5c3a21] pb-4"><h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49]">Панель Управления</h2></div>
-                <div className="flex flex-wrap gap-4 mb-8 font-pixeloid-mono text-sm">
-                  <button onClick={() => { setAdminTab("dashboard"); playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 flex items-center gap-2 ${adminTab === 'dashboard' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}><LayoutDashboard size={16}/> Дашборд</button>
-                  <button onClick={() => { setAdminTab("archive"); playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'archive' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Добавить</button>
-                  {userRole.level >= 2 && <button onClick={() => { setAdminTab("bulk"); playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'bulk' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Импорт</button>}
-                  
-                  {userRole.level >= 2 && <button onClick={() => { setAdminTab("users"); playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'users' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Аккаунты</button>}
-                  
-                  <button onClick={() => { setAdminTab("media"); playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 flex items-center gap-2 ${adminTab === 'media' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}><ImagePlus size={16}/> Медиа</button>
-                  {userRole.level >= 2 && <button onClick={() => { setAdminTab("categories"); playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'categories' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Категории</button>}
-                  {userRole.level >= 3 && <button onClick={() => { setAdminTab("roles"); playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'roles' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Уровни</button>}
-                  {(userRole.id === "owner" || userRole.id === "creator") && <button onClick={() => { setAdminTab("logs"); playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'logs' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Логи</button>}
-                  <button onClick={() => { setAdminTab("diag"); playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 ${adminTab === 'diag' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Диагностика</button>
-                </div>
-
-                {adminTab === "dashboard" && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-smooth-fade-up">
-                    <div className="bg-[#1c110b] p-6 rounded-xl border border-[#5c3a21] text-center shadow-lg"><ScrollText size={40} className="mx-auto text-[#a37c49] mb-4" /><h3 className="text-3xl font-bold text-[#e6d5b8] select-text">{stats.archives}</h3><p className="text-[#8c6e52] font-pixeloid-mono mt-2">Записей в архиве</p></div>
-                    <div className="bg-[#1c110b] p-6 rounded-xl border border-[#5c3a21] text-center shadow-lg"><Users size={40} className="mx-auto text-[#a37c49] mb-4" /><h3 className="text-3xl font-bold text-[#e6d5b8] select-text">{stats.users}</h3><p className="text-[#8c6e52] font-pixeloid-mono mt-2">Пользователей</p></div>
-                    <div className="bg-[#1c110b] p-6 rounded-xl border border-[#5c3a21] text-center shadow-lg"><Tag size={40} className="mx-auto text-[#a37c49] mb-4" /><h3 className="text-3xl font-bold text-[#e6d5b8] select-text">{stats.categories}</h3><p className="text-[#8c6e52] font-pixeloid-mono mt-2">Категорий</p></div>
-                  </div>
-                )}
-
-                {adminTab === "archive" && (
-                  <div className="animate-smooth-fade-up">
-                    <form onSubmit={handleAddMultipleItems} className="space-y-6 max-w-xl">
-                      {newItems.map((item, index) => (
-                        <div key={index} className="relative p-4 bg-[#1c110b] border border-[#5c3a21] rounded-lg">
-                          
-                          {newItems.length > 1 && (
-                            <button 
-                              type="button" 
-                              onClick={() => handleRemoveNewItem(index)} 
-                              className="absolute top-2 right-2 text-gray-500 hover:text-red-500 active:scale-90 transition-all bg-[#160d08] p-1.5 rounded"
-                              title="Удалить эту форму"
-                            >
-                              <X size={16} />
-                            </button>
-                          )}
-
-                          <div className="space-y-3">
-                            <input required placeholder="Название" value={item.title} onChange={e => { const upd = [...newItems]; upd[index].title = e.target.value; setNewItems(upd); }} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none transition-colors" />
-                            <div className="grid grid-cols-2 gap-4">
-                              <select value={item.category} onChange={e => { const upd = [...newItems]; upd[index].category = e.target.value; setNewItems(upd); }} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none">{categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select>
-                              <select value={item.dangerLevel} onChange={e => { const upd = [...newItems]; upd[index].dangerLevel = e.target.value; setNewItems(upd); }} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none">{DANGER_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}</select>
-                            </div>
-                            <textarea required placeholder="Описание (Markdown)" value={item.description} onChange={e => { const upd = [...newItems]; upd[index].description = e.target.value; setNewItems(upd); }} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white h-20 focus:border-[#a37c49] outline-none transition-colors" />
-                            <label className="flex items-center gap-2 text-sm text-[#a37c49] font-pixeloid-mono cursor-pointer"><input type="checkbox" checked={item.is_draft === 1} onChange={e => { const upd = [...newItems]; upd[index].is_draft = e.target.checked ? 1 : 0; setNewItems(upd); }} />Сохранить как черновик (скрыто от пользователей)</label>
-                            
-                            <div className="mt-2 border-t border-[#5c3a21] pt-3">
-                              <label className="block text-xs font-pixeloid-mono text-[#a37c49] mb-2 flex items-center gap-1"><ImageIcon size={14}/> Картинки (до 3 шт, макс 1МБ каждая)</label>
-                              <input type="file" multiple accept="image/*" onChange={(e) => handleImageUpload(e, index)} className="w-full text-sm text-[#8c6e52] file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-[#3d2617] file:text-[#e6d5b8] hover:file:bg-[#5c3a21] file:cursor-pointer mb-3" />
-                              <div className="flex flex-wrap gap-2">
-                                {item.images?.map((img, i) => (
-                                  <div key={i} className="relative inline-block border-2 border-[#5c3a21] rounded-lg overflow-hidden" style={{ backgroundColor: '#d6c5b3' }}>
-                                    <img src={img} alt="Preview" loading="lazy" draggable={false} className="h-20 object-contain p-1 no-select" />
-                                    <button type="button" onClick={() => handleRemoveImage(i, index)} className="absolute top-0 right-0 bg-red-600/80 hover:bg-red-600 text-white p-0.5 rounded-bl-lg transition-colors"><X size={12} /></button>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      <div className="flex gap-4">
-                        <button type="button" onClick={() => setNewItems([...newItems, { ...INITIAL_NEW_ITEM }])} className="px-4 py-2 bg-[#3d2617] border border-[#5c3a21] text-white rounded hover:bg-[#5c3a21] active:scale-95 transition-all">Добавить ещё</button>
-                        <button type="submit" className="px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-white font-bold rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Сохранить</button>
-                      </div>
-                    </form>
-                    {userRole.id === "owner" && (
-                      <div className="mt-12 pt-6 border-t border-red-900/50 max-w-xl animate-smooth-fade-up">
-                        <h3 className="text-red-500 font-bold font-pixeloid-mono mb-2 flex items-center gap-2"><AlertTriangle size={18}/> Опасная зона</h3>
-                        <p className="text-sm text-gray-500 mb-4">Эта кнопка безвозвратно удалит ВСЕ записи из архива.</p>
-                        <button onClick={handleClearDatabase} className="px-6 py-2 bg-red-900/20 border border-red-500 text-red-400 font-bold rounded hover:bg-red-900/40 active:scale-95 transition-all">Очистить базу данных</button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {adminTab === "media" && (
-                  <div className="animate-smooth-fade-up w-full">
-                    <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4">Галерея картинок</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {mediaList.map(m => (
-                        <div key={m.id} className="bg-[#1c110b] border border-[#5c3a21] rounded-lg p-2 relative group">
-                          <img src={m.image} alt={m.title} loading="lazy" draggable={false} className="w-full h-32 object-cover rounded no-select" />
-                          <div className="mt-2 text-xs text-center truncate select-text">{m.title}</div>
-                          <button onClick={() => handleDeleteMedia(m.id)} className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={14}/></button>
-                        </div>
-                      ))}
-                      {mediaList.length === 0 && <p className="col-span-full text-center text-[#8c6e52] py-8">Нет загруженных картинок</p>}
-                    </div>
-                  </div>
-                )}
-
-                {adminTab === "categories" && userRole.level >= 2 && (
-                  <div className="animate-smooth-fade-up max-w-xl">
-                    <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Tag size={18}/> Управление категориями</h3>
-                    <div className="flex gap-2 mb-6">
-                      <input type="text" placeholder="Новая категория..." value={newCatName} onChange={e => setNewCatName(e.target.value)} className="flex-grow p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
-                      <button onClick={handleAddCategory} className="px-4 py-2 bg-[#5c3a21] border border-[#a37c49] text-white font-bold rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Добавить</button>
-                    </div>
-                    <div className="space-y-2">
-                      {categories.map(c => (
-                        <div key={c.id} className="flex justify-between items-center p-3 bg-[#1c110b] border border-[#5c3a21] rounded">
-                          <span className="font-pixeloid-mono text-[#e6d5b8] select-text">{c.name}</span>
-                          <button onClick={() => handleDeleteCategory(c.id)} className="text-red-500 hover:text-red-400 p-1.5 rounded active:scale-90 transition-all"><Trash2 size={16}/></button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {adminTab === "roles" && userRole.level >= 3 && (
-                  <div className="animate-smooth-fade-up max-w-2xl">
-                    <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><ShieldAlert size={18}/> Уровни доступа (Роли)</h3>
-                    <div className="flex flex-wrap gap-2 mb-6 p-4 bg-[#1c110b] border border-[#5c3a21] rounded-lg">
-                      <input type="text" placeholder="Название роли..." value={newRoleName} onChange={e => setNewRoleName(e.target.value)} className="flex-grow p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
-                      <input type="number" placeholder="Уровень" value={newRoleLevel} onChange={e => setNewRoleLevel(parseInt(e.target.value))} className="w-32 p-2 bg-[#160d08] border border-[#5c3a21] rounded text-white focus:border-[#a37c49] outline-none" />
-                      <button onClick={handleAddRole} className="px-4 py-2 bg-[#5c3a21] border border-[#a37c49] text-white font-bold rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Создать</button>
-                    </div>
-                    <div className="space-y-2">
-                      {roles.map(r => (
-                        <div key={r.id} className="flex flex-wrap items-center gap-2 p-3 bg-[#1c110b] border border-[#5c3a21] rounded">
-                          <input type="text" value={r.name} onChange={e => { const newRoles = roles.map(role => role.id === r.id ? { ...role, name: e.target.value } : role); setRoles(newRoles); }} className="flex-grow p-1 bg-transparent border-b border-transparent hover:border-[#5c3a21] focus:border-[#a37c49] outline-none text-white font-pixeloid-mono" />
-                          <input type="number" value={r.level} onChange={e => { const newRoles = roles.map(role => role.id === r.id ? { ...role, level: parseInt(e.target.value) } : role); setRoles(newRoles); }} className="w-20 p-1 bg-[#160d08] border border-[#5c3a21] rounded text-center text-white" title="Уровень доступа" />
-                          {(userRole.id === "owner" || userRole.level > r.level) && <button onClick={() => handleUpdateRole(r.id, r.name, r.level)} className="text-green-500 hover:text-green-400 p-1.5 rounded active:scale-90 transition-all" title="Сохранить изменения"><Save size={16}/></button>}
-                          {r.id !== "owner" && (userRole.id === "owner" || userRole.level > r.level) && <button onClick={() => handleDeleteRole(r.id)} className="text-red-500 hover:text-red-400 p-1.5 rounded active:scale-90 transition-all" title="Удалить роль"><Trash2 size={16}/></button>}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {adminTab === "bulk" && userRole.level >= 2 && (
-                  <div className="space-y-8 max-w-3xl animate-smooth-fade-up">
-                    <div className="bg-[#1c110b] p-6 rounded-lg border-2 border-[#a37c49] shadow-[0_0_20px_rgba(163,124,73,0.1)]">
-                      <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-2 flex items-center gap-2"><BookOpen size={18}/> Умный импорт из текста (Google Docs)</h3>
-                      <p className="text-xs text-[#8c6e52] mb-4">
-                        Вставьте текст в формате:<br/>
-                        <code className="text-[#e6d5b8] bg-black/30 p-1 rounded">Название: Слово</code><br/>
-                        <code className="text-[#e6d5b8] bg-black/30 p-1 rounded">Категория: Слова</code><br/>
-                        <code className="text-[#e6d5b8] bg-black/30 p-1 rounded">Уровень: Низкий</code><br/>
-                        <code className="text-[#e6d5b8] bg-black/30 p-1 rounded">Описание: Само описание...</code><br/>
-                        <span className="text-[#a37c49] font-bold">---</span> (три дефиса для разделения записей)
-                      </p>
-                      <textarea 
-                        placeholder="Вставьте сюда текст из документа..." 
-                        value={bulkText} 
-                        onChange={e => setBulkText(e.target.value)} 
-                        className="w-full p-3 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] font-mono text-sm focus:border-[#a37c49] outline-none h-64" 
-                      />
-                      <button onClick={handleTextImport} className="mt-4 px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#7a4f2e] active:scale-95 transition-all shadow-lg">Импортировать текст</button>
-                    </div>
-
-                    <div className="bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
-                      <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Upload size={18}/> Импорт JSON (для профи)</h3>
-                      <textarea placeholder="Вставьте JSON сюда..." value={bulkJson} onChange={e => setBulkJson(e.target.value)} className="w-full p-3 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] font-mono text-sm focus:border-[#a37c49] outline-none h-32" />
-                      <button onClick={handleBulkImport} className="mt-4 px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#7a4f2e] active:scale-95 transition-all shadow-lg">Импортировать JSON</button>
-                    </div>
-
-                    <div className="bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
-                      <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Download size={18}/> Экспорт</h3>
-                      <div className="flex gap-4 flex-wrap">
-                        <button onClick={handleExport} className="px-6 py-2 bg-[#3d2617] border border-[#5c3a21] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#5c3a21] active:scale-95 transition-all shadow-lg flex items-center gap-2">
-                          <Download size={16} /> Скачать JSON
-                        </button>
-                        <button onClick={handleExportCSV} className="px-6 py-2 bg-[#3d2617] border border-green-700/50 text-green-400 font-bold font-pixeloid-mono rounded hover:bg-green-900/30 hover:border-green-500 active:scale-95 transition-all shadow-lg flex items-center gap-2">
-                          <FileSpreadsheet size={16} /> Скачать CSV (Excel)
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {adminTab === "users" && userRole.level >= 2 && (
-                  <div className="space-y-10 font-sans animate-smooth-fade-up">
-                    <form onSubmit={handleCreateUser} className="space-y-4 max-w-xl bg-[#1c110b] p-6 rounded-lg border border-[#5c3a21]">
-                      <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] flex items-center gap-2"><Plus size={18}/> Создать аккаунт</h3>
-                      <input required placeholder="Название аккаунта" value={newAcc.account_name} onChange={e => setNewAcc({...newAcc, account_name: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none" />
-                      <div className="flex items-center gap-2"><input required={!autoUser} placeholder="Логин" value={newAcc.username} onChange={e => setNewAcc({...newAcc, username: e.target.value})} disabled={autoUser} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none disabled:opacity-50" /><label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer font-pixeloid-mono hover:text-white transition-colors"><input type="checkbox" checked={autoUser} onChange={e => setAutoUser(e.target.checked)} /> Рандом</label></div>
-                      <div className="flex items-center gap-2"><input required={!autoPass} placeholder="Пароль" value={newAcc.password} onChange={e => setNewAcc({...newAcc, password: e.target.value})} disabled={autoPass} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none disabled:opacity-50" /><label className="flex items-center gap-1 text-sm text-[#8c6e52] cursor-pointer font-pixeloid-mono hover:text-white transition-colors"><input type="checkbox" checked={autoPass} onChange={e => setAutoPass(e.target.checked)} /> Рандом</label></div>
-                      <select value={newAcc.role} onChange={e => setNewAcc({...newAcc, role: e.target.value})} className="w-full p-2 bg-[#160d08] border border-[#5c3a21] rounded text-[#e6d5b8] focus:border-[#a37c49] outline-none">{roles.filter(r => userRole.id === "owner" || r.level < userRole.level).map(r => <option key={r.id} value={r.id}>{r.name} (Ур. {r.level})</option>)}</select>
-                      <button type="submit" className="px-6 py-2 bg-[#5c3a21] border border-[#a37c49] text-[#e6d5b8] font-bold font-pixeloid-mono rounded hover:bg-[#7a4f2e] active:scale-95 transition-all">Сгенерировать</button>
-                    </form>
-                    
-                    <div>
-                      <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Users size={18}/> Список аккаунтов</h3>
-                      <div className="overflow-x-auto rounded-lg border border-[#5c3a21]">
-                        <table className="w-full text-left border-collapse">
-                          <thead className="bg-[#1c110b]"><tr className="text-[#8c6e52] border-b border-[#5c3a21] font-pixeloid-mono text-sm"><th className="p-3">Имя</th><th className="p-3">Роль</th><th className="p-3">Логин</th><th className="p-3">Действие</th></tr></thead>
-                          <tbody>
-                            {usersList.map(u => {
-                              const roleObj = roles.find(r => r.id === u.role);
-                              const roleLevel = roleObj ? roleObj.level : 0;
-                              return (
-                                <tr key={u.id} className="border-b border-[#3d2617] hover:bg-[#1c110b] transition-colors">
-                                  <td className="p-3 font-medium select-text">{u.account_name}</td>
-                                  <td className={`p-3 text-sm font-bold font-pixeloid-mono ${getRoleColor(roleLevel)} select-text`}>{roleObj?.name || u.role}</td>
-                                  <td className="p-3 font-mono text-[#c4b5a5] select-text">{u.username}</td>
-                                  <td className="p-3">
-                                    {userRole.level > roleLevel && u.id !== user.id && (
-                                      <button onClick={() => handleDeleteUser(u.id, u.account_name)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all"><Trash2 size={16} /></button>
-                                    )}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {adminTab === "logs" && (userRole.id === "owner" || userRole.id === "creator") && (
-                  <div className="animate-smooth-fade-up">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] flex items-center gap-2"><History size={18}/> История действий (Последние 100)</h3>
-                      <button onClick={handleClearLogs} className="px-4 py-2 bg-red-900/20 border border-red-500 text-red-400 font-bold hover:bg-red-900/40 active:scale-95 transition-all rounded">Очистить логи</button>
-                    </div>
-                    <div className="overflow-x-auto rounded-lg border border-[#5c3a21]">
-                      <table className="w-full text-left border-collapse">
-                        <thead className="bg-[#1c110b]">
-                          <tr className="text-[#8c6e52] border-b border-[#5c3a21] font-pixeloid-mono text-sm">
-                            <th className="p-3">Действие</th>
-                            <th className="p-3">Объект</th>
-                            <th className="p-3">Пользователь</th>
-                            <th className="p-3">Роль</th>
-                            <th className="p-3">Время</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {logsList.map((log) => (
-                            <tr key={log.id} className="border-b border-[#3d2617] hover:bg-[#1c110b] transition-colors">
-                              <td className="p-3 font-mono text-sm text-[#e6d5b8] select-text">{log.action}</td>
-                              <td className="p-3 text-sm text-[#c4b5a5] select-text">{log.item_title}</td>
-                              <td className="p-3 text-sm text-[#c4b5a5] select-text">{log.user_name}</td>
-                              <td className="p-3 text-sm font-bold font-pixeloid-mono text-[#a37c49] select-text">{log.user_role}</td>
-                              <td className="p-3 text-sm text-[#8c6e52] select-text">{new Date(log.timestamp).toLocaleString()}</td>
-                            </tr>
-                          ))}
-                          {logsList.length === 0 && (
-                            <tr>
-                              <td colSpan={5} className="p-4 text-center text-[#8c6e52]">Логи пусты</td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {adminTab === "diag" && (
-                  <div className="animate-smooth-fade-up max-w-xl">
-                    <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Activity size={18}/> Диагностика базы данных</h3>
-                    <button onClick={async () => { try { const res = await fetch('/api/diag'); setDiagResult(await res.json()); } catch { setDiagResult({ status: 'error', message: 'Ошибка сети' }); } }} className="px-6 py-3 bg-[#5c3a21] border border-[#a37c49] text-white font-bold rounded-lg hover:bg-[#7a4f2e] active:scale-95 transition-all mb-6 flex items-center gap-2"><Database size={18}/> Проверить соединение</button>
-                    {diagResult && (
-                      <div className={`p-6 rounded-lg border-2 ${diagResult.status === 'ok' ? 'bg-green-900/20 border-green-500' : 'bg-red-900/20 border-red-500'}`}>
-                        <p className={`font-bold font-pixeloid-mono text-lg mb-2 ${diagResult.status === 'ok' ? 'text-green-400' : 'text-red-400'}`}>{diagResult.status === 'ok' ? '✓ Соединение установлено' : '✗ Ошибка соединения'}</p>
-                        <p className="text-[#c4b5a5] select-text">{diagResult.message}</p>
-                        {diagResult.latency !== undefined && <p className="text-[#8c6e52] text-sm mt-2 select-text">Задержка: {diagResult.latency} мс</p>}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+              <AdminView user={user} userRole={userRole} roles={roles} categories={categories} stats={stats} adminTab={adminTab} setAdminTab={setAdminTab} newItems={newItems} setNewItems={setNewItems} handleAddMultipleItems={handleAddMultipleItems} handleImageUpload={handleImageUpload} handleRemoveImage={handleRemoveImage} handleClearDatabase={handleClearDatabase} mediaList={mediaList} handleDeleteMedia={handleDeleteMedia} newCatName={newCatName} setNewCatName={setNewCatName} handleAddCategory={handleAddCategory} handleDeleteCategory={handleDeleteCategory} newRoleName={newRoleName} setNewRoleName={setNewRoleName} newRoleLevel={newRoleLevel} setNewRoleLevel={setNewRoleLevel} handleAddRole={handleAddRole} handleUpdateRole={handleUpdateRole} handleDeleteRole={handleDeleteRole} bulkText={bulkText} setBulkText={setBulkText} handleTextImport={handleTextImport} bulkJson={bulkJson} setBulkJson={setBulkJson} handleBulkImport={handleBulkImport} handleExport={handleExport} handleExportCSV={handleExportCSV} newAcc={newAcc} setNewAcc={setNewAcc} autoUser={autoUser} setAutoUser={setAutoUser} autoPass={autoPass} setAutoPass={setAutoPass} handleCreateUser={handleCreateUser} usersList={usersList} handleDeleteUser={handleDeleteUser} logsList={logsList} handleClearLogs={handleClearLogs} diagResult={diagResult} setDiagResult={setDiagResult} playSound={playSound} getRoleColor={getRoleColor} />
             )}
           </div>
         </div>
       )}
 
       {showScrollTop && (
-        <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="fixed bottom-8 right-8 p-3 bg-[#5c3a21] border-2 border-[#a37c49] rounded-full text-white shadow-[0_0_20px_rgba(163,124,73,0.5)] hover:bg-[#7a4f2e] active:scale-90 transition-all z-50" title="Наверх">
-          <ArrowUp size={24} />
-        </button>
+        <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="fixed bottom-8 right-8 p-3 bg-[#5c3a21] border-2 border-[#a37c49] rounded-full text-white shadow-lg hover:bg-[#7a4f2e] active:scale-90 transition-all z-50" title="Наверх"><ArrowUp size={24} /></button>
       )}
-
     </main>
   );
 }
