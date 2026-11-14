@@ -266,15 +266,27 @@ export const AdminView = (props: AdminViewProps) => {
             <table className="w-full text-left border-collapse">
               <thead className="bg-[#1c110b]"><tr className="text-[#8c6e52] border-b border-[#5c3a21] text-sm"><th className="p-3">Действие</th><th className="p-3">Объект</th><th className="p-3">Пользователь</th><th className="p-3">Роль</th><th className="p-3">Время</th></tr></thead>
               <tbody>
-                {props.logsList.map((log) => (
-                  <tr key={log.id} className="border-b border-[#3d2617] hover:bg-[#1c110b] transition-colors">
-                    <td className="p-3 font-mono text-sm text-[#e6d5b8] select-text">{log.action}</td>
-                    <td className="p-3 text-sm text-[#c4b5a5] select-text">{log.item_title}</td>
-                    <td className="p-3 text-sm text-[#c4b5a5] select-text">{log.user_name}</td>
-                    <td className="p-3 text-sm font-bold font-pixeloid-mono text-[#a37c49] select-text">{log.user_role}</td>
-                    <td className="p-3 text-sm text-[#8c6e52] select-text">{new Date(log.timestamp).toLocaleString()}</td>
-                  </tr>
-                ))}
+                {props.logsList.map((log) => {
+                  // Ищем красивую роль по её ID
+                  const roleObj = props.roles.find(r => r.id === log.user_role);
+                  const displayRole = roleObj ? roleObj.name : log.user_role;
+                  
+                  // Определяем цвет по уровню роли
+                  const roleColor = roleObj ? props.getRoleColor(roleObj.level) : "text-[#a37c49]";
+
+                  return (
+                    <tr key={log.id} className="border-b border-[#3d2617] hover:bg-[#1c110b] transition-colors">
+                      <td className="p-3 font-mono text-sm text-[#e6d5b8] select-text">{log.action}</td>
+                      <td className="p-3 text-sm text-[#c4b5a5] select-text">{log.item_title}</td>
+                      <td className="p-3 text-sm text-[#c4b5a5] select-text">{log.user_name}</td>
+                      
+                      {/* Выводим красивое название и применяем цвет */}
+                      <td className={`p-3 text-sm font-bold font-pixeloid-mono ${roleColor} select-text`}>{displayRole}</td>
+                      
+                      <td className="p-3 text-sm text-[#8c6e52] select-text">{new Date(log.timestamp).toLocaleString()}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
