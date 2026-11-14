@@ -10,7 +10,7 @@ import { HomeView } from "@/components/views/HomeView";
 import { ArchiveView } from "@/components/views/ArchiveView";
 import { AdminView } from "@/components/views/AdminView";
 import { Modals } from "@/components/Modals";
-import { ArrowUp, CheckCircle2, Skull, AlertTriangle, Info } from "lucide-react";
+import { ArrowUp, CheckCircle2, Skull, AlertTriangle, Info, Pill, AlertOctagon, PackageX } from "lucide-react";
 
 export default function TavernArchive() {
   const cursorDotRef = useRef<HTMLDivElement>(null);
@@ -476,7 +476,7 @@ export default function TavernArchive() {
   if (isCheckingAuth) return <main className="min-h-screen bg-[#160d08]"></main>;
 
   return (
-    <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col">
+    <main className="min-h-screen relative overflow-hidden bg-[#160d08] text-[#e6d5b8] font-sans flex flex-col pb-24">
       <div ref={cursorDotRef} className="custom-cursor-dot hidden md:block pointer-events-none" />
       <div ref={trail1Ref} className="custom-cursor-trail trail-1 hidden md:block pointer-events-none" />
       <div ref={trail2Ref} className="custom-cursor-trail trail-2 hidden md:block pointer-events-none" />
@@ -515,7 +515,7 @@ export default function TavernArchive() {
 
       {user && (
         <div className="flex-grow flex flex-col relative z-10 w-full animate-content-fade">
-          <Header user={user} userRole={userRole} infoPages={infoPages} view={view} setView={setView} openProfile={openProfile} handleLogout={handleLogout} setActivePage={setActivePage} playSound={playSound} getRoleColor={getRoleColor} />
+          <Header user={user} userRole={userRole} view={view} setView={setView} openProfile={openProfile} handleLogout={handleLogout} playSound={playSound} getRoleColor={getRoleColor} />
           
           <div className="max-w-5xl mx-auto px-6 pb-12 w-full flex flex-col flex-grow -mt-16">
             <header className="flex justify-center mb-8">
@@ -535,10 +535,7 @@ export default function TavernArchive() {
                 user={user} userRole={userRole} roles={roles} setRoles={setRoles} 
                 categories={categories} stats={stats} adminTab={adminTab} setAdminTab={setAdminTab} 
                 newItems={newItems} setNewItems={setNewItems} handleAddMultipleItems={handleAddMultipleItems} 
-                handleImageUpload={handleImageUpload} 
-                handleImageDrop={handleImageDrop} 
-                handleRemoveImage={handleRemoveImage} 
-                handleClearDatabase={handleClearDatabase} 
+                handleImageUpload={handleImageUpload} handleImageDrop={handleImageDrop} handleRemoveImage={handleRemoveImage} handleClearDatabase={handleClearDatabase} 
                 mediaList={mediaList} handleDeleteMedia={handleDeleteMedia} 
                 newCatName={newCatName} setNewCatName={setNewCatName} handleAddCategory={handleAddCategory} handleDeleteCategory={handleDeleteCategory} 
                 newRoleName={newRoleName} setNewRoleName={setNewRoleName} newRoleLevel={newRoleLevel} setNewRoleLevel={setNewRoleLevel} handleAddRole={handleAddRole} handleUpdateRole={handleUpdateRole} handleDeleteRole={handleDeleteRole} 
@@ -555,6 +552,30 @@ export default function TavernArchive() {
               />
             )}
           </div>
+        </div>
+      )}
+
+      {/* ПАНЕЛЬ КНОПОК ПРАВИЛ ВНИЗУ ПО ЦЕНТРУ */}
+      {user && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex flex-wrap justify-center gap-3 animate-menu-drop" style={{ animationDelay: '0.4s' }}>
+          {infoPages.map(page => {
+            let Icon = Info;
+            let shortName = "";
+            if (page.id === 'pharma') { Icon = Pill; shortName = "Фарма"; }
+            if (page.id === 'offensive') { Icon = AlertOctagon; shortName = "Контент"; }
+            if (page.id === 'dangerous') { Icon = PackageX; shortName = "Товары"; }
+
+            return (
+              <button 
+                key={page.id}
+                onClick={() => { setActivePage(page); playSound("modalOpen"); }} 
+                className="flex items-center gap-2 px-6 py-3 bg-[#2e1b13]/95 border-2 border-red-500/50 text-red-400 font-bold font-pixeloid-mono rounded-lg hover:bg-red-900/40 hover:text-white hover:border-red-500 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)] backdrop-blur-md"
+                title={page.title}
+              >
+                <Icon size={18} /> {shortName}
+              </button>
+            );
+          })}
         </div>
       )}
 
