@@ -555,27 +555,29 @@ export default function TavernArchive() {
         </div>
       )}
 
-      {/* ПАНЕЛЬ КНОПОК ПРАВИЛ ВНИЗУ ПО ЦЕНТРУ */}
+      {/* ПАНЕЛЬ КНОПОК ПРАВИЛ ВНИЗУ ПО ЦЕНТРУ (УМЕНЬШЕННАЯ И ЦЕНТРИРОВАННАЯ) */}
       {user && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex flex-wrap justify-center gap-3 animate-menu-drop" style={{ animationDelay: '0.4s' }}>
-          {infoPages.map(page => {
-            let Icon = Info;
-            let shortName = "";
-            if (page.id === 'pharma') { Icon = Pill; shortName = "Фарма"; }
-            if (page.id === 'offensive') { Icon = AlertOctagon; shortName = "Контент"; }
-            if (page.id === 'dangerous') { Icon = PackageX; shortName = "Товары"; }
+        <div className="fixed bottom-6 left-0 right-0 z-[100] flex justify-center pointer-events-none animate-menu-drop" style={{ animationDelay: '0.4s' }}>
+          <div className="flex flex-wrap justify-center gap-2 pointer-events-auto">
+            {infoPages.map(page => {
+              let Icon = Info;
+              let shortName = "";
+              if (page.id === 'pharma') { Icon = Pill; shortName = "Фарма"; }
+              if (page.id === 'offensive') { Icon = AlertOctagon; shortName = "Контент"; }
+              if (page.id === 'dangerous') { Icon = PackageX; shortName = "Товары"; }
 
-            return (
-              <button 
-                key={page.id}
-                onClick={() => { setActivePage(page); playSound("modalOpen"); }} 
-                className="flex items-center gap-2 px-6 py-3 bg-[#2e1b13]/95 border-2 border-red-500/50 text-red-400 font-bold font-pixeloid-mono rounded-lg hover:bg-red-900/40 hover:text-white hover:border-red-500 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)] backdrop-blur-md"
-                title={page.title}
-              >
-                <Icon size={18} /> {shortName}
-              </button>
-            );
-          })}
+              return (
+                <button 
+                  key={page.id}
+                  onClick={() => { setActivePage(page); playSound("modalOpen"); }} 
+                  className="flex items-center gap-2 px-4 py-2 bg-[#2e1b13]/95 border border-red-500/50 text-red-400 font-bold font-pixeloid-mono text-sm rounded-lg hover:bg-red-900/40 hover:text-white hover:border-red-500 transition-all shadow-lg backdrop-blur-md"
+                  title={page.title}
+                >
+                  <Icon size={14} /> {shortName}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
