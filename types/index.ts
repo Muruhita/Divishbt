@@ -1,0 +1,10 @@
+export type ArchiveItem = { id: number; title: string; category: string; description: string; symbol?: string; dangerLevel?: string; images?: string[]; is_draft?: number; };
+export type DbArchiveItem = { id: number; title: string; category: string; description: string; symbol: string | null; danger_level: string | null; image: string | null; is_draft: number; };
+export type User = { id: number; username: string; account_name: string; role: string; avatar?: string; };
+export type DbUser = { id: number; username: string; account_name: string; role: string; avatar: string | null; };
+export type LogItem = { id: number; action: string; item_title: string; user_name: string; user_role: string; timestamp: string; };
+export type NewArchiveItem = Omit<ArchiveItem, "id">;
+export type RoleItem = { id: string; name: string; level: number };
+export type CategoryItem = { id: number; name: string };
+export type InfoPage = { id: string; title: string; content: string; };
+export type ImportJsonItem = { title: string; category: string; description: string; symbol?: string; dangerLevel?: string; images?: string[]; image?: string; is_draft?: number; };
