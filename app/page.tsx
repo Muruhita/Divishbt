@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import imageCompression from "browser-image-compression";
 import { ArchiveItem, DbArchiveItem, User, DbUser, LogItem, NewArchiveItem, RoleItem, CategoryItem, InfoPage, ImportJsonItem } from "@/types";
 import { DEFAULT_CATEGORIES, DEFAULT_ROLES, DEFAULT_INFO_PAGES, INITIAL_NEW_ITEM, RUNES } from "@/constants";
 import { LoginBook } from "@/components/ui/LoginBook";
@@ -242,7 +243,8 @@ export default function TavernArchive() {
     const reader = new FileReader(); reader.onloadend = () => setUser(prev => prev ? { ...prev, avatar: reader.result as string } : null); reader.readAsDataURL(file);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, index?: number) => {
+  // ОБНОВЛЕННАЯ ФУНКЦИЯ СЖАТИЯ
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, index?: number) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
@@ -254,15 +256,31 @@ export default function TavernArchive() {
       return;
     }
 
-    Array.from(files).forEach(file => {
-      if (file.size > 1024 * 1024) {
-        showToast(`Файл ${file.name} больше 1МБ! Максимум 1МБ на картинку.`, "warning");
-        return;
+    const options = {
+      maxSizeMB: 0.2, // Сжимаем до 200 КБ
+      maxWidthOrHeight: 1200, // Ограничиваем разрешение
+      useWebWorker: true,
+    };
+
+    for (const file of Array.from(files)) {
+      // Проверяем исходный размер (если больше 5МБ, возможно, стоит предупредить)
+      if (file.size > 5 * 1024 * 1024) {
+        showToast(`Файл ${file.name} слишком большой (макс 5МБ для сжатия)`, "warning");
+        continue;
       }
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
+      try {
+        // Сжимаем файл
+        const compressedFile = await imageCompression(file, options);
+        
+        // Конвертируем сжатый файл в Base64
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(compressedFile);
+        });
+
         if (isEditing) {
           setEditingItem(prev => prev ? { ...prev, images: [...(prev.images || []), base64] } : null);
         } else {
@@ -272,9 +290,11 @@ export default function TavernArchive() {
             return updated;
           });
         }
-      };
-      reader.readAsDataURL(file);
-    });
+      } catch (error) {
+        console.error("Ошибка сжатия:", error);
+        showToast(`Не удалось сжать ${file.name}`, "error");
+      }
+    }
     
     e.target.value = '';
   };
