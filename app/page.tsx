@@ -77,7 +77,7 @@ export default function TavernArchive() {
   
   const [bulkJson, setBulkJson] = useState(""); 
   const [bulkText, setBulkText] = useState("");
-  const [adminTab, setAdminTab] = useState<"dashboard" | "archive" | "bulk" | "users" | "diag" | "logs" | "categories" | "roles" | "media">("dashboard");
+  const [adminTab, setAdminTab] = useState<"dashboard" | "archive" | "bulk" | "users" | "diag" | "logs" | "categories" | "roles" | "media" | "backup">("dashboard");
   
   const [usersList, setUsersList] = useState<DbUser[]>([]);
   const [logsList, setLogsList] = useState<LogItem[]>([]);
@@ -242,7 +242,6 @@ export default function TavernArchive() {
     const reader = new FileReader(); reader.onloadend = () => setUser(prev => prev ? { ...prev, avatar: reader.result as string } : null); reader.readAsDataURL(file);
   };
 
-  // ВОЗВРАЩЕНО НА BASE64
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, index?: number) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -386,6 +385,60 @@ export default function TavernArchive() {
     if (res.ok) { showToast("Сохранено", "success"); setIsEditingPage(false); const u = infoPages.map(p => p.id === activePage.id ? { ...p, content: editPageContent } : p); setInfoPages(u); setActivePage({ ...activePage, content: editPageContent }); }
   };
 
+  // --- БЭКАП ---
+  const handleDownloadBackup = async () => {
+    try {
+      const res = await fetch("/api/admin/backup");
+      if (!res.ok) throw new Error("Ошибка при скачивании бэкапа");
+      const data = await res.json();
+      
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `tavern_backup_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast("Бэкап успешно скачан!", "success");
+    } catch (e: any) {
+      showToast(e.message || "Ошибка", "error");
+    }
+  };
+
+  const handleUploadBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string);
+        
+        showConfirm("ВНИМАНИЕ! Это полностью сотрет текущую базу и заменит её данными из файла. Действие необратимо. Продолжить?", async () => {
+          const res = await fetch("/api/admin/backup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(json)
+          });
+          
+          if (res.ok) {
+            showToast("База успешно восстановлена! Перезагрузка...", "success");
+            setTimeout(() => window.location.reload(), 1500);
+          } else {
+            const d = await res.json();
+            showToast(d.error || "Ошибка восстановления", "error");
+          }
+        });
+      } catch {
+        showToast("Неверный формат файла бэкапа", "error");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
   useEffect(() => {
     if (view === "admin") {
       if (adminTab === "users" && userRole.level >= 2) fetchUsers();
@@ -451,7 +504,7 @@ export default function TavernArchive() {
             )}
 
             {view === "archive" && (
-              <ArchiveView categories={categories} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} showOnlyFavorites={showOnlyFavorites} setShowOnlyFavorites={setShowOnlyFavorites} isLoading={isLoading} displayedData={displayedData} favorites={favorites} canEdit={canEdit} canDelete={canDelete} handleToggleFavorite={handleToggleFavorite} setEditingItem={setEditingItem} handleDeleteItem={handleDeleteItem} setSelectedImage={setSelectedImage} currentPage={currentPage} totalPages={totalPages} setCurrentPage={setCurrentPage} playSound={playSound} />
+              <ArchiveView searchQuery={searchQuery} categories={categories} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} showOnlyFavorites={showOnlyFavorites} setShowOnlyFavorites={setShowOnlyFavorites} isLoading={isLoading} displayedData={displayedData} favorites={favorites} canEdit={canEdit} canDelete={canDelete} handleToggleFavorite={handleToggleFavorite} setEditingItem={setEditingItem} handleDeleteItem={handleDeleteItem} setSelectedImage={setSelectedImage} currentPage={currentPage} totalPages={totalPages} setCurrentPage={setCurrentPage} playSound={playSound} />
             )}
 
             {view === "admin" && userRole.level >= 1 && (
@@ -471,6 +524,8 @@ export default function TavernArchive() {
                 logsList={logsList} handleClearLogs={handleClearLogs} 
                 diagResult={diagResult} setDiagResult={setDiagResult} 
                 playSound={playSound} getRoleColor={getRoleColor} 
+                handleDownloadBackup={handleDownloadBackup}
+                handleUploadBackup={handleUploadBackup}
               />
             )}
           </div>
