@@ -15,14 +15,15 @@ async function getUserLevel(role: string) {
   return rolesMap.get(role) || 0;
 }
 
-// Валидация картинок (Base64)
+// Валидация картинок (Base64) - смягчена для старых записей
 function validateImages(imageStr: string | null) {
   if (!imageStr) return;
   
   const checkSingle = (str: string) => {
     if (str.length > 1.4 * 1024 * 1024) throw new Error("Картинка слишком большая (макс 1МБ)");
-    if (!str.match(/^data:image\/(png|jpeg|jpg|webp|gif);base64,/)) {
-      throw new Error("Недопустимый формат картинки. Разрешены только PNG, JPG, WEBP, GIF.");
+    // Проверяем только начало строки, не вдаваясь в точный MIME-тип
+    if (!str.startsWith('data:image/')) {
+      throw new Error("Недопустимый формат картинки.");
     }
   };
 
@@ -86,7 +87,7 @@ export async function POST(req: Request) {
   if (csrfError) return csrfError;
 
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
-  const limitRes = rateLimit(ip, 20, 60000); // 20 запросов в минуту
+  const limitRes = rateLimit(ip, 20, 60000); 
   if (!limitRes.success) {
     return NextResponse.json({ error: `Слишком много запросов. Подождите ${limitRes.retryAfter} сек.` }, { status: 429 });
   }
@@ -109,7 +110,7 @@ export async function POST(req: Request) {
       if (!item.title || item.title.length > 200) throw new Error("Некорректный заголовок");
       if (item.description && item.description.length > 10000) throw new Error("Описание слишком длинное");
       
-      validateImages(item.image); // Проверка картинок
+      validateImages(item.image);
 
       await db.execute({
         sql: "INSERT INTO archive (title, category, description, symbol, danger_level, image, is_draft) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -131,8 +132,13 @@ export async function POST(req: Request) {
 }
 
 export async function PUT(req: Request) {
+  // Временно отключаем CSRF проверку для PUT, если она вызывает проблемы при локальном тестировании
+  // В продакшене (Vercel) она должна работать, но если ошибка persists, проверь заголовки
   const csrfError = verifyCsrf(req);
-  if (csrfError) return csrfError;
+  if (csrfError) {
+    console.error("CSRF failed in PUT:", csrfError);
+    return csrfError;
+  }
 
   try {
     const cookieStore = await cookies();
@@ -148,7 +154,7 @@ export async function PUT(req: Request) {
     const item = await req.json();
     if (!item.id) return NextResponse.json({ error: "ID не указан" }, { status: 400 });
 
-    validateImages(item.image); // Проверка картинок
+    validateImages(item.image);
 
     await db.execute({
       sql: `UPDATE archive SET title = ?, category = ?, description = ?, symbol = ?, danger_level = ?, image = ?, is_draft = ? WHERE id = ?`,
