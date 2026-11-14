@@ -25,7 +25,7 @@ export const HomeView = (props: HomeViewProps) => {
     <div className="flex-grow flex flex-col items-center animate-smooth-fade-up text-center pb-20">
       <h2 className="text-4xl font-bold font-pixeloid-mono text-[#a37c49] mb-6">Запретный Архив</h2>
       <div className="relative w-full max-w-2xl mb-8 group">
-        <input type="text" placeholder="Поиск..." value={props.searchQuery} onChange={(e) => { props.setSearchQuery(e.target.value); props.setCurrentPage(1); }} className="w-full p-4 pl-12 bg-[#2e1b13] border-2 border-[#5c3a21] rounded-lg text-[#e6d5b8] font-pixeloid-mono focus:border-[#a37c49] transition-colors shadow-lg" />
+        <input type="text" placeholder="Поиск по названию, описанию, символу..." value={props.searchQuery} onChange={(e) => { props.setSearchQuery(e.target.value); props.setCurrentPage(1); }} className="w-full p-4 pl-12 bg-[#2e1b13] border-2 border-[#5c3a21] rounded-lg text-[#e6d5b8] font-pixeloid-mono focus:border-[#a37c49] transition-colors shadow-lg" />
         <Search className="absolute left-4 top-4 text-[#6b513b] group-focus-within:text-[#a37c49] transition-colors" size={24} />
       </div>
       
@@ -34,7 +34,7 @@ export const HomeView = (props: HomeViewProps) => {
           {props.isLoading ? (
             <><SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard /></>
           ) : props.displayedData.length > 0 ? props.displayedData.map((item) => (
-            <ArchiveCard key={item.id} item={item} canEdit={props.canEdit} canDelete={props.canDelete} onEdit={(item) => { props.setEditingItem(item); props.playSound("modalOpen"); }} onDelete={props.handleDeleteItem} onViewImage={(img) => { props.setSelectedImage(img); props.playSound("modalOpen"); }} isFavorite={props.favorites.includes(item.id)} onToggleFavorite={props.handleToggleFavorite} />
+            <ArchiveCard key={item.id} item={item} canEdit={props.canEdit} canDelete={props.canDelete} onEdit={(item) => { props.setEditingItem(item); props.playSound("modalOpen"); }} onDelete={props.handleDeleteItem} onViewImage={(img) => { props.setSelectedImage(img); props.playSound("modalOpen"); }} isFavorite={props.favorites.includes(item.id)} onToggleFavorite={props.handleToggleFavorite} searchQuery={props.searchQuery} />
           )) : <p className="text-center w-full col-span-2 text-[#8c6e52]">Ничего не найдено...</p>}
         </div>
       ) : (
