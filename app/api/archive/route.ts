@@ -27,9 +27,11 @@ export async function GET(req: Request) {
     const args: (string | number)[] = [];
 
     if (category !== "Все") { whereConditions.push("category = ?"); args.push(category); }
+    
+    // УЛУЧШЕННЫЙ ПОИСК: Ищем по title, description, symbol и category
     if (search) {
-      whereConditions.push("(LOWER(title) LIKE LOWER(?) OR LOWER(description) LIKE LOWER(?))");
-      args.push(`%${search}%`, `%${search}%`);
+      whereConditions.push("(LOWER(title) LIKE LOWER(?) OR LOWER(description) LIKE LOWER(?) OR LOWER(symbol) LIKE LOWER(?) OR LOWER(category) LIKE LOWER(?))");
+      args.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
     
     const userLevel = user ? await getUserLevel(user.role) : 0;
