@@ -25,7 +25,7 @@ export default function TavernArchive() {
 
   const showToast = useCallback((msg: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 5000); // Увеличил время показа ошибок до 5 сек
+    setTimeout(() => setToast(null), 5000);
   }, []);
   
   const showConfirm = useCallback((msg: string, onConfirm: () => void) => setConfirmDialog({ msg, onConfirm }), []);
@@ -242,40 +242,41 @@ export default function TavernArchive() {
     const reader = new FileReader(); reader.onloadend = () => setUser(prev => prev ? { ...prev, avatar: reader.result as string } : null); reader.readAsDataURL(file);
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, index?: number) => {
-    const files = e.target.files; if (!files || files.length === 0) return;
+  // ВОЗВРАЩЕНО НА BASE64
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, index?: number) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
     const isEditing = index === undefined;
     const currentImages = isEditing ? (editingItem?.images || []) : (newItems[index!].images || []);
-    if (currentImages.length + files.length > 3) return showToast("Максимум 3 картинки!", "warning");
     
-    for (const file of Array.from(files)) {
-      if (file.size > 1024 * 1024) { showToast(`Файл ${file.name} > 1МБ`, "warning"); continue; }
-      const formData = new FormData(); formData.append('file', file);
-      
-      try {
-        const res = await fetch('/api/upload', { method: 'POST', body: formData });
-        
-        // Читаем ответ как текст, чтобы перехватить HTML-ошибку, если API нет
-        const text = await res.text();
-        let d;
-        try {
-          d = JSON.parse(text);
-        } catch {
-          throw new Error(`Сервер вернул не JSON (Код: ${res.status}). Возможно, отсутствует /api/upload`);
-        }
-
-        if (res.ok && d.url) {
-          if (isEditing) setEditingItem(prev => prev ? { ...prev, images: [...(prev.images || []), d.url] } : null);
-          else setNewItems(prev => { const u = [...prev]; u[index!].images = [...(u[index!].images || []), d.url]; return u; });
-        } else {
-          showToast(d.error || 'Ошибка загрузки', 'error');
-        }
-      } catch (err: any) {
-        console.error("Upload error:", err);
-        // Показываем реальную причину
-        showToast(err.message || 'Ошибка соединения при загрузке', 'error');
-      }
+    if (currentImages.length + files.length > 3) {
+      showToast("Можно прикрепить не более 3 картинок!", "warning");
+      return;
     }
+
+    Array.from(files).forEach(file => {
+      if (file.size > 1024 * 1024) {
+        showToast(`Файл ${file.name} больше 1МБ! Максимум 1МБ на картинку.`, "warning");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        if (isEditing) {
+          setEditingItem(prev => prev ? { ...prev, images: [...(prev.images || []), base64] } : null);
+        } else {
+          setNewItems(prev => {
+            const updated = [...prev];
+            updated[index!].images = [...(updated[index!].images || []), base64];
+            return updated;
+          });
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+    
     e.target.value = '';
   };
 
