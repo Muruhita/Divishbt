@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { ArchiveItem, DbArchiveItem, User, DbUser, LogItem, NewArchiveItem, RoleItem, CategoryItem, InfoPage, ImportJsonItem } from "@/types";
 import { DEFAULT_CATEGORIES, DEFAULT_ROLES, DEFAULT_INFO_PAGES, INITIAL_NEW_ITEM, RUNES } from "@/constants";
-// Импорты ArchiveCard и SkeletonCard убраны, так как они теперь внутри HomeView и ArchiveView
 import { LoginBook } from "@/components/ui/LoginBook";
 import { Header } from "@/components/ui/Header";
 import { HomeView } from "@/components/views/HomeView";
@@ -26,8 +25,9 @@ export default function TavernArchive() {
 
   const showToast = useCallback((msg: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 3500);
+    setTimeout(() => setToast(null), 5000); // Увеличил время показа ошибок до 5 сек
   }, []);
+  
   const showConfirm = useCallback((msg: string, onConfirm: () => void) => setConfirmDialog({ msg, onConfirm }), []);
   const showPrompt = useCallback((msg: string, onConfirm: (val: string) => void) => setPromptDialog({ msg, val: "", onConfirm }), []);
 
@@ -247,17 +247,34 @@ export default function TavernArchive() {
     const isEditing = index === undefined;
     const currentImages = isEditing ? (editingItem?.images || []) : (newItems[index!].images || []);
     if (currentImages.length + files.length > 3) return showToast("Максимум 3 картинки!", "warning");
+    
     for (const file of Array.from(files)) {
       if (file.size > 1024 * 1024) { showToast(`Файл ${file.name} > 1МБ`, "warning"); continue; }
       const formData = new FormData(); formData.append('file', file);
+      
       try {
         const res = await fetch('/api/upload', { method: 'POST', body: formData });
-        const d = await res.json();
+        
+        // Читаем ответ как текст, чтобы перехватить HTML-ошибку, если API нет
+        const text = await res.text();
+        let d;
+        try {
+          d = JSON.parse(text);
+        } catch {
+          throw new Error(`Сервер вернул не JSON (Код: ${res.status}). Возможно, отсутствует /api/upload`);
+        }
+
         if (res.ok && d.url) {
           if (isEditing) setEditingItem(prev => prev ? { ...prev, images: [...(prev.images || []), d.url] } : null);
           else setNewItems(prev => { const u = [...prev]; u[index!].images = [...(u[index!].images || []), d.url]; return u; });
-        } else showToast(d.error || 'Ошибка загрузки', 'error');
-      } catch { showToast('Ошибка соединения', 'error'); }
+        } else {
+          showToast(d.error || 'Ошибка загрузки', 'error');
+        }
+      } catch (err: any) {
+        console.error("Upload error:", err);
+        // Показываем реальную причину
+        showToast(err.message || 'Ошибка соединения при загрузке', 'error');
+      }
     }
     e.target.value = '';
   };
