@@ -1,21 +1,19 @@
 import React from "react";
-import { User as UserIcon, LogOut, Home, ScrollText, Settings, Pill, AlertOctagon, PackageX, Info } from "lucide-react";
-import { User, RoleItem, InfoPage } from "@/types";
+import { User as UserIcon, LogOut, Home, ScrollText, Settings } from "lucide-react";
+import { User, RoleItem } from "@/types";
 
 interface HeaderProps {
   user: User;
   userRole: RoleItem;
-  infoPages: InfoPage[];
   view: "home" | "archive" | "admin";
   setView: (v: "home" | "archive" | "admin") => void;
   openProfile: () => void;
   handleLogout: () => void;
-  setActivePage: (p: InfoPage) => void;
   playSound: (t: string) => void;
   getRoleColor: (level: number) => string;
 }
 
-export const Header = ({ user, userRole, infoPages, view, setView, openProfile, handleLogout, setActivePage, playSound, getRoleColor }: HeaderProps) => {
+export const Header = ({ user, userRole, view, setView, openProfile, handleLogout, playSound, getRoleColor }: HeaderProps) => {
   return (
     <div className="w-full flex justify-end p-4 relative z-[60] animate-menu-drop" style={{ animationDelay: '0.2s' }}>
       <div className="flex flex-col items-end gap-2">
@@ -31,19 +29,6 @@ export const Header = ({ user, userRole, infoPages, view, setView, openProfile, 
         </button>
 
         <div className="flex flex-col gap-1 items-end">
-          {infoPages.map(page => {
-            let Icon = Info; let shortName = "";
-            if (page.id === 'pharma') { Icon = Pill; shortName = "Фарма"; }
-            if (page.id === 'offensive') { Icon = AlertOctagon; shortName = "Контент"; }
-            if (page.id === 'dangerous') { Icon = PackageX; shortName = "Товары"; }
-
-            return (
-              <button key={page.id} onClick={() => { setActivePage(page); playSound("modalOpen"); }} className="flex items-center gap-2 px-3 py-1.5 bg-red-900/20 border border-red-500/50 text-red-400 text-xs font-pixeloid-mono rounded hover:bg-red-900/40 hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start" title={page.title}>
-                <Icon size={14} /> {shortName}
-              </button>
-            );
-          })}
-
           {view !== "home" && <button onClick={() => { setView("home"); playSound("click"); }} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/90 border border-[#5c3a21] text-[#a37c49] text-xs font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start"><Home size={14} /> На главную</button>}
           {view !== "archive" && <button onClick={() => { setView("archive"); playSound("click"); }} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/90 border border-[#5c3a21] text-[#a37c49] text-xs font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start"><ScrollText size={14} /> Открыть свитки</button>}
           {view !== "admin" && userRole.level >= 1 && <button onClick={() => { setView("admin"); playSound("click"); }} className="flex items-center gap-2 px-3 py-1.5 bg-[#1c110b]/90 border border-[#5c3a21] text-[#a37c49] text-xs font-pixeloid-mono rounded hover:bg-[#5c3a21] hover:text-white transition-all shadow-md backdrop-blur-sm w-32 justify-start"><Settings size={14} /> Админка</button>}
