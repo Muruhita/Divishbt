@@ -626,9 +626,9 @@ export default function TavernArchive() {
             {infoPages.map(page => {
               let Icon = Info;
               let shortName = "";
-              if (page.id === 'pharma') { Icon = Pill; shortName = "Фарма"; }
-              if (page.id === 'offensive') { Icon = AlertOctagon; shortName = "Контент"; }
-              if (page.id === 'dangerous') { Icon = PackageX; shortName = "Товары"; }
+              if (page.id === 'pharma') { Icon = Pill; shortName = "Запр.Препараты"; }
+              if (page.id === 'offensive') { Icon = AlertOctagon; shortName = "Запр.Контент"; }
+              if (page.id === 'dangerous') { Icon = PackageX; shortName = "Запр.Товары"; }
 
               return (
                 <button 
