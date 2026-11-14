@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
+  // swcMinify удален, так как он устарел в Next.js 15
   images: {
     formats: ['image/avif', 'image/webp'],
   },
