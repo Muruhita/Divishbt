@@ -17,7 +17,8 @@
     "next": "15.5.28",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-markdown": "^9.0.1"
+    "react-markdown": "^9.0.1",
+    "rehype-sanitize": "^6.0.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
