@@ -34,8 +34,13 @@ export default function TavernArchive() {
 
   const [data, setData] = useState<ArchiveItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Раздельные стейты для поиска
   const [searchQuery, setSearchQuery] = useState("");
+  const [archiveSearchQuery, setArchiveSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState(""); 
+  const [archiveDebouncedSearch, setArchiveDebouncedSearch] = useState("");
+
   const [selectedCategory, setSelectedCategory] = useState("Все");
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
   const [favorites, setFavorites] = useState<number[]>([]);
@@ -101,10 +106,16 @@ export default function TavernArchive() {
     }
   }, [showToast]);
 
+  // Эффекты для дебаунса поиска
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearch(searchQuery), 500);
     return () => clearTimeout(handler);
   }, [searchQuery]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => setArchiveDebouncedSearch(archiveSearchQuery), 500);
+    return () => clearTimeout(handler);
+  }, [archiveSearchQuery]);
 
   useEffect(() => {
     const handleScroll = () => setShowScrollTop(window.scrollY > 300);
@@ -162,7 +173,7 @@ export default function TavernArchive() {
     }
   }, [user, favorites, showToast]);
 
-  const fetchArchive = useCallback(async (page = 1, cat = selectedCategory, search = debouncedSearch) => {
+  const fetchArchive = useCallback(async (page = 1, cat = selectedCategory, search = "") => {
     setIsLoading(true);
     try {
       const res = await fetch(`/api/archive?page=${page}&limit=${LIMIT}&category=${encodeURIComponent(cat)}&search=${encodeURIComponent(search)}`);
@@ -177,7 +188,7 @@ export default function TavernArchive() {
       });
       setData(formatted); setTotalPages(Math.ceil((result.total || 0) / LIMIT)); setCurrentPage(page);
     } catch { setData([]); } finally { setIsLoading(false); }
-  }, [selectedCategory, debouncedSearch]);
+  }, [selectedCategory]);
 
   useEffect(() => {
     try {
@@ -192,7 +203,13 @@ export default function TavernArchive() {
     fetchSettings();
   }, [fetchFavorites, fetchSettings]);
 
-  useEffect(() => { if (user) fetchArchive(currentPage, selectedCategory, debouncedSearch); }, [user, currentPage, selectedCategory, debouncedSearch, fetchArchive]);
+  // Вызов fetchArchive с правильным поиском в зависимости от вкладки
+  useEffect(() => { 
+    if (user) {
+      const activeSearch = view === "home" ? debouncedSearch : archiveDebouncedSearch;
+      fetchArchive(currentPage, selectedCategory, activeSearch);
+    }
+  }, [user, currentPage, selectedCategory, debouncedSearch, archiveDebouncedSearch, view, fetchArchive]);
 
   const userRole = roles.find(r => r.id === user?.role) || DEFAULT_ROLES.find(r => r.id === user?.role) || { level: 0, id: "guest", name: "Гость" };
   const canEdit = user?.role === 'owner' || user?.role === 'creator' || userRole.level >= 3;
@@ -355,7 +372,6 @@ export default function TavernArchive() {
       setEditingItem(null); 
       fetchArchive(currentPage); 
     } else {
-      // Читаем ошибку с сервера и показываем её
       const errorData = await res.json().catch(() => ({}));
       showToast(errorData.error || "Ошибка при обновлении. Проверьте консоль.", "error");
       console.error("Ошибка сервера:", errorData);
@@ -535,11 +551,47 @@ export default function TavernArchive() {
             </header>
 
             {view === "home" && (
-              <HomeView searchQuery={searchQuery} setSearchQuery={setSearchQuery} setCurrentPage={setCurrentPage} isLoading={isLoading} displayedData={displayedData} selectedCategory={selectedCategory} favorites={favorites} canEdit={canEdit} canDelete={canDelete} handleToggleFavorite={handleToggleFavorite} setEditingItem={setEditingItem} handleDeleteItem={handleDeleteItem} setSelectedImage={setSelectedImage} playSound={playSound} />
+              <HomeView 
+                searchQuery={searchQuery} 
+                setSearchQuery={setSearchQuery} 
+                setCurrentPage={setCurrentPage} 
+                isLoading={isLoading} 
+                displayedData={displayedData} 
+                selectedCategory={selectedCategory} 
+                favorites={favorites} 
+                canEdit={canEdit} 
+                canDelete={canDelete} 
+                handleToggleFavorite={handleToggleFavorite} 
+                setEditingItem={setEditingItem} 
+                handleDeleteItem={handleDeleteItem} 
+                setSelectedImage={setSelectedImage} 
+                playSound={playSound} 
+              />
             )}
 
             {view === "archive" && (
-              <ArchiveView searchQuery={searchQuery} categories={categories} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} showOnlyFavorites={showOnlyFavorites} setShowOnlyFavorites={setShowOnlyFavorites} isLoading={isLoading} displayedData={displayedData} favorites={favorites} canEdit={canEdit} canDelete={canDelete} handleToggleFavorite={handleToggleFavorite} setEditingItem={setEditingItem} handleDeleteItem={handleDeleteItem} setSelectedImage={setSelectedImage} currentPage={currentPage} totalPages={totalPages} setCurrentPage={setCurrentPage} playSound={playSound} />
+              <ArchiveView 
+                searchQuery={archiveSearchQuery} 
+                setSearchQuery={setArchiveSearchQuery} 
+                categories={categories} 
+                selectedCategory={selectedCategory} 
+                setSelectedCategory={setSelectedCategory} 
+                showOnlyFavorites={showOnlyFavorites} 
+                setShowOnlyFavorites={setShowOnlyFavorites} 
+                isLoading={isLoading} 
+                displayedData={displayedData} 
+                favorites={favorites} 
+                canEdit={canEdit} 
+                canDelete={canDelete} 
+                handleToggleFavorite={handleToggleFavorite} 
+                setEditingItem={setEditingItem} 
+                handleDeleteItem={handleDeleteItem} 
+                setSelectedImage={setSelectedImage} 
+                currentPage={currentPage} 
+                totalPages={totalPages} 
+                setCurrentPage={setCurrentPage} 
+                playSound={playSound} 
+              />
             )}
 
             {view === "admin" && userRole.level >= 1 && (
@@ -567,7 +619,7 @@ export default function TavernArchive() {
         </div>
       )}
 
-      {/* ПАНЕЛЬ КНОПОК ПРАВИЛ ВНИЗУ ПО ЦЕНТРУ (УМЕНЬШЕННАЯ И ЦЕНТРИРОВАННАЯ) */}
+      {/* ПАНЕЛЬ КНОПОК ПРАВИЛ ВНИЗУ ПО ЦЕНТРУ */}
       {user && (
         <div className="fixed bottom-6 left-0 right-0 z-[100] flex justify-center pointer-events-none animate-menu-drop" style={{ animationDelay: '0.4s' }}>
           <div className="flex flex-wrap justify-center gap-2 pointer-events-auto">
