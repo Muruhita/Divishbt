@@ -11,7 +11,6 @@ export async function GET() {
     { name: "JWT_SECRET", value: process.env.JWT_SECRET },
     { name: "Turso Database URL", value: process.env.tavernoydb_TURSO_DATABASE_URL },
     { name: "Turso Auth Token", value: process.env.tavernoydb_TURSO_AUTH_TOKEN },
-    { name: "Vercel Blob Token", value: process.env.BLOB_READ_WRITE_TOKEN || process.env.IMGSTR_BLOB_READ_WRITE_TOKEN },
   ];
 
   envChecks.forEach(env => {
