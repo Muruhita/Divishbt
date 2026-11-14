@@ -2,16 +2,21 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
+import { unstable_cache, revalidateTag } from "next/cache";
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
-  try {
+const getInfoPages = unstable_cache(
+  async () => {
     const result = await db.execute("SELECT * FROM info_pages");
-    return NextResponse.json(result.rows);
-  } catch (error) {
-    return NextResponse.json({ error: "Ошибка получения данных" }, { status: 500 });
-  }
+    return result.rows;
+  },
+  ['info-pages-list'],
+  { tags: ['info-pages'] }
+);
+
+export async function GET() {
+  try { return NextResponse.json(await getInfoPages()); } catch { return NextResponse.json({ error: "Ошибка" }, { status: 500 }); }
 }
 
 export async function PUT(req: Request) {
@@ -25,25 +30,15 @@ export async function PUT(req: Request) {
     const rolesMap = new Map(rolesRes.rows.map(r => [r.id, Number(r.level)]));
     const userLevel = rolesMap.get(user.role) || 0;
     
-    // Проверка прав: уровень 2 и выше (Хранитель, Создатель, Овнер)
     if (user.role !== 'owner' && user.role !== 'creator' && userLevel < 2) {
-      return NextResponse.json({ error: "Недостаточно прав. Требуется Хранитель или выше." }, { status: 403 });
+      return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
     }
 
     const { id, content } = await req.json();
+    await db.execute({ sql: "UPDATE info_pages SET content = ? WHERE id = ?", args: [content, id] });
+    await db.execute({ sql: "INSERT INTO logs (action, item_title, user_name, user_role) VALUES (?, ?, ?, ?)", args: ["ИЗМЕНЕНИЕ_ПРАВИЛ", id, user.account_name, user.role] });
     
-    await db.execute({
-      sql: "UPDATE info_pages SET content = ? WHERE id = ?",
-      args: [content, id]
-    });
-    
-    await db.execute({
-      sql: "INSERT INTO logs (action, item_title, user_name, user_role) VALUES (?, ?, ?, ?)",
-      args: ["ИЗМЕНЕНИЕ_ПРАВИЛ", id, user.account_name, user.role],
-    });
-
+    revalidateTag('info-pages');
     return NextResponse.json({ success: true });
-  } catch (error) {
-    return NextResponse.json({ error: "Ошибка при обновлении" }, { status: 500 });
-  }
+  } catch { return NextResponse.json({ error: "Ошибка при обновлении" }, { status: 500 }); }
 }
