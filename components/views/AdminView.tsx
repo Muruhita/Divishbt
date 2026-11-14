@@ -1,5 +1,5 @@
 import React from "react";
-import { LayoutDashboard, ScrollText, Users, Tag, ImagePlus, ShieldAlert, History, Activity, Database, Plus, X, Image as ImageIcon, AlertTriangle, BookOpen, Upload, Download, FileSpreadsheet, Trash2, Save, CheckCircle2 } from "lucide-react";
+import { LayoutDashboard, ScrollText, Users, Tag, ImagePlus, ShieldAlert, History, Activity, Database, Plus, X, Image as ImageIcon, AlertTriangle, BookOpen, Upload, Download, FileSpreadsheet, Trash2, Save, CheckCircle2, HardDriveDownload, HardDriveUpload } from "lucide-react";
 import { User, RoleItem, CategoryItem, NewArchiveItem, DbUser, LogItem } from "@/types";
 import { DANGER_LEVELS } from "@/constants";
 
@@ -54,6 +54,9 @@ interface AdminViewProps {
   setDiagResult: (v: any) => void;
   playSound: (t: string) => void;
   getRoleColor: (level: number) => string;
+  // Для бэкапа
+  handleDownloadBackup: () => void;
+  handleUploadBackup: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export const AdminView = (props: AdminViewProps) => {
@@ -63,7 +66,6 @@ export const AdminView = (props: AdminViewProps) => {
         <h2 className="text-2xl font-bold font-pixeloid-mono text-[#a37c49]">Панель Управления</h2>
       </div>
       
-      {/* Навигация по вкладкам */}
       <div className="flex flex-wrap gap-4 mb-8 font-pixeloid-mono text-sm">
         <button onClick={() => { props.setAdminTab("dashboard"); props.playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 flex items-center gap-2 ${props.adminTab === 'dashboard' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}><LayoutDashboard size={16}/> Дашборд</button>
         <button onClick={() => { props.setAdminTab("archive"); props.playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 ${props.adminTab === 'archive' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Добавить</button>
@@ -73,27 +75,16 @@ export const AdminView = (props: AdminViewProps) => {
         {props.userRole.level >= 2 && <button onClick={() => { props.setAdminTab("categories"); props.playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 ${props.adminTab === 'categories' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Категории</button>}
         {props.userRole.level >= 3 && <button onClick={() => { props.setAdminTab("roles"); props.playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 ${props.adminTab === 'roles' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Уровни</button>}
         {(props.userRole.id === "owner" || props.userRole.id === "creator") && <button onClick={() => { props.setAdminTab("logs"); props.playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 ${props.adminTab === 'logs' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Логи</button>}
+        {props.userRole.id === "owner" && <button onClick={() => { props.setAdminTab("backup"); props.playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 flex items-center gap-2 ${props.adminTab === 'backup' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}><Database size={16}/> Бэкап</button>}
         <button onClick={() => { props.setAdminTab("diag"); props.playSound("click"); }} className={`px-4 py-2 rounded transition-all active:scale-95 ${props.adminTab === 'diag' ? 'bg-[#5c3a21] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Диагностика</button>
       </div>
 
       {/* --- DASHBOARD --- */}
       {props.adminTab === "dashboard" && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-smooth-fade-up">
-          <div className="bg-[#1c110b] p-6 rounded-xl border border-[#5c3a21] text-center shadow-lg">
-            <ScrollText size={40} className="mx-auto text-[#a37c49] mb-4" />
-            <h3 className="text-3xl font-bold text-[#e6d5b8] select-text">{props.stats.archives}</h3>
-            <p className="text-[#8c6e52] font-pixeloid-mono mt-2">Записей в архиве</p>
-          </div>
-          <div className="bg-[#1c110b] p-6 rounded-xl border border-[#5c3a21] text-center shadow-lg">
-            <Users size={40} className="mx-auto text-[#a37c49] mb-4" />
-            <h3 className="text-3xl font-bold text-[#e6d5b8] select-text">{props.stats.users}</h3>
-            <p className="text-[#8c6e52] font-pixeloid-mono mt-2">Пользователей</p>
-          </div>
-          <div className="bg-[#1c110b] p-6 rounded-xl border border-[#5c3a21] text-center shadow-lg">
-            <Tag size={40} className="mx-auto text-[#a37c49] mb-4" />
-            <h3 className="text-3xl font-bold text-[#e6d5b8] select-text">{props.stats.categories}</h3>
-            <p className="text-[#8c6e52] font-pixeloid-mono mt-2">Категорий</p>
-          </div>
+          <div className="bg-[#1c110b] p-6 rounded-xl border border-[#5c3a21] text-center shadow-lg"><ScrollText size={40} className="mx-auto text-[#a37c49] mb-4" /><h3 className="text-3xl font-bold text-[#e6d5b8] select-text">{props.stats.archives}</h3><p className="text-[#8c6e52] font-pixeloid-mono mt-2">Записей в архиве</p></div>
+          <div className="bg-[#1c110b] p-6 rounded-xl border border-[#5c3a21] text-center shadow-lg"><Users size={40} className="mx-auto text-[#a37c49] mb-4" /><h3 className="text-3xl font-bold text-[#e6d5b8] select-text">{props.stats.users}</h3><p className="text-[#8c6e52] font-pixeloid-mono mt-2">Пользователей</p></div>
+          <div className="bg-[#1c110b] p-6 rounded-xl border border-[#5c3a21] text-center shadow-lg"><Tag size={40} className="mx-auto text-[#a37c49] mb-4" /><h3 className="text-3xl font-bold text-[#e6d5b8] select-text">{props.stats.categories}</h3><p className="text-[#8c6e52] font-pixeloid-mono mt-2">Категорий</p></div>
         </div>
       )}
 
@@ -305,6 +296,30 @@ export const AdminView = (props: AdminViewProps) => {
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* --- BACKUP --- */}
+      {props.adminTab === "backup" && props.userRole.id === "owner" && (
+        <div className="animate-smooth-fade-up max-w-2xl">
+          <h3 className="text-lg font-bold font-pixeloid-mono text-[#a37c49] mb-4 flex items-center gap-2"><Database size={18}/> Бэкап Базы Данных</h3>
+          
+          <div className="bg-[#1c110b] p-6 rounded-lg border-2 border-[#a37c49] mb-6">
+            <h4 className="font-bold text-white mb-2">Скачать полную копию</h4>
+            <p className="text-sm text-[#8c6e52] mb-4">Скачивает всю базу (пользователей, записи, логи, настройки) в один JSON-файл.</p>
+            <button onClick={props.handleDownloadBackup} className="px-6 py-3 bg-[#5c3a21] border border-[#a37c49] text-white font-bold rounded-lg flex items-center gap-2 hover:bg-[#7a4f2e] transition-all">
+              <HardDriveDownload size={18}/> Скачать бэкап
+            </button>
+          </div>
+
+          <div className="bg-[#2e1b13] p-6 rounded-lg border border-red-500/50">
+            <h4 className="font-bold text-red-500 mb-2 flex items-center gap-2"><AlertTriangle size={18}/> Восстановить из файла</h4>
+            <p className="text-sm text-gray-400 mb-4">ВНИМАНИЕ! Это полностью сотрет текущую базу и заменит её данными из файла. Действие необратимо!</p>
+            <label className="px-6 py-3 bg-red-900/20 border border-red-500 text-red-400 font-bold rounded-lg inline-flex items-center gap-2 cursor-pointer hover:bg-red-900/40 transition-all">
+              <HardDriveUpload size={18}/> Выбрать файл бэкапа
+              <input type="file" accept=".json" onChange={props.handleUploadBackup} className="hidden" />
+            </label>
           </div>
         </div>
       )}
