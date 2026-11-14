@@ -2,6 +2,7 @@ import React from "react";
 import ReactMarkdown from "react-markdown";
 import { Star, Pencil, Trash2, Maximize2 } from "lucide-react";
 import { ArchiveItem } from "@/types";
+import { Highlight } from "./Highlight";
 
 export const SkeletonCard = React.memo(() => (
   <div className="bg-[#2e1b13] border-double border-4 border-[#5c3a21] rounded-lg p-6 flex flex-col h-64 animate-pulse">
@@ -22,8 +23,24 @@ export const SkeletonCard = React.memo(() => (
 ));
 SkeletonCard.displayName = 'SkeletonCard';
 
+// Компонент для рендера Markdown с подсветкой
+const MarkdownWithHighlight = ({ text, query }: { text: string, query: string }) => {
+  return (
+    <ReactMarkdown
+      components={{
+        p: ({ children }) => <p>{React.Children.map(children, child => typeof child === 'string' ? <Highlight text={child} query={query} /> : child)}</p>,
+        li: ({ children }) => <li>{React.Children.map(children, child => typeof child === 'string' ? <Highlight text={child} query={query} /> : child)}</li>,
+        strong: ({ children }) => <strong>{React.Children.map(children, child => typeof child === 'string' ? <Highlight text={child} query={query} /> : child)}</strong>,
+        em: ({ children }) => <em>{React.Children.map(children, child => typeof child === 'string' ? <Highlight text={child} query={query} /> : child)}</em>,
+      }}
+    >
+      {text}
+    </ReactMarkdown>
+  );
+};
+
 export const ArchiveCard = React.memo(({ 
-  item, canEdit, canDelete, onEdit, onDelete, onViewImage, isFavorite, onToggleFavorite
+  item, canEdit, canDelete, onEdit, onDelete, onViewImage, isFavorite, onToggleFavorite, searchQuery = ""
 }: { 
   item: ArchiveItem; 
   canEdit: boolean; 
@@ -33,6 +50,7 @@ export const ArchiveCard = React.memo(({
   onViewImage: (img: string) => void;
   isFavorite: boolean;
   onToggleFavorite: (id: number) => void;
+  searchQuery?: string;
 }) => {
   if (!item || !item.title) return null;
   const imgCount = item.images?.length || 0;
@@ -80,33 +98,34 @@ export const ArchiveCard = React.memo(({
       )}
       <div className="p-6 flex flex-col flex-grow">
         <div className="flex justify-between items-start mb-3 relative z-10">
-          <h3 className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8] select-text">{item.title}</h3>
+          <h3 className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8] select-text">
+            <Highlight text={item.title} query={searchQuery} />
+          </h3>
           <div className="flex gap-2 items-center">
              {item.is_draft === 1 && <span className="text-xs bg-yellow-600 text-white px-2 py-1 rounded font-bold">Черновик</span>}
-             {item.symbol && <span className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8] bg-[#1c110b] px-3 py-1 rounded border border-[#5c3a21] select-text">{item.symbol}</span>}
+             {item.symbol && (
+               <span className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8] bg-[#1c110b] px-3 py-1 rounded border border-[#5c3a21] select-text">
+                 <Highlight text={item.symbol} query={searchQuery} />
+               </span>
+             )}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 mb-4 relative z-10">
-          <span className="inline-block px-3 py-1 text-xs font-bold font-pixeloid-mono bg-[#1c110b] text-[#a37c49] rounded border border-[#5c3a21] uppercase select-text">{item.category}</span>
+          <span className="inline-block px-3 py-1 text-xs font-bold font-pixeloid-mono bg-[#1c110b] text-[#a37c49] rounded border border-[#5c3a21] uppercase select-text">
+            <Highlight text={item.category} query={searchQuery} />
+          </span>
           {item.dangerLevel && <span className="inline-block px-2 py-1 text-xs font-bold font-pixeloid-mono rounded border border-red-900/50 bg-red-900/20 text-red-400 uppercase select-text">{item.dangerLevel}</span>}
           
           <div className="ml-auto flex items-center gap-1 relative z-[60]">
-            <button 
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFavorite(item.id); }} 
-              className={`p-1.5 rounded active:scale-90 transition-all cursor-pointer ${isFavorite ? 'text-yellow-400 bg-yellow-500/10' : 'text-gray-500 hover:text-yellow-400 bg-white/5 hover:bg-yellow-500/10'}`}
-            >
+            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFavorite(item.id); }} className={`p-1.5 rounded active:scale-90 transition-all cursor-pointer ${isFavorite ? 'text-yellow-400 bg-yellow-500/10' : 'text-gray-500 hover:text-yellow-400 bg-white/5 hover:bg-yellow-500/10'}`}>
               <Star size={16} fill={isFavorite ? "currentColor" : "none"} />
             </button>
-            {canEdit && (
-              <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(item); }} className="text-blue-400 hover:text-blue-300 bg-blue-500/10 p-1.5 rounded active:scale-90 transition-all cursor-pointer"><Pencil size={16} /></button>
-            )}
-            {canDelete && (
-              <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(item.id, item.title); }} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all cursor-pointer"><Trash2 size={16} /></button>
-            )}
+            {canEdit && <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(item); }} className="text-blue-400 hover:text-blue-300 bg-blue-500/10 p-1.5 rounded active:scale-90 transition-all cursor-pointer"><Pencil size={16} /></button>}
+            {canDelete && <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(item.id, item.title); }} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all cursor-pointer"><Trash2 size={16} /></button>}
           </div>
         </div>
         <div className="text-[#c4b5a5] font-sans leading-relaxed flex-grow relative z-10 prose prose-invert prose-sm max-w-none select-text">
-          <ReactMarkdown>{item.description}</ReactMarkdown>
+          <MarkdownWithHighlight text={item.description} query={searchQuery} />
         </div>
       </div>
     </div>
