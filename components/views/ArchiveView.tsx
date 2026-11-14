@@ -22,6 +22,7 @@ interface ArchiveViewProps {
   totalPages: number;
   setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
   playSound: (t: string) => void;
+  searchQuery: string;
 }
 
 export const ArchiveView = (props: ArchiveViewProps) => {
@@ -38,7 +39,7 @@ export const ArchiveView = (props: ArchiveViewProps) => {
           {props.isLoading ? (
             <><SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard /></>
           ) : props.displayedData.length > 0 ? props.displayedData.map((item) => (
-            <ArchiveCard key={item.id} item={item} canEdit={props.canEdit} canDelete={props.canDelete} onEdit={(item) => { props.setEditingItem(item); props.playSound("modalOpen"); }} onDelete={props.handleDeleteItem} onViewImage={(img) => { props.setSelectedImage(img); props.playSound("modalOpen"); }} isFavorite={props.favorites.includes(item.id)} onToggleFavorite={props.handleToggleFavorite} />
+            <ArchiveCard key={item.id} item={item} canEdit={props.canEdit} canDelete={props.canDelete} onEdit={(item) => { props.setEditingItem(item); props.playSound("modalOpen"); }} onDelete={props.handleDeleteItem} onViewImage={(img) => { props.setSelectedImage(img); props.playSound("modalOpen"); }} isFavorite={props.favorites.includes(item.id)} onToggleFavorite={props.handleToggleFavorite} searchQuery={props.searchQuery} />
           )) : <p className="text-center w-full col-span-2 text-[#8c6e52]">{props.showOnlyFavorites ? "В избранном пока пусто..." : "В этой категории пока нет записей..."}</p>}
        </div>
        {props.totalPages > 1 && !props.showOnlyFavorites && (
