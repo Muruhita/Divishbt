@@ -8,18 +8,21 @@ body {
   background-color: #160d08;
   color: #e6d5b8;
   overflow-x: hidden;
-}
-
-/* Класс для запрета выделения только на декоративных элементах */
-.no-select {
+  /* Глобальный запрет выделения */
   user-select: none;
   -webkit-user-select: none;
 }
 
-/* Разрешаем выделение для полей ввода */
-input, textarea {
+/* Разрешаем выделение только полей и элементов с классом .select-text */
+input, textarea, .select-text {
   user-select: text !important;
   -webkit-user-select: text !important;
+}
+
+/* Явный запрет для декоративных элементов (на всякий случай) */
+.no-select {
+  user-select: none !important;
+  -webkit-user-select: none !important;
 }
 
 .font-pixeloid-mono {
