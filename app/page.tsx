@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { ArchiveItem, DbArchiveItem, User, DbUser, LogItem, NewArchiveItem, RoleItem, CategoryItem, InfoPage, ImportJsonItem } from "@/types";
 import { DEFAULT_CATEGORIES, DEFAULT_ROLES, DEFAULT_INFO_PAGES, INITIAL_NEW_ITEM, RUNES } from "@/constants";
-import { ArchiveCard, SkeletonCard } from "@/components/ui/ArchiveCard";
+// Импорты ArchiveCard и SkeletonCard убраны, так как они теперь внутри HomeView и ArchiveView
 import { LoginBook } from "@/components/ui/LoginBook";
 import { Header } from "@/components/ui/Header";
 import { HomeView } from "@/components/views/HomeView";
@@ -437,7 +437,23 @@ export default function TavernArchive() {
             )}
 
             {view === "admin" && userRole.level >= 1 && (
-              <AdminView user={user} userRole={userRole} roles={roles} categories={categories} stats={stats} adminTab={adminTab} setAdminTab={setAdminTab} newItems={newItems} setNewItems={setNewItems} handleAddMultipleItems={handleAddMultipleItems} handleImageUpload={handleImageUpload} handleRemoveImage={handleRemoveImage} handleClearDatabase={handleClearDatabase} mediaList={mediaList} handleDeleteMedia={handleDeleteMedia} newCatName={newCatName} setNewCatName={setNewCatName} handleAddCategory={handleAddCategory} handleDeleteCategory={handleDeleteCategory} newRoleName={newRoleName} setNewRoleName={setNewRoleName} newRoleLevel={newRoleLevel} setNewRoleLevel={setNewRoleLevel} handleAddRole={handleAddRole} handleUpdateRole={handleUpdateRole} handleDeleteRole={handleDeleteRole} bulkText={bulkText} setBulkText={setBulkText} handleTextImport={handleTextImport} bulkJson={bulkJson} setBulkJson={setBulkJson} handleBulkImport={handleBulkImport} handleExport={handleExport} handleExportCSV={handleExportCSV} newAcc={newAcc} setNewAcc={setNewAcc} autoUser={autoUser} setAutoUser={setAutoUser} autoPass={autoPass} setAutoPass={setAutoPass} handleCreateUser={handleCreateUser} usersList={usersList} handleDeleteUser={handleDeleteUser} logsList={logsList} handleClearLogs={handleClearLogs} diagResult={diagResult} setDiagResult={setDiagResult} playSound={playSound} getRoleColor={getRoleColor} />
+              <AdminView 
+                user={user} userRole={userRole} roles={roles} setRoles={setRoles} 
+                categories={categories} stats={stats} adminTab={adminTab} setAdminTab={setAdminTab} 
+                newItems={newItems} setNewItems={setNewItems} handleAddMultipleItems={handleAddMultipleItems} 
+                handleImageUpload={handleImageUpload} handleRemoveImage={handleRemoveImage} handleClearDatabase={handleClearDatabase} 
+                mediaList={mediaList} handleDeleteMedia={handleDeleteMedia} 
+                newCatName={newCatName} setNewCatName={setNewCatName} handleAddCategory={handleAddCategory} handleDeleteCategory={handleDeleteCategory} 
+                newRoleName={newRoleName} setNewRoleName={setNewRoleName} newRoleLevel={newRoleLevel} setNewRoleLevel={setNewRoleLevel} handleAddRole={handleAddRole} handleUpdateRole={handleUpdateRole} handleDeleteRole={handleDeleteRole} 
+                bulkText={bulkText} setBulkText={setBulkText} handleTextImport={handleTextImport} 
+                bulkJson={bulkJson} setBulkJson={setBulkJson} handleBulkImport={handleBulkImport} 
+                handleExport={handleExport} handleExportCSV={handleExportCSV} 
+                newAcc={newAcc} setNewAcc={setNewAcc} autoUser={autoUser} setAutoUser={setAutoUser} autoPass={autoPass} setAutoPass={setAutoPass} handleCreateUser={handleCreateUser} 
+                usersList={usersList} handleDeleteUser={handleDeleteUser} 
+                logsList={logsList} handleClearLogs={handleClearLogs} 
+                diagResult={diagResult} setDiagResult={setDiagResult} 
+                playSound={playSound} getRoleColor={getRoleColor} 
+              />
             )}
           </div>
         </div>
