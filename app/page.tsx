@@ -344,10 +344,22 @@ export default function TavernArchive() {
   };
 
   const handleUpdateItem = async (e: React.FormEvent) => {
-    e.preventDefault(); if (!editingItem || !user) return;
+    e.preventDefault(); 
+    if (!editingItem || !user) return;
+    
     const payload = { ...editingItem, image: editingItem.images && editingItem.images.length > 0 ? JSON.stringify(editingItem.images) : null };
     const res = await fetch("/api/archive", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-    if (res.ok) { showToast("Обновлено!", "success"); setEditingItem(null); fetchArchive(currentPage); }
+    
+    if (res.ok) { 
+      showToast("Обновлено!", "success"); 
+      setEditingItem(null); 
+      fetchArchive(currentPage); 
+    } else {
+      // Читаем ошибку с сервера и показываем её
+      const errorData = await res.json().catch(() => ({}));
+      showToast(errorData.error || "Ошибка при обновлении. Проверьте консоль.", "error");
+      console.error("Ошибка сервера:", errorData);
+    }
   };
 
   const handleAddCategory = async () => { if (!newCatName.trim()) return; const res = await fetch("/api/admin/categories", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: newCatName }) }); if (res.ok) { setNewCatName(""); fetchSettings(); showToast("Добавлено", "success"); } };
@@ -562,9 +574,9 @@ export default function TavernArchive() {
             {infoPages.map(page => {
               let Icon = Info;
               let shortName = "";
-              if (page.id === 'pharma') { Icon = Pill; shortName = "Запр.Препараты"; }
-              if (page.id === 'offensive') { Icon = AlertOctagon; shortName = "Запр.Контент"; }
-              if (page.id === 'dangerous') { Icon = PackageX; shortName = "Запр.Товары"; }
+              if (page.id === 'pharma') { Icon = Pill; shortName = "Фарма"; }
+              if (page.id === 'offensive') { Icon = AlertOctagon; shortName = "Контент"; }
+              if (page.id === 'dangerous') { Icon = PackageX; shortName = "Товары"; }
 
               return (
                 <button 
