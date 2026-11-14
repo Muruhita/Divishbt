@@ -118,15 +118,15 @@ const ArchiveCard = React.memo(({
 
       <div className="p-6 flex flex-col flex-grow">
         <div className="flex justify-between items-start mb-3 relative z-10">
-          <h3 className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8]">{item.title}</h3>
+          <h3 className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8] select-text">{item.title}</h3>
           <div className="flex gap-2 items-center">
              {item.is_draft === 1 && <span className="text-xs bg-yellow-600 text-white px-2 py-1 rounded font-bold">Черновик</span>}
-             {item.symbol && <span className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8] bg-[#1c110b] px-3 py-1 rounded border border-[#5c3a21]">{item.symbol}</span>}
+             {item.symbol && <span className="text-xl font-bold font-pixeloid-mono text-[#e6d5b8] bg-[#1c110b] px-3 py-1 rounded border border-[#5c3a21] select-text">{item.symbol}</span>}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 mb-4 relative z-10">
-          <span className="inline-block px-3 py-1 text-xs font-bold font-pixeloid-mono bg-[#1c110b] text-[#a37c49] rounded border border-[#5c3a21] uppercase">{item.category}</span>
-          {item.dangerLevel && <span className="inline-block px-2 py-1 text-xs font-bold font-pixeloid-mono rounded border border-red-900/50 bg-red-900/20 text-red-400 uppercase">{item.dangerLevel}</span>}
+          <span className="inline-block px-3 py-1 text-xs font-bold font-pixeloid-mono bg-[#1c110b] text-[#a37c49] rounded border border-[#5c3a21] uppercase select-text">{item.category}</span>
+          {item.dangerLevel && <span className="inline-block px-2 py-1 text-xs font-bold font-pixeloid-mono rounded border border-red-900/50 bg-red-900/20 text-red-400 uppercase select-text">{item.dangerLevel}</span>}
           
           <div className="ml-auto flex items-center gap-1 relative z-[60]">
             <button 
@@ -145,7 +145,7 @@ const ArchiveCard = React.memo(({
             )}
           </div>
         </div>
-        <div className="text-[#c4b5a5] font-sans leading-relaxed flex-grow relative z-10 prose prose-invert prose-sm max-w-none">
+        <div className="text-[#c4b5a5] font-sans leading-relaxed flex-grow relative z-10 prose prose-invert prose-sm max-w-none select-text">
           <ReactMarkdown>{item.description}</ReactMarkdown>
         </div>
       </div>
@@ -712,7 +712,6 @@ export default function TavernArchive() {
       a.href = url; a.download = `Доступ_${newAcc.account_name.replace(/\s+/g, '_')}.txt`;
       document.body.appendChild(a); a.click(); document.body.removeChild(a); 
       
-      // Задержка для корректного скачивания в Safari/Firefox
       setTimeout(() => URL.revokeObjectURL(url), 1000);
 
       setNewAcc({ account_name: "", username: "", password: "", role: roles[roles.length - 1]?.id || "low" });
@@ -945,10 +944,10 @@ export default function TavernArchive() {
       {/* ЭФФЕКТ КЛИКА */}
       {clicks.map(c => <div key={c.id} className="cursor-click-ripple" style={{ left: c.x, top: c.y }} />)}
 
-      <div className="pixel-stars pointer-events-none no-select"></div>
-      <div className="fog-container pointer-events-none no-select"><div className="fog-layer"></div><div className="fog-layer"></div></div>
+      <div className="pixel-stars pointer-events-none"></div>
+      <div className="fog-container pointer-events-none"><div className="fog-layer"></div><div className="fog-layer"></div></div>
       
-      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden no-select">
+      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
         {RUNES.slice(0, 6).map((rune, i) => <div key={i} className="rune pointer-events-none">{rune}</div>)}
       </div>
 
@@ -1062,7 +1061,7 @@ export default function TavernArchive() {
                   className="w-full h-64 p-4 bg-[#160d08] border-2 border-[#5c3a21] rounded-lg text-[#e6d5b8] font-mono text-sm focus:border-[#a37c49] outline-none whitespace-pre-wrap" 
                 />
               ) : (
-                <div className="text-[#c4b5a5] font-sans leading-relaxed max-w-none whitespace-pre-wrap break-words">
+                <div className="text-[#c4b5a5] font-sans leading-relaxed max-w-none whitespace-pre-wrap break-words select-text">
                   {activePage.content}
                 </div>
               )}
@@ -1117,7 +1116,7 @@ export default function TavernArchive() {
       )}
 
       {(!user || isBookClosing) && (
-        <div className={`fixed inset-0 z-[999] flex items-center justify-center overflow-hidden book-container no-select ${(isBookOpening || (isBookClosing && !startBookCloseAnim)) ? 'book-open' : ''}`}>
+        <div className={`fixed inset-0 z-[999] flex items-center justify-center overflow-hidden book-container ${(isBookOpening || (isBookClosing && !startBookCloseAnim)) ? 'book-open' : ''}`}>
           <div className="absolute inset-0 bg-[#0a0705]"></div>
           <div className="book-cover-left flex items-center justify-end pr-4"><div className="w-1/2 h-full border-r border-[#5c3a21]"></div><div className="book-corner book-corner-tl"></div><div className="book-corner book-corner-bl"></div></div>
           <div className="book-cover-right flex items-center justify-start pl-4"><div className="w-1/2 h-full border-l border-[#5c3a21]"></div><div className="book-corner book-corner-tr"></div><div className="book-corner book-corner-br"></div></div>
@@ -1150,8 +1149,8 @@ export default function TavernArchive() {
                   {user.avatar ? <img src={user.avatar} alt="Avatar" loading="lazy" draggable={false} className="w-full h-full object-cover no-select" /> : <UserIcon size={20} className="text-[#5c3a21] group-hover:text-[#a37c49] transition-colors" />}
                 </div>
                 <div className="flex flex-col text-right pr-2">
-                  <span className="text-sm font-bold font-pixeloid-mono">{user.account_name}</span>
-                  <span className={`text-xs font-bold font-pixeloid-mono ${getRoleColor(userRole.level)}`}>{userRole.name}</span>
+                  <span className="text-sm font-bold font-pixeloid-mono select-text">{user.account_name}</span>
+                  <span className={`text-xs font-bold font-pixeloid-mono ${getRoleColor(userRole.level)} select-text`}>{userRole.name}</span>
                 </div>
                 <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleLogout(); }} className="p-2 text-red-400 hover:bg-red-500/20 rounded active:scale-90 transition-all" title="Выйти"><LogOut size={18} /></button>
               </button>
@@ -1265,9 +1264,9 @@ export default function TavernArchive() {
 
                 {adminTab === "dashboard" && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-smooth-fade-up">
-                    <div className="bg-[#1c110b] p-6 rounded-xl border border-[#5c3a21] text-center shadow-lg"><ScrollText size={40} className="mx-auto text-[#a37c49] mb-4" /><h3 className="text-3xl font-bold text-[#e6d5b8]">{stats.archives}</h3><p className="text-[#8c6e52] font-pixeloid-mono mt-2">Записей в архиве</p></div>
-                    <div className="bg-[#1c110b] p-6 rounded-xl border border-[#5c3a21] text-center shadow-lg"><Users size={40} className="mx-auto text-[#a37c49] mb-4" /><h3 className="text-3xl font-bold text-[#e6d5b8]">{stats.users}</h3><p className="text-[#8c6e52] font-pixeloid-mono mt-2">Пользователей</p></div>
-                    <div className="bg-[#1c110b] p-6 rounded-xl border border-[#5c3a21] text-center shadow-lg"><Tag size={40} className="mx-auto text-[#a37c49] mb-4" /><h3 className="text-3xl font-bold text-[#e6d5b8]">{stats.categories}</h3><p className="text-[#8c6e52] font-pixeloid-mono mt-2">Категорий</p></div>
+                    <div className="bg-[#1c110b] p-6 rounded-xl border border-[#5c3a21] text-center shadow-lg"><ScrollText size={40} className="mx-auto text-[#a37c49] mb-4" /><h3 className="text-3xl font-bold text-[#e6d5b8] select-text">{stats.archives}</h3><p className="text-[#8c6e52] font-pixeloid-mono mt-2">Записей в архиве</p></div>
+                    <div className="bg-[#1c110b] p-6 rounded-xl border border-[#5c3a21] text-center shadow-lg"><Users size={40} className="mx-auto text-[#a37c49] mb-4" /><h3 className="text-3xl font-bold text-[#e6d5b8] select-text">{stats.users}</h3><p className="text-[#8c6e52] font-pixeloid-mono mt-2">Пользователей</p></div>
+                    <div className="bg-[#1c110b] p-6 rounded-xl border border-[#5c3a21] text-center shadow-lg"><Tag size={40} className="mx-auto text-[#a37c49] mb-4" /><h3 className="text-3xl font-bold text-[#e6d5b8] select-text">{stats.categories}</h3><p className="text-[#8c6e52] font-pixeloid-mono mt-2">Категорий</p></div>
                   </div>
                 )}
 
@@ -1334,7 +1333,7 @@ export default function TavernArchive() {
                       {mediaList.map(m => (
                         <div key={m.id} className="bg-[#1c110b] border border-[#5c3a21] rounded-lg p-2 relative group">
                           <img src={m.image} alt={m.title} loading="lazy" draggable={false} className="w-full h-32 object-cover rounded no-select" />
-                          <div className="mt-2 text-xs text-center truncate">{m.title}</div>
+                          <div className="mt-2 text-xs text-center truncate select-text">{m.title}</div>
                           <button onClick={() => handleDeleteMedia(m.id)} className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={14}/></button>
                         </div>
                       ))}
@@ -1353,7 +1352,7 @@ export default function TavernArchive() {
                     <div className="space-y-2">
                       {categories.map(c => (
                         <div key={c.id} className="flex justify-between items-center p-3 bg-[#1c110b] border border-[#5c3a21] rounded">
-                          <span className="font-pixeloid-mono text-[#e6d5b8]">{c.name}</span>
+                          <span className="font-pixeloid-mono text-[#e6d5b8] select-text">{c.name}</span>
                           <button onClick={() => handleDeleteCategory(c.id)} className="text-red-500 hover:text-red-400 p-1.5 rounded active:scale-90 transition-all"><Trash2 size={16}/></button>
                         </div>
                       ))}
@@ -1445,9 +1444,9 @@ export default function TavernArchive() {
                               const roleLevel = roleObj ? roleObj.level : 0;
                               return (
                                 <tr key={u.id} className="border-b border-[#3d2617] hover:bg-[#1c110b] transition-colors">
-                                  <td className="p-3 font-medium">{u.account_name}</td>
-                                  <td className={`p-3 text-sm font-bold font-pixeloid-mono ${getRoleColor(roleLevel)}`}>{roleObj?.name || u.role}</td>
-                                  <td className="p-3 font-mono text-[#c4b5a5]">{u.username}</td>
+                                  <td className="p-3 font-medium select-text">{u.account_name}</td>
+                                  <td className={`p-3 text-sm font-bold font-pixeloid-mono ${getRoleColor(roleLevel)} select-text`}>{roleObj?.name || u.role}</td>
+                                  <td className="p-3 font-mono text-[#c4b5a5] select-text">{u.username}</td>
                                   <td className="p-3">
                                     {userRole.level > roleLevel && u.id !== user.id && (
                                       <button onClick={() => handleDeleteUser(u.id, u.account_name)} className="text-red-500 hover:text-red-400 bg-red-500/10 p-1.5 rounded active:scale-90 transition-all"><Trash2 size={16} /></button>
@@ -1483,11 +1482,11 @@ export default function TavernArchive() {
                         <tbody>
                           {logsList.map((log) => (
                             <tr key={log.id} className="border-b border-[#3d2617] hover:bg-[#1c110b] transition-colors">
-                              <td className="p-3 font-mono text-sm text-[#e6d5b8]">{log.action}</td>
-                              <td className="p-3 text-sm text-[#c4b5a5]">{log.item_title}</td>
-                              <td className="p-3 text-sm text-[#c4b5a5]">{log.user_name}</td>
-                              <td className="p-3 text-sm font-bold font-pixeloid-mono text-[#a37c49]">{log.user_role}</td>
-                              <td className="p-3 text-sm text-[#8c6e52]">{new Date(log.timestamp).toLocaleString()}</td>
+                              <td className="p-3 font-mono text-sm text-[#e6d5b8] select-text">{log.action}</td>
+                              <td className="p-3 text-sm text-[#c4b5a5] select-text">{log.item_title}</td>
+                              <td className="p-3 text-sm text-[#c4b5a5] select-text">{log.user_name}</td>
+                              <td className="p-3 text-sm font-bold font-pixeloid-mono text-[#a37c49] select-text">{log.user_role}</td>
+                              <td className="p-3 text-sm text-[#8c6e52] select-text">{new Date(log.timestamp).toLocaleString()}</td>
                             </tr>
                           ))}
                           {logsList.length === 0 && (
@@ -1508,8 +1507,8 @@ export default function TavernArchive() {
                     {diagResult && (
                       <div className={`p-6 rounded-lg border-2 ${diagResult.status === 'ok' ? 'bg-green-900/20 border-green-500' : 'bg-red-900/20 border-red-500'}`}>
                         <p className={`font-bold font-pixeloid-mono text-lg mb-2 ${diagResult.status === 'ok' ? 'text-green-400' : 'text-red-400'}`}>{diagResult.status === 'ok' ? '✓ Соединение установлено' : '✗ Ошибка соединения'}</p>
-                        <p className="text-[#c4b5a5]">{diagResult.message}</p>
-                        {diagResult.latency !== undefined && <p className="text-[#8c6e52] text-sm mt-2">Задержка: {diagResult.latency} мс</p>}
+                        <p className="text-[#c4b5a5] select-text">{diagResult.message}</p>
+                        {diagResult.latency !== undefined && <p className="text-[#8c6e52] text-sm mt-2 select-text">Задержка: {diagResult.latency} мс</p>}
                       </div>
                     )}
                   </div>
