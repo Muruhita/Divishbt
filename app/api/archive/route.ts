@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { revalidateTag } from "next/cache";
 import { sendDiscordNotification } from "@/lib/discord";
+import { verifyCsrf } from "@/lib/csrf";
+import { rateLimit } from "@/lib/rate-limit";
 
 export const dynamic = 'force-dynamic';
 
@@ -13,8 +15,29 @@ async function getUserLevel(role: string) {
   return rolesMap.get(role) || 0;
 }
 
+// Валидация картинок (Base64)
+function validateImages(imageStr: string | null) {
+  if (!imageStr) return;
+  
+  const checkSingle = (str: string) => {
+    if (str.length > 1.4 * 1024 * 1024) throw new Error("Картинка слишком большая (макс 1МБ)");
+    if (!str.match(/^data:image\/(png|jpeg|jpg|webp|gif);base64,/)) {
+      throw new Error("Недопустимый формат картинки. Разрешены только PNG, JPG, WEBP, GIF.");
+    }
+  };
+
+  if (imageStr.startsWith('[')) {
+    try {
+      const arr = JSON.parse(imageStr);
+      if (!Array.isArray(arr) || arr.length > 3) throw new Error("Максимум 3 картинки");
+      arr.forEach(img => checkSingle(img));
+    } catch (e: any) { throw new Error(e.message || "Ошибка парсинга картинок"); }
+  } else {
+    checkSingle(imageStr);
+  }
+}
+
 export async function GET(req: Request) {
-  // ... (остается без изменений)
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('tavern_token')?.value;
@@ -59,6 +82,15 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const csrfError = verifyCsrf(req);
+  if (csrfError) return csrfError;
+
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+  const limitRes = rateLimit(ip, 20, 60000); // 20 запросов в минуту
+  if (!limitRes.success) {
+    return NextResponse.json({ error: `Слишком много запросов. Подождите ${limitRes.retryAfter} сек.` }, { status: 429 });
+  }
+
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('tavern_token')?.value;
@@ -75,7 +107,10 @@ export async function POST(req: Request) {
     
     for (const item of items) {
       if (!item.title || item.title.length > 200) throw new Error("Некорректный заголовок");
+      if (item.description && item.description.length > 10000) throw new Error("Описание слишком длинное");
       
+      validateImages(item.image); // Проверка картинок
+
       await db.execute({
         sql: "INSERT INTO archive (title, category, description, symbol, danger_level, image, is_draft) VALUES (?, ?, ?, ?, ?, ?, ?)",
         args: [item.title.trim(), item.category, item.description, item.symbol || "", item.dangerLevel || null, item.image || null, item.is_draft ? 1 : 0],
@@ -85,10 +120,9 @@ export async function POST(req: Request) {
         args: ["СОЗДАНИЕ", item.title.trim(), user.account_name, user.role],
       });
 
-      // Отправляем вебхук!
       sendDiscordNotification("СОЗДАНИЕ", item.title.trim(), user.account_name, user.role);
     }
-    revalidateTag('archive'); // Сбрасываем кэш
+    revalidateTag('archive');
     return NextResponse.json({ success: true, count: items.length });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Ошибка при добавлении";
@@ -97,7 +131,9 @@ export async function POST(req: Request) {
 }
 
 export async function PUT(req: Request) {
-  // ... (остается без изменений)
+  const csrfError = verifyCsrf(req);
+  if (csrfError) return csrfError;
+
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('tavern_token')?.value;
@@ -112,6 +148,8 @@ export async function PUT(req: Request) {
     const item = await req.json();
     if (!item.id) return NextResponse.json({ error: "ID не указан" }, { status: 400 });
 
+    validateImages(item.image); // Проверка картинок
+
     await db.execute({
       sql: `UPDATE archive SET title = ?, category = ?, description = ?, symbol = ?, danger_level = ?, image = ?, is_draft = ? WHERE id = ?`,
       args: [item.title.trim(), item.category, item.description, item.symbol || "", item.dangerLevel || null, item.image || null, item.is_draft ? 1 : 0, item.id],
@@ -123,13 +161,16 @@ export async function PUT(req: Request) {
     });
     revalidateTag('archive');
     return NextResponse.json({ success: true });
-  } catch {
-    return NextResponse.json({ error: "Ошибка при обновлении" }, { status: 500 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Ошибка при обновлении";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
 export async function DELETE(req: Request) {
-  // ... (остается без изменений)
+  const csrfError = verifyCsrf(req);
+  if (csrfError) return csrfError;
+
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('tavern_token')?.value;
